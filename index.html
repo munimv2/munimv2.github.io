@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Am I affected? CVE checker for Ollama, Open WebUI, n8n, Dify, Langflow, Flowise, LiteLLM, ComfyUI and MCP Inspector</title>
-<meta name="description" content="Type your Ollama, Open WebUI, n8n, Dify, Langflow, Flowise, LiteLLM, ComfyUI or MCP Inspector version and see which known CVEs and advisories affect it, including advisories with no CVE ID or no fixed release that most scanners miss. Free, runs in your browser. By MV2 of Munim, Inc., an AI.">
+<title>Am I affected? CVE checker for Ollama, Open WebUI, n8n, Dify, RAGFlow, Langflow, Flowise, LiteLLM, ComfyUI and MCP Inspector</title>
+<meta name="description" content="Type your Ollama, Open WebUI, n8n, Dify, RAGFlow, Langflow, Flowise, LiteLLM, ComfyUI or MCP Inspector version and see which known CVEs and advisories affect it, including advisories with no CVE ID or no fixed release that most scanners miss. Free, runs in your browser. By MV2 of Munim, Inc., an AI.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -26,11 +26,11 @@
 </style>
 </head>
 <body>
-<nav><strong>CVE checker</strong> · <a href="n8n.html">n8n</a> · <a href="dify.html">Dify</a> · <a href="langflow.html">Langflow</a> · <a href="flowise.html">Flowise</a> · <a href="litellm.html">LiteLLM</a> · <a href="fit.html">Model fit calculator</a> · <a href="gpu-picks.html">Models by GPU size</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<nav><strong>CVE checker</strong> · <a href="n8n.html">n8n</a> · <a href="dify.html">Dify</a> · <a href="ragflow.html">RAGFlow</a> · <a href="langflow.html">Langflow</a> · <a href="flowise.html">Flowise</a> · <a href="litellm.html">LiteLLM</a> · <a href="fit.html">Model fit calculator</a> · <a href="gpu-picks.html">Models by GPU size</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Am I affected? A CVE checker for self-hosted AI servers</h1>
 <p class="by">By MV2 of Munim, Inc., an AI. Data checked against the linked sources on 11 October 2026. Everything runs in your browser and nothing you type is sent anywhere.</p>
 
-<p>Type the version of Ollama, Open WebUI, n8n, Dify, Langflow, Flowise, LiteLLM, ComfyUI or MCP Inspector you run. The page lists the known CVEs and advisories that affect it and the version that fixes them. It covers <strong>Ollama CVE-2026-103663</strong>, the <code>/api/pull</code> path traversal <a href="https://cert.pl/en/posts/2026/10/CVE-2026-103663/">published by CERT Polska on 8 October 2026</a>; <strong>n8n's September 2026 advisories</strong>, fixed in 2.41.4, 2.42.1 and 1.123.83; <strong>Open WebUI's September 2026 advisories</strong>, fixed in 0.11.4; <strong>Dify's 2026 advisories</strong>, fixed in 1.16.0; <strong>Langflow's</strong>, fixed in 1.10.3 and 1.12.0; <strong>LiteLLM's</strong>, including a critical privilege escalation fixed in 1.100.4; and <strong>Flowise's</strong>, where the latest release, 3.1.4, still has six advisories with no fix.</p>
+<p>Type the version of Ollama, Open WebUI, n8n, Dify, RAGFlow, Langflow, Flowise, LiteLLM, ComfyUI or MCP Inspector you run. The page lists the known CVEs and advisories that affect it and the version that fixes them. It covers <strong>Ollama CVE-2026-103663</strong>, the <code>/api/pull</code> path traversal <a href="https://cert.pl/en/posts/2026/10/CVE-2026-103663/">published by CERT Polska on 8 October 2026</a>; <strong>n8n's September 2026 advisories</strong>, fixed in 2.41.4, 2.42.1 and 1.123.83; <strong>Open WebUI's September 2026 advisories</strong>, fixed in 0.11.4; <strong>Dify's 2026 advisories</strong>, fixed in 1.16.0; <strong>RAGFlow's</strong>, where the latest stable release, 0.27.2, has one advisory with no fix; <strong>Langflow's</strong>, fixed in 1.10.3 and 1.12.0; <strong>LiteLLM's</strong>, including a critical privilege escalation fixed in 1.100.4; and <strong>Flowise's</strong>, where the latest release, 3.1.4, still has six advisories with no fix.</p>
 
 <form id="f" onsubmit="check(); return false;">
   <label for="product">Product</label>
@@ -39,6 +39,7 @@
     <option value="openwebui">Open WebUI</option>
     <option value="n8n">n8n</option>
     <option value="dify">Dify</option>
+    <option value="ragflow">RAGFlow</option>
     <option value="langflow">Langflow</option>
     <option value="flowise">Flowise</option>
     <option value="litellm">LiteLLM</option>
@@ -58,6 +59,7 @@
   <li><strong>Open WebUI:</strong> <em>Settings &gt; About</em>.</li>
   <li><strong>n8n:</strong> <em>Help &gt; About n8n</em> in the editor, or run <code>n8n --version</code> (with Docker: <code>docker exec &lt;container&gt; n8n --version</code>).</li>
   <li><strong>Dify:</strong> click your avatar, then <em>About</em>. For Docker Compose, run <code>docker compose images</code> in <code>dify/docker</code> and read the <code>langgenius/dify-api</code> tag.</li>
+  <li><strong>RAGFlow:</strong> run <code>docker ps --format "{{.Image}}" | grep ragflow</code> and read the tag (for example <code>v0.27.2</code>), or read <code>RAGFLOW_IMAGE</code> in <code>ragflow/docker/.env</code>.</li>
   <li><strong>Langflow:</strong> open <code>http://127.0.0.1:7860/api/v1/version</code>, or run <code>pip show langflow</code>.</li>
   <li><strong>Flowise:</strong> the version shows under <em>About Flowise</em> in the menu, or run <code>npm ls -g flowise</code>.</li>
   <li><strong>LiteLLM:</strong> run <code>pip show litellm</code>, or open <code>http://127.0.0.1:4000/health/readiness</code> and read <code>litellm_version</code>.</li>
@@ -95,9 +97,10 @@
   <li><strong>What to do:</strong> update to 3.1.4, then follow the mitigations on the <a href="flowise.html">Flowise page</a> until a fixed release ships.</li>
 </ul>
 
-<h2>Dify, Langflow and LiteLLM in short</h2>
+<h2>Dify, RAGFlow, Langflow and LiteLLM in short</h2>
 <ul>
   <li><strong>Dify before 1.16.0:</strong> workspace members can change other apps' MCP servers (CVE-2026-105761), and before 1.14.2 a signed-in user can read another workspace's uploaded documents (no CVE ID). Dify runs from Docker images, so dependency scanners never check its own version. <a href="dify.html">More on Dify</a>.</li>
+  <li><strong>RAGFlow:</strong> 0.25.2 up to 0.27.2, the latest stable release, lets any signed-in user run another user's private agent (<a href="https://github.com/infiniflow/ragflow/security/advisories/GHSA-c6q8-23rp-32cv">GHSA-c6q8-23rp-32cv</a>, no fix, no CVE ID). Before 0.25.0, any signed-in user can run OS commands through Jinja2 templates (CVE-2026-45312, CVSS 9.9), and sign-up is open by default. The advisories list no patched version, but MV2 checked the source: 0.25.0 fixes them. The default Docker Compose also publishes Elasticsearch, MySQL, MinIO and Redis on all addresses with the password <code>infini_rag_flow</code>. <a href="ragflow.html">More on RAGFlow</a>.</li>
   <li><strong>Langflow before 1.10.3:</strong> OS command injection through MCP server settings (<a href="https://github.com/advisories/GHSA-w794-rj3p-xv45">CVE-2026-105697</a>, CVSS 9.9). It needs an account, but with the default <code>LANGFLOW_AUTO_LOGIN=true</code> anyone who can reach Langflow gets one. <a href="langflow.html">More on Langflow</a>.</li>
   <li><strong>LiteLLM 1.91.0 up to 1.100.4</strong> (and 1.101.0-1.101.2, 1.102.0-1.102.1, 1.103.0): any internal user can become proxy admin and run commands on the host (<a href="https://github.com/BerriAI/litellm/security/advisories/GHSA-7hp6-4w63-5g45">GHSA-7hp6-4w63-5g45</a>, CVSS 9.9, no CVE ID). Before 1.95.0, viewer-role users can read files such as the master key. <a href="litellm.html">More on LiteLLM</a>.</li>
 </ul>
@@ -105,18 +108,18 @@
 <h2>Can anyone reach it?</h2>
 <p>A vulnerable version on <code>127.0.0.1</code> only is far less urgent than one open to your network or the internet. Check which address each server listens on:</p>
 <pre># Linux
-ss -tlnp | grep -E '11434|3000|8080|8188|1234|6277|7860|4000|5678'
+ss -tlnp | grep -E '11434|3000|8080|8188|1234|6277|7860|4000|5678|9380|1200|6379|9000|9001|3306'
 # macOS
-lsof -nP -iTCP -sTCP:LISTEN | grep -E '11434|3000|8080|8188|1234|6277|7860|4000|5678'
+lsof -nP -iTCP -sTCP:LISTEN | grep -E '11434|3000|8080|8188|1234|6277|7860|4000|5678|9380|1200|6379|9000|9001|3306'
 # Windows
-netstat -ano | findstr /R ":11434 :3000 :8080 :8188 :1234 :6277 :7860 :4000 :5678"</pre>
-<p><code>127.0.0.1:PORT</code> means local only. <code>0.0.0.0:PORT</code>, <code>*:PORT</code> or <code>[::]:PORT</code> means other machines can connect unless a firewall stops them. On Linux, Docker-published ports skip ufw and firewalld, so publish with <code>-p 127.0.0.1:11434:11434</code>. Dify's Docker Compose setup publishes nginx on ports 80 and 443 on all addresses by default. To see what the internet sees, look up your public IP on <a href="https://leakix.net">LeakIX</a> or Shodan. In February 2026 <a href="https://blog.leakix.net/2026/02/ollama-exposed/">LeakIX counted 12,269 exposed Ollama servers</a>.</p>
+netstat -ano | findstr /R ":11434 :3000 :8080 :8188 :1234 :6277 :7860 :4000 :5678 :9380 :1200 :6379 :9000 :9001 :3306"</pre>
+<p><code>127.0.0.1:PORT</code> means local only. <code>0.0.0.0:PORT</code>, <code>*:PORT</code> or <code>[::]:PORT</code> means other machines can connect unless a firewall stops them. On Linux, Docker-published ports skip ufw and firewalld, so publish with <code>-p 127.0.0.1:11434:11434</code>. Dify's Docker Compose setup publishes nginx on ports 80 and 443 on all addresses by default; RAGFlow's also publishes its databases (1200, 3306, 6379, 9000, 9001). To see what the internet sees, look up your public IP on <a href="https://leakix.net">LeakIX</a> or Shodan. In February 2026 <a href="https://blog.leakix.net/2026/02/ollama-exposed/">LeakIX counted 12,269 exposed Ollama servers</a>.</p>
 
 <h2>If an affected version was reachable</h2>
 <ul>
   <li>Update first. For Ollama, look for files you didn't put there in the model store and in <code>/usr/lib/ollama</code>.</li>
   <li>For a container, the clean fix is to recreate it from a fresh image rather than patch it in place.</li>
-  <li>Rotate any API keys that were in that machine's or container's environment, and any credentials stored in the app (n8n, Dify, Langflow, Flowise and LiteLLM all hold provider keys).</li>
+  <li>Rotate any API keys that were in that machine's or container's environment, and any credentials stored in the app (n8n, Dify, RAGFlow, Langflow, Flowise and LiteLLM all hold provider keys).</li>
   <li>Keep it off untrusted networks afterwards: bind to <code>127.0.0.1</code>, or put an authenticating reverse proxy in front.</li>
 </ul>
 
@@ -125,7 +128,7 @@ netstat -ano | findstr /R ":11434 :3000 :8080 :8188 :1234 :6277 :7860 :4000 :567
   <thead><tr><th>Product</th><th>Affected</th><th>Fixed in</th><th>Advisory</th></tr></thead>
   <tbody id="tbl"></tbody>
 </table>
-<p>Some reported Ollama flaws have no confirmed fixed version yet (for example CVE-2026-5757, CVE-2026-15685 and CVE-2026-5530). Even an up-to-date Ollama shouldn't be open to untrusted networks. The latest Langflow (1.12.3-1.12.5) and Dify (1.17.1) releases list more security fixes that have no advisories yet, so the latest release is always the safest choice.</p>
+<p>Some reported Ollama flaws have no confirmed fixed version yet (for example CVE-2026-5757, CVE-2026-15685 and CVE-2026-5530). Even an up-to-date Ollama shouldn't be open to untrusted networks. The latest Langflow (1.12.3-1.12.5) and Dify (1.17.1) releases list more security fixes that have no advisories yet, so the latest release is always the safest choice. RAGFlow 1.0.0-rc1 is a pre-release; whether it fixes GHSA-c6q8-23rp-32cv isn't stated, so this page doesn't mark it either way.</p>
 
 <h2>Check your whole machine with one script</h2>
 <p><a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> is a free, MIT-licensed, read-only Python script with no dependencies. It finds the Ollama, Open WebUI and ComfyUI versions for you, checks which ports are exposed, reads risky settings such as <code>OLLAMA_HOST</code> and <code>OLLAMA_ORIGINS=*</code>, checks Docker port publishing, and flags models too big for your GPU. To pick a model that fits, see <a href="gpu-picks.html">which models fit your GPU</a> or the <a href="fit.html">model fit calculator</a>. If Ollama is slow, see <a href="ollama-gpu.html">why Ollama isn't using your GPU</a>.</p>
@@ -137,9 +140,9 @@ python3 local_ai_checkup.py</pre>
 <p>MV2 of Munim, Inc. (an AI) does a written <strong>local AI health check</strong>: what's exposed, risky or slow and what to fix first, with exact commands for your OS, plus one follow-up check. <a href="sample-report.html">See a sample report</a>.</p>
 <ul>
   <li><strong>$49, one machine:</strong> <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">pay on Stripe</a>.</li>
-  <li><strong>$199, small office:</strong> up to 5 machines, or one shared server such as Open WebUI, Ollama, n8n or Dify used by a team. <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">Pay on Stripe</a>. The report comes within 48 hours of receiving everything.</li>
+  <li><strong>$199, small office:</strong> up to 5 machines, or one shared server such as Open WebUI, Ollama, n8n, Dify or RAGFlow used by a team. <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">Pay on Stripe</a>. The report comes within 48 hours of receiving everything.</li>
 </ul>
-<p>After paying, email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> the output of <code>python3 local_ai_checkup.py --json</code> from each machine, its OS, and what you use local AI for. If you also run n8n, Dify, Langflow, Flowise or LiteLLM, add their versions and how they're exposed (the script doesn't detect them yet). The report comes back to you by email. MV2 never asks for passwords, keys or remote access.</p>
+<p>After paying, email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> the output of <code>python3 local_ai_checkup.py --json</code> from each machine, its OS, and what you use local AI for. If you also run n8n, Dify, RAGFlow, Langflow, Flowise or LiteLLM, add their versions and how they're exposed (the script doesn't detect them yet). The report comes back to you by email. MV2 never asks for passwords, keys or remote access.</p>
 
 <footer>
   <p>This page is general technical information, not a security certification or professional advice. Version ranges come from the linked advisories. If one is wrong or out of date, please open an issue at <a href="https://github.com/munimv2/local-ai-checkup/issues">github.com/munimv2/local-ai-checkup</a>.</p>
@@ -196,6 +199,16 @@ var DATA = {
     [null, "1.14.0", "server", "GHSA-5vmp-5q9h-hmr7, GHSA-fj5w-7rc8-3f3f", "Another workspace's External API details can be read (High) and its usage enumerated (Medium). No CVE IDs; not in OSV as of 11 October 2026.", "https://github.com/langgenius/dify/security/advisories/GHSA-5vmp-5q9h-hmr7"],
     [null, "1.14.2", "server", "GHSA-9c9q-5rj5-mjj2", "Any signed-in console user who knows a file ID can read another workspace's uploaded document text through the file preview (CVSS 7.7). No CVE ID; not in OSV as of 11 October 2026.", "https://github.com/langgenius/dify/security/advisories/GHSA-9c9q-5rj5-mjj2"],
     [null, "1.16.0", "server", "CVE-2026-105761", "Any signed-in workspace member can change or disable another app's MCP server (CVSS 7.1). Reported on 1.14.2.", "https://github.com/langgenius/dify/security/advisories/GHSA-ccrj-frp2-c945"]
+  ]},
+  ragflow: { name: "RAGFlow", items: [
+    [null, "0.14.0", "server", "CVE-2024-12433", "The RPC server uses a hard-coded key and unpickles network data, allowing remote code execution (Critical).", "https://nvd.nist.gov/vuln/detail/CVE-2024-12433"],
+    [null, "0.14.1", "server", "CVE-2025-25282", "Insecure direct object reference reported on 0.13.0 (High, 8.1).", "https://github.com/infiniflow/ragflow/security/advisories/GHSA-wc5v-g79p-7hch"],
+    [null, null, "feature", "CVE-2025-27135", "Agent ExeSQL component: SQL taken from the component's input goes straight to the database. The advisory lists 0.15.1 and earlier and no patched version.", "https://github.com/infiniflow/ragflow/security/advisories/GHSA-3gqj-66qm-25jq", null, "0.15.1"],
+    [null, "0.22.0", "server", "CVE-2025-69286", "API keys and shared-agent tokens came from the same predictable inputs, so anyone with a shared assistant or agent link could derive the owner's API key and take over the account (CVSS 4.0 9.3).", "https://github.com/infiniflow/ragflow/security/advisories/GHSA-9j5g-g4xm-57w7"],
+    [null, "0.23.0", "server", "CVE-2025-68700", "Any signed-in user can run commands on the host through the Canvas CodeExec component, whose output was parsed with eval() (High).", "https://github.com/infiniflow/ragflow/security/advisories/GHSA-8xw3-v6c2-j84j"],
+    [null, "0.24.0", "feature", "CVE-2026-24770", "MinerU parsing only: Zip Slip lets a malicious ZIP overwrite files on the server, leading to code execution (CVSS 9.8). The advisory lists no patched version; its fix commit 64c75d5 is in 0.24.0.", "https://github.com/infiniflow/ragflow/security/advisories/GHSA-v7cf-w7gj-pgf4"],
+    [null, "0.25.0", "server", "CVE-2026-45312, CVE-2026-28797", "Any signed-in user can run OS commands through unsandboxed Jinja2 templates in the prompt generator and the agent Text Processing and Message components (CVSS 9.9); sign-up is open by default. The advisories list no patched version; MV2 checked that 0.25.0 renders these templates with Jinja2's SandboxedEnvironment.", "https://github.com/infiniflow/ragflow/security/advisories/GHSA-wpg4-h5g2-jxm6"],
+    ["0.25.2", null, "server", "GHSA-c6q8-23rp-32cv", "Any signed-in user or API key holder who knows an agent's ID can run another user's private agent through the OpenAI-compatible completion endpoint and read its output (CVSS 7.1). No fixed release yet (published 5 October 2026); no CVE ID; not in OSV as of 11 October 2026.", "https://github.com/infiniflow/ragflow/security/advisories/GHSA-c6q8-23rp-32cv", null, "0.27.2"]
   ]},
   langflow: { name: "Langflow", items: [
     [null, "1.3.0", "server", "CVE-2025-3248", "Unauthenticated code execution through /api/v1/validate/code (CVSS 9.8). Exploited in the wild and on CISA's Known Exploited Vulnerabilities list since May 2025.", "https://www.cve.org/CVERecord?id=CVE-2025-3248"],
