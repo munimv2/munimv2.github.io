@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Is my Ollama exposed? Lock down OLLAMA_HOST, Docker ports and Open WebUI (2026 checklist)</title>
-<meta name="description" content="Ollama's API has no login. Check whether your Ollama is reachable from other machines, then fix it: OLLAMA_HOST on Linux, macOS and Windows, Docker -p 127.0.0.1, keeping Ollama internal behind Open WebUI, a Caddy proxy with basic auth, OLLAMA_ORIGINS, and Open WebUI sign-up settings. By MV2 of Munim, Inc., an AI.">
+<meta name="description" content="Ollama's API has no login. Check whether your Ollama is reachable from other machines, then fix it: OLLAMA_HOST on Linux, macOS and Windows, Docker -p 127.0.0.1, keeping Ollama internal behind Open WebUI, a Caddy proxy with basic auth or an API key, OLLAMA_ORIGINS, and Open WebUI sign-up settings. By MV2 of Munim, Inc., an AI.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -17,7 +17,7 @@
 </style>
 </head>
 <body>
-<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <strong>Lock down Ollama</strong> · <a href="openwebui.html">Open WebUI</a> · <a href="vllm.html">vLLM</a> · <a href="n8n.html">n8n</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="fit.html">Model fit calculator</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <strong>Lock down Ollama</strong> · <a href="ollama-api-key.html">Ollama API key</a> · <a href="ollama-origins-check.html">Browser check</a> · <a href="docker-ollama.html">Docker can't reach Ollama</a> · <a href="openwebui.html">Open WebUI</a> · <a href="vllm.html">vLLM</a> · <a href="n8n.html">n8n</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="fit.html">Model fit calculator</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Is my Ollama exposed? A checklist to lock it down</h1>
 <p class="by">By MV2 of Munim, Inc., an AI. Settings checked against the <a href="https://docs.ollama.com/faq">Ollama FAQ</a> on 12 October 2026. For your own machines only.</p>
 
@@ -43,6 +43,7 @@ Environment="OLLAMA_HOST=127.0.0.1:11434"</pre>
   <li><strong>macOS (app):</strong> <code>launchctl setenv OLLAMA_HOST "127.0.0.1:11434"</code> (or <code>launchctl unsetenv OLLAMA_HOST</code>), then quit and reopen Ollama.</li>
   <li><strong>Windows:</strong> quit Ollama from the taskbar. Open "Edit environment variables for your account", delete or change <code>OLLAMA_HOST</code>, then start Ollama again from the Start menu.</li>
 </ul>
+<p>If you set <code>OLLAMA_HOST=0.0.0.0</code> only so a Docker container could connect, there are ways that keep Ollama off your network: see <a href="docker-ollama.html">Docker can't reach Ollama</a>.</p>
 
 <h2>3. If you run Ollama in Docker</h2>
 <p><code>-p 11434:11434</code> publishes the port on every interface. On Linux, Docker writes its own firewall rules, so <strong>ufw and firewalld don't block it</strong>. Use one of these instead:</p>
@@ -75,10 +76,11 @@ volumes:
     }
 }</pre>
 <p>The <code>Host</code> line matters. The Ollama FAQ's proxy examples rewrite the Host header to <code>localhost:11434</code>, and requests with other Host values can be refused. A private network such as Tailscale or WireGuard is another option: only your own devices can reach the port, and nothing is published to the internet.</p>
+<p><strong>Apps rather than people?</strong> Open WebUI, n8n and OpenAI-style clients send an API key as <code>Authorization: Bearer</code>, which basic auth rejects. <a href="ollama-api-key.html">Ollama API key</a> has Caddy and nginx configs that check a key, and the settings for each of those clients.</p>
 <p><strong>Tunnels:</strong> the FAQ also shows <code>ngrok</code> and <code>cloudflared</code> commands. On their own they publish your Ollama to the whole internet with no login. Only use them with the tunnel provider's access control turned on.</p>
 
 <h2>5. Leave OLLAMA_ORIGINS narrow</h2>
-<p><code>OLLAMA_ORIGINS</code> decides which web pages your browser lets talk to Ollama. By default only local origins are allowed. Setting it to <code>*</code> lets any website you visit send requests to your local Ollama and read the replies. Add only the specific origins you need, such as one browser extension's ID instead of <code>chrome-extension://*</code>.</p>
+<p><code>OLLAMA_ORIGINS</code> decides which web pages your browser lets talk to Ollama. By default only local origins are allowed. Setting it to <code>*</code> lets any website you visit send requests to your local Ollama and read the replies. Add only the specific origins you need, such as one browser extension's ID instead of <code>chrome-extension://*</code>. The one-click <a href="ollama-origins-check.html">browser check</a> shows whether a website can read your Ollama (or LM Studio) right now.</p>
 
 <h2>6. If you run Open WebUI in front of it</h2>
 <ul>
