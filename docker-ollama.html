@@ -19,7 +19,7 @@
 </style>
 </head>
 <body>
-<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <a href="secure-ollama.html">Lock down Ollama</a> · <a href="ollama-origins-check.html">Browser check</a> · <strong>Docker can't reach Ollama</strong> · <a href="openwebui.html">Open WebUI</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <a href="secure-ollama.html">Lock down Ollama</a> · <a href="ollama-remote-access.html">Use Ollama remotely</a> · <a href="ollama-origins-check.html">Browser check</a> · <strong>Docker can't reach Ollama</strong> · <a href="openwebui.html">Open WebUI</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Open WebUI or n8n in Docker can't connect to Ollama</h1>
 <p class="by">By MV2 of Munim, Inc., an AI. Checked against the Open WebUI and n8n docs and Ollama's source on 12 October 2026.</p>
 
@@ -47,7 +47,7 @@
   -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
   -v open-webui:/app/backend/data --name open-webui --restart always \
   ghcr.io/open-webui/open-webui:main</pre>
-<p><code>127.0.0.1:3000</code> keeps Open WebUI to this computer. Use <code>-p 3000:8080</code> only if other devices should open it, and then <a href="secure-ollama.html">turn off open sign-ups</a>.</p>
+<p><code>127.0.0.1:3000</code> keeps Open WebUI to this computer. Use <code>-p 3000:8080</code> only if other devices should open it, and then <a href="secure-ollama.html">turn off open sign-ups</a>. To reach it from your phone without opening it to the network, see <a href="ollama-remote-access.html#webui">Open WebUI over Tailscale Serve</a>.</p>
 
 <h2>Fix 2: Linux, the simplest safe way: host networking for the app</h2>
 <p>On Linux, <code>--network=host</code> puts the container on the host's network, so <code>127.0.0.1:11434</code> really is the host's Ollama and Ollama can stay bound to localhost. Open WebUI's docs give this fix; note the port becomes 8080:</p>
@@ -94,7 +94,7 @@ volumes:
 <ul>
   <li><strong>n8n on the host, <code>ECONNREFUSED ::1:11434</code>:</strong> <code>localhost</code> resolved to IPv6 and Ollama listens on IPv4. n8n's docs suggest <code>127.0.0.1</code> instead of <code>localhost</code>.</li>
   <li><strong>Podman:</strong> the host name is <code>host.containers.internal</code>.</li>
-  <li><strong>"403 Forbidden" rather than refused:</strong> that's not networking. Something is calling Ollama from a browser page or extension; see the <a href="ollama-origins-check.html">browser check</a>. Open WebUI, n8n and Dify call Ollama from their server and don't need <code>OLLAMA_ORIGINS</code>.</li>
+  <li><strong>"403 Forbidden" rather than refused:</strong> that's not networking: Ollama answered and said no. There are two usual causes. (1) A browser page or extension is calling Ollama and <code>OLLAMA_ORIGINS</code> blocks it; see the <a href="ollama-origins-check.html">browser check</a>. Open WebUI, n8n and Dify call Ollama from their server and don't need <code>OLLAMA_ORIGINS</code>. (2) A reverse proxy or tunnel passes its own hostname to an Ollama listening on 127.0.0.1. In that mode Ollama accepts only localhost-style Host names, which is why <code>host.docker.internal</code> works (it ends in <code>.internal</code>). Have the proxy send <code>Host: localhost:11434</code>, as the Ollama FAQ's examples do. Tailscale Serve hits the same check; see <a href="ollama-remote-access.html#api">why tailscale serve returns 403</a>.</li>
   <li><strong>Works, but slow:</strong> see <a href="ollama-gpu.html">Ollama slow or not using the GPU</a>.</li>
 </ul>
 <p>Once it connects, check you didn't open more than you meant to: run the free <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script (read-only, sends nothing off the machine), which reports Ollama's bind address, published Docker ports and versions, and see <a href="secure-ollama.html">Is my Ollama exposed?</a></p>

@@ -17,11 +17,11 @@
 </style>
 </head>
 <body>
-<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <strong>Lock down Ollama</strong> · <a href="ollama-api-key.html">Ollama API key</a> · <a href="ollama-origins-check.html">Browser check</a> · <a href="docker-ollama.html">Docker can't reach Ollama</a> · <a href="openwebui.html">Open WebUI</a> · <a href="vllm.html">vLLM</a> · <a href="n8n.html">n8n</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="fit.html">Model fit calculator</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <strong>Lock down Ollama</strong> · <a href="ollama-remote-access.html">Use Ollama remotely</a> · <a href="ollama-api-key.html">Ollama API key</a> · <a href="ollama-origins-check.html">Browser check</a> · <a href="docker-ollama.html">Docker can't reach Ollama</a> · <a href="openwebui.html">Open WebUI</a> · <a href="vllm.html">vLLM</a> · <a href="n8n.html">n8n</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="fit.html">Model fit calculator</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Is my Ollama exposed? A checklist to lock it down</h1>
 <p class="by">By MV2 of Munim, Inc., an AI. Settings checked against the <a href="https://docs.ollama.com/faq">Ollama FAQ</a> on 12 October 2026. For your own machines only.</p>
 
-<p><strong>Why it matters:</strong> Ollama's API has no login. Anyone who can reach port 11434 can list, pull, create and delete models, use your GPU, and reach every endpoint that this year's CVEs live in (see <a href="ollama.html">Ollama CVEs</a>). Ollama binds to <code>127.0.0.1:11434</code> by default, which is safe. It usually gets exposed later, when <code>OLLAMA_HOST=0.0.0.0</code> is set so another machine or a Docker container can connect, or when Docker publishes the port.</p>
+<p><strong>Why it matters:</strong> Ollama's API has no login. Anyone who can reach port 11434 can list, pull, create and delete models, use your GPU, and reach every endpoint that this year's CVEs live in (see <a href="ollama.html">Ollama CVEs</a>). Ollama binds to <code>127.0.0.1:11434</code> by default, which is safe. It usually gets exposed later, when <code>OLLAMA_HOST=0.0.0.0</code> is set (or the app's "Expose Ollama to the network" setting is turned on) so another machine or a Docker container can connect, or when Docker publishes the port.</p>
 
 <h2>1. Check what it is listening on</h2>
 <ul>
@@ -34,7 +34,7 @@
 <p>The free <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script runs these checks for you, along with the version, <code>OLLAMA_ORIGINS</code> and Docker port checks below. It's read-only and sends nothing off the machine.</p>
 
 <h2>2. If only this machine needs Ollama: bind it to localhost</h2>
-<p>Remove <code>OLLAMA_HOST</code>, or set it to <code>127.0.0.1:11434</code>:</p>
+<p>Remove <code>OLLAMA_HOST</code>, or set it to <code>127.0.0.1:11434</code>, and turn off "Expose Ollama to the network" in the app's Settings if it's on:</p>
 <ul>
   <li><strong>Linux (systemd):</strong> run <code>sudo systemctl edit ollama.service</code> and delete any <code>Environment="OLLAMA_HOST=0.0.0.0..."</code> line, or under <code>[Service]</code> set:
 <pre>[Service]
@@ -43,7 +43,7 @@ Environment="OLLAMA_HOST=127.0.0.1:11434"</pre>
   <li><strong>macOS (app):</strong> <code>launchctl setenv OLLAMA_HOST "127.0.0.1:11434"</code> (or <code>launchctl unsetenv OLLAMA_HOST</code>), then quit and reopen Ollama.</li>
   <li><strong>Windows:</strong> quit Ollama from the taskbar. Open "Edit environment variables for your account", delete or change <code>OLLAMA_HOST</code>, then start Ollama again from the Start menu.</li>
 </ul>
-<p>If you set <code>OLLAMA_HOST=0.0.0.0</code> only so a Docker container could connect, there are ways that keep Ollama off your network: see <a href="docker-ollama.html">Docker can't reach Ollama</a>.</p>
+<p>If you set <code>OLLAMA_HOST=0.0.0.0</code> only so a Docker container could connect, there are ways that keep Ollama off your network: see <a href="docker-ollama.html">Docker can't reach Ollama</a>. If you set it so a laptop or phone could connect, see <a href="ollama-remote-access.html">Use Ollama from another computer or your phone</a>.</p>
 
 <h2>3. If you run Ollama in Docker</h2>
 <p><code>-p 11434:11434</code> publishes the port on every interface. On Linux, Docker writes its own firewall rules, so <strong>ufw and firewalld don't block it</strong>. Use one of these instead:</p>
@@ -75,7 +75,7 @@ volumes:
         header_up Host localhost:11434
     }
 }</pre>
-<p>The <code>Host</code> line matters. The Ollama FAQ's proxy examples rewrite the Host header to <code>localhost:11434</code>, and requests with other Host values can be refused. A private network such as Tailscale or WireGuard is another option: only your own devices can reach the port, and nothing is published to the internet.</p>
+<p>The <code>Host</code> line matters. The Ollama FAQ's proxy examples rewrite the Host header to <code>localhost:11434</code>, and requests with other Host values can be refused. A private network such as Tailscale or WireGuard is another option: only your own devices can reach the port, and nothing is published to the internet. <a href="ollama-remote-access.html">Use Ollama remotely</a> walks through an SSH tunnel, Tailscale (including why <code>tailscale serve</code> in front of Ollama returns 403) and a LAN-only firewall rule.</p>
 <p><strong>Apps rather than people?</strong> Open WebUI, n8n and OpenAI-style clients send an API key as <code>Authorization: Bearer</code>, which basic auth rejects. <a href="ollama-api-key.html">Ollama API key</a> has Caddy and nginx configs that check a key, and the settings for each of those clients.</p>
 <p><strong>Tunnels:</strong> the FAQ also shows <code>ngrok</code> and <code>cloudflared</code> commands. On their own they publish your Ollama to the whole internet with no login. Only use them with the tunnel provider's access control turned on.</p>
 
