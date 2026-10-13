@@ -1,0 +1,604 @@
+# GTFS Data Repository (https://gtfs-data.jp/) feed list, snapshot 2026-10-13 from https://api.gtfs-data.jp/v2/feeds
+# organization_id|feed_id|organization_name|feed_name|feed_pref_id|feed_license|latest_feed_end_date|feed_is_discontinued
+gan-wu|shiokazeline|岩宇地域公共交通活性化協議会|しおかぜライン|1|CC BY 4.0|2027-09-30|false
+ishikariwanshinko|on-demandtransit_itsumo|石狩湾新港地域公共交通サービス推進協議会|石狩市AIデマンド交通「いつモ」|1|CC0 1.0|2027-03-31|false
+kamishihorotown|kamishihoro|上士幌町|上士幌町コミュニティバス|1|CC BY 4.0|2026-10-31|false
+kamishihorotown|kamishihoro-self-bus|上士幌町|上士幌町自動運転バス|1|CC BY 4.0|2026-10-31|false
+nemurokotsu|nemurobus|根室交通株式会社|根室交通株式会社|1|CC0 1.0|2027-05-25|false
+fukauratown|fukaura-town-communitybus|深浦町|深浦町コミュニティバス|2|CC BY 4.0|2027-03-31|false
+goshogawaracity|goshogawara-communitybus|五所川原市|五所川原市コミュニティバス|2|CC BY 4.0|2027-03-31|false
+hachinohe|hachinohe-citybus|八戸市交通部|八戸市営バス|2|CC BY 4.0|2027-03-31|false
+hachinohecity|hachinohe-nango|八戸市|八戸市南郷コミュニティバス|2|CC BY 4.0|2027-03-31|false
+hashikamitown|hashikamibus|階上町|階上町コミュニティバス|2|CC0 1.0|2027-03-31|false
+hirakawacity|hirakawa-sharedtaxi|平川市|予約型乗り合いタクシー東部・平賀線|2|CC BY 4.0|2026-11-01|false
+hirakawacity|hirakwacitybus|平川市|平川市碇ヶ関・平賀線バス|2|CC BY 4.0|2027-03-31|false
+hiranaitown|hiranaitownbus|平内町|平内町民バス|2|CC BY 4.0|2027-03-31|false
+hirosakicity|kounan-tetsudou|弘前市|弘南鉄道|2|CC BY 4.0|2027-03-31|false
+hirosakicity|hokusei-noriai|弘前市|弘前市乗合タクシー（北星交通）|2|CC BY 4.0|2027-03-31|false
+jr-east-morioka|JReast_wandotaxi|JR東日本盛岡支社|わんタク定時便|2|CC BY 4.0|2026-12-31|false
+jr-east-morioka|JR-east_tsugaruline|JR東日本盛岡支社|JR津軽線代行バス（蟹田駅～三厩体育館）|2|CC BY 4.0|2027-04-30|false
+jr-east-morioka|JR-east_wandotaxi|JR東日本盛岡支社|わんタク定時便（JR津軽線実証実験）|2|CC BY 4.0|2025-04-30|true
+kuroishicity|kuroishi|黒石市|ぷらっと号|2|CC BY 4.0|2027-03-31|false
+misawacity|misawacity-mebus|三沢市|三沢市コミュニティバス「みーばす」|2|CC BY 4.0|2027-03-31|false
+nakadomaritown|nakadomari-communitybus|中泊町|中泊町コミュニティバス|2|CC BY 4.0|2026-12-31|false
+owanitown|owanitown-sunekarabus|大鰐町|大鰐町スネカラバス|2|CC BY 4.0|2026-12-31|false
+rokkashovillage|rokkasho-sharedtaxi|六ヶ所村|六ヶ所村乗合タクシー|2|CC BY 4.0|2026-10-30|false
+shichinohetown|shichinohe_community-bus|七戸町|七戸町コミュニティバス・シャトルバス|2|CC BY 4.0|2028-03-31|false
+shimoko|shimokitakotsu|下北交通株式会社|下北交通|2|CC BY 4.0|2027-03-31|false
+shingovillage|shingo-mizubashogo|新郷村|新郷村営バス|2|CC BY 4.0|2026-12-31|false
+sotogahamatown|sotogahama-townbus|外ヶ浜町|外ヶ浜町営バス|2|CC BY 4.0|2026-12-31|false
+tohokutown|tohoku-town-bus|東北町|東北町町民バス|2|CC0 1.0|2027-03-31|false
+towadacity|towadacity_communitybus|十和田市|十和田市コミュニティバス|2|CC BY 4.0|2026-12-31|false
+towadakankodentetsu|toutetsu|十和田観光電鉄株式会社|十和田観光電鉄（一般路線）|2|CC BY 4.0|2027-03-31|false
+towadakankodentetsu|toutetsu_airport_line|十和田観光電鉄株式会社|十和田観光電鉄（八戸～三沢空港線）|2|CC BY 4.0|2026-10-24|false
+tsugarucity|tsugarucity_localtransportation|つがる市|つがる市地域内交通|2|CC BY 4.0|2026-12-31|false
+tsurutatown|tsuruta-townbus|鶴田町|鶴田町地域巡回バス|2|CC BY 4.0|2027-03-31|false
+yomogitavillage|yomogita-communitybus|蓬田村|蓬田村コミュニティバス|2|CC BY 4.0|2027-03-31|false
+hanamakicity|hanamaki|花巻市|花巻市コミュニティバス|3|CC BY 4.0|2027-03-31|false
+ichinosekicity|Ichinosekibus|一関市|一関市市営バス|3|CC BY 4.0|2027-03-31|false
+oshucity|bus-oshucity-iwate-jp|奥州市|奥州市コミュニティバス|3|CC BY 4.0|2027-03-31|false
+shichigahamatown|Gururinko|七ヶ浜町|七ヶ浜町民バス「ぐるりんこ」|4|CC BY 4.0|2027-03-31|false
+takeyakoutu|takeyakotsu|株式会社タケヤ交通|株式会社タケヤ交通|4|CC BY 4.0|2027-03-31|false
+sembokucity|bus-city-semboku|仙北市|仙北市民バス（たっこちゃんバス・スマイルバス）|5|CC BY 4.0|2027-03-31|false
+ugokotsu|ugokotsu_honjo|羽後交通株式会社|羽後交通（本荘地区）|5|CC BY 4.0|2027-03-31|false
+ugokotsu|ugokotsu_tazawako|羽後交通株式会社|羽後交通（田沢湖地区）|5|CC BY 4.0|2027-03-31|false
+feel-the-zao|feelthezao|「世界の蔵王」プロジェクト実行委員会|zaoproject|6|CC BY 4.0|2025-11-09|true
+higashinecity|HigashineCity|東根市|東根市営バス|6|CC BY 4.0|2027-03-31|false
+kahokutown|KahokuTown|河北町|河北町営バス|6|CC BY 4.0|2026-12-31|false
+kaminoyamacity|KaminoyamaCity|上山市|上山市営バス|6|CC BY 4.0|2027-09-30|false
+mamurogawatown|MamurogawaTown|真室川町|真室川町営バス|6|CC BY 4.0|2027-03-31|false
+mogamigawakotsu|MOGAMIGAWAKOTSU|最上川交通|最上川交通|6|CC BY 4.0|2027-03-31|false
+murayamacity|MurayamaCity|村山市|村山市営バス|6|CC BY 4.0|2027-03-31|false
+nagaicity|NagaiCity|長井市|長井市営バス|6|CC BY 4.0|2027-09-30|false
+nakayamatown|NakayamaTown|中山町|中山町営バス|6|CC BY 4.0|2027-03-31|false
+nanyocity|NanyoCity|南陽市|南陽市営バス|6|CC BY 4.0|2027-09-30|false
+nishikawatown|NishikawaTown|西川町|西川町営バス|6|CC BY 4.0|2027-03-31|false
+obanazawacity|ObanazawaCity|尾花沢市|尾花沢市営バス|6|CC BY 4.0|2027-09-30|false
+oetown|Oetown|大江町|大江町営バス|6|CC BY 4.0|2027-03-31|false
+ohkuravillage|OhkuraVillage|大蔵村|大蔵村営バス|6|CC BY 4.0|2028-01-01|false
+sagaecity|SagaeCity|寒河江市|寒河江市営バス|6|CC BY 4.0|2026-10-31|false
+sakatacity|SakataCity|酒田市|酒田市営バス|6|CC BY 4.0|2027-03-31|false
+sakegawavillage|SakegawaVillage|鮭川村|鮭川村営バス|6|CC BY 4.0|2027-09-30|false
+shinjocity|ShinjoCity|新庄市|新庄市営バス|6|CC BY 4.0|2027-03-31|false
+shiratakatown|ShiratakaTown|白鷹町|白鷹町営バス|6|CC BY 4.0|2027-03-31|false
+shonaikotsu|SHONAIKOTSU|庄内交通|庄内交通|6|CC BY 4.0|2027-03-31|false
+shonaitown|ShonaiTown|庄内町|庄内町営バス|6|CC BY 4.0|2027-03-31|false
+tendocity|TendoCity|天童市|天童市営バス|6|CC BY 4.0|2027-03-31|false
+tozawavillage|tozawavillagebus|戸沢村|戸沢村営バス|6|CC BY 4.0|2027-09-30|false
+tsuruokacity|TsuruokaCity|鶴岡市|鶴岡市営バス|6|CC BY 4.0|2027-09-30|false
+yamagata-asahitown|AsahiTown|朝日町|朝日町営バス|6|CC BY 4.0|2027-03-31|false
+yamagata-kaneyamatown|KaneyamaTown|山形県金山町|金山町営バス|6|CC BY 4.0|2027-03-31|false
+yamagata-ogunitown|OguniTown|山形県小国町|小国町営バス|6|CC BY 4.0|2027-06-30|false
+yamagata-yamagatacity|YamagataCity|山形市|山形市営バス|6|CC BY 4.0|2027-03-31|false
+yamagatatetsudo|flowerliner|山形鉄道株式会社|山形鉄道|6|CC BY 4.0|2027-03-13|false
+yamakobus|YAMAKOBUS|山形交通|山交バス|6|CC BY 4.0|2026-11-24|false
+yamanobetown|YamanobeTown|山辺町|山辺町営バス|6|CC BY 4.0|2027-03-17|false
+yonezawacity|Yonezawa|米沢市|米沢市営バス|6|CC BY 4.0|2026-11-30|false
+motomiyacity|motomiyashibus|本宮市|本宮市コミュニティバス|7|CC BY 4.0|2027-03-31|false
+otamavillage|otamavillage-bus|大玉村|大玉村通勤通学バス|7|CC BY 4.0|2027-03-31|false
+shinjobankotsu|SHINJOBANKOTSU|新常磐交通株式会社|新常磐交通|7|CC BY 4.0|2027-04-30|false
+yanaizutown|yanaizutown-bus|柳津町|柳津町町民バス”ふれあい号”|7|CC BY 4.0|2026-12-28|false
+hitachinakacity|Hitachinaka-smileaozorabus|ひたちなか市|ひたちなか市スマイルあおぞらバス|8|CC BY 4.0|2027-03-31|false
+namegatacity|bus-namegata-ibaraki-jp|行方市|行方市営路線バス|8|CC BY 4.0|2027-02-25|false
+otonekotu|otonekotubus|大利根交通自動車株式会社|大利根交通バス|8|CC BY 4.0|2027-04-08|false
+ryugasakicity|Ryugasakishi-communitybus|龍ケ崎市|龍ケ崎市コミュニティバス|8|CC BY 4.0|2026-12-31|false
+tsuchiuracity|tsuchimarubus|土浦市|つちまるバス|8|CC BY 4.0|2027-03-31|false
+tsukubacity|TSUKUBANEGO|つくば市|つくばね号|8|CC BY 4.0|2027-09-30|false
+tsukubacity|TSUKUBUS|つくば市|つくバス|8|CC BY 4.0|2027-12-31|false
+yukicity|junkaibus|結城市|結城市巡回バス|8|CC0 1.0|2028-07-31|false
+ashikagacity|Ashikaga-route-bus|足利市|足利市路線バス|9|CC BY 4.0|2027-07-31|false
+kanumacity|ri-bus|鹿沼市|リーバス|9|CC BY 4.0|2024-07-31|false
+mibutown|mibubu|壬生町|壬生町コミュニティバス「みぶーぶ」|9|CC BY 4.0|2027-03-31|false
+nasushiobaracity|chiikibasu|那須塩原市|那須塩原市地域バス|9|CC BY 4.0|2027-03-31|false
+nasutown|nasutown|那須町|那須町町民バス|9|CC BY 4.0|2027-03-31|false
+nikkocity|nikkocity|日光市|日光市営バス|9|CC BY 4.0|2027-03-31|false
+otawaracity|Ohtawaracitybus|大田原市|大田原市営バス|9|CC BY 4.0|2027-03-31|false
+tochigi-nakagawatown|nakagawamaticommunitybus|那珂川町|那珂川町コミュニティバス（馬頭烏山線）|9|CC BY 4.0|2026-03-31|false
+yaitacity|chuuou-junkan|矢板市|中央部循環路線|9|CC BY 4.0|2027-03-31|false
+annakacity|annakashi-rosenbus|安中市|安中市路線バス（あんバス）|10|CC BY 4.0|2027-03-31|false
+gunma-otacity|ootacitybus|太田市|太田市営バス|10|CC BY 4.0|2027-06-04|false
+nagai-unyu|Nagaibus|永井運輸株式会社|永井バス|10|CC BY 4.0|2027-09-30|false
+nagai-unyu|tamarin|永井運輸株式会社|（2024年10月1日廃止）玉村町乗合タクシー「たまりん」|10|CC BY 4.0|2024-09-30|true
+oizumitown|kouikikoukyoubasuaozora|大泉町|広域公共バス「あおぞら」|10|CC BY 4.0|2027-03-31|false
+hannocity|odekakemuma-minamikoma|飯能市|飯能市乗合ワゴン　南高麗|11|CC0 1.0|2026-12-31|false
+hannocity|odekakemuma-seimei-kaji|飯能市|飯能市乗合ワゴン　精明・加治|11|CC0 1.0|2027-03-31|false
+hannocity|odekakemuma-haraichiba|飯能市|飯能市乗合ワゴン　原市場|11|CC0 1.0|2026-12-31|false
+kumagayacity|yuuyuubus|熊谷市|熊谷市ゆうゆうバス|11|CC BY 4.0|2027-12-31|false
+saitamacity|rakurakugou|さいたま市|岩槻区並木・加倉地区乗合タクシーらくらく号|11|CC BY 4.0|2027-03-31|false
+saitamacity|iwatsukikucommunitybus|さいたま市|岩槻区コミュニティバス|11|CC BY 4.0|2027-03-31|false
+saitamacity|ajisaigou|さいたま市|西区指扇地区乗合タクシーあじさい号|11|CC BY 4.0|2027-03-31|false
+saitamacity|kawasemigou|さいたま市|見沼区片柳西地区乗合タクシーカワセミ号|11|CC BY 4.0|2027-03-31|false
+saitamacity|nisikucommunitybus|さいたま市|西区コミュニティバス|11|CC BY 4.0|2027-03-31|false
+saitamacity|miyaharanakayoshigou|さいたま市|北区吉野町乗合タクシー宮原なかよし号|11|CC BY 4.0|2027-03-31|false
+saitamacity|musashigou|さいたま市|桜区大久保・中央区西与野地区乗合タクシーむさし号|11|CC BY 4.0|2027-03-31|false
+saitamacity|minamikucommunitybus|さいたま市|南区コミュニティバス|11|CC BY 4.0|2027-03-31|false
+saitamacity|orizurugou|さいたま市|岩槻区河合地区乗合タクシーおりづる号|11|CC BY 4.0|2027-03-31|false
+saitamacity|sakurakucommunitybus|さいたま市|桜区コミュニティバス|11|CC BY 4.0|2027-03-31|false
+saitamacity|minumakucommunitybus|さいたま市|見沼区コミュニティバス|11|CC BY 4.0|2027-03-31|false
+saitamacity|minumagou|さいたま市|見沼区大砂土東地区乗合タクシーみぬま号|11|CC BY 4.0|2027-03-31|false
+saitamacity|kitakucommunitybus|さいたま市|北区コミュニティバス|11|CC BY 4.0|2027-03-31|false
+wakocity|Wako-City-junkanbus|和光市|和光市内循環バス（わこば）|11|CC BY 4.0|2026-12-31|false
+chiba-rainbow-bus|chibarainbowbus|ちばレインボーバス株式会社|ちばレインボーバス|12|CC BY 4.0|2025-09-30|false
+inzaicity|rosenbus|印西市|宗像路線、六合路線|12|CC BY 4.0|2028-03-31|false
+katoricity|katori-junkan|香取市|香取市循環バス|12|CC0 1.0|2027-04-30|false
+keisei-transitbus|keiseitransitbus|京成バス千葉ウエスト株式会社|京成バス千葉ウエスト　塩浜営業所（市川市コミュニティバス　南部ルート　わくわくバス含む）|12|CC BY 4.0|2027-04-01|false
+kimitsucity|Kimitsu_City_Community_Bus|君津市|君津市コミュニティバス|12|CC0 1.0|2027-03-31|false
+kimitsucity|Local_buses_via_Kimitsu_City|君津市|君津市経由路線バス|12|CC0 1.0|2027-03-31|false
+matsudocity|matsudo|松戸市|松戸市ゆめいろバス|12|CC BY 4.0|2027-03-31|false
+matsudocity|matsudo-takatsuka|松戸市|松戸市ゆめいろワゴンバス|12|CC BY 4.0|2027-03-31|false
+nagareyamacity|nagareyamagreenbus|流山市|流山ぐりーんバス|12|CC BY 4.0|2027-01-10|false
+naritacity|narita-community-bus|成田市|成田市コミュニティバス|12|CC BY 4.0|2026-12-30|false
+yotsukaidocity|yoppii|四街道市|市内循環バス「ヨッピィ」|12|CC0 1.0|2027-03-31|false
+akishimacity|Abus|昭島市|Aバス|13|CC0 1.0|2027-08-27|false
+arakawacity|sakura|荒川区|コミュニティバスさくら|13|CC BY 4.0|2027-02-28|false
+katsushikacity|sakura|葛飾区|さくら|13|CC BY 4.0|2026-12-31|false
+kozushimavillage|kozushimavillagebus|神津島村|神津島村営バス|13|CC BY 4.0|2027-01-28|false
+kunitachicity|kunikko|国立市|国立市コミュニティバス「くにっこ」|13|CC0 1.0|2027-08-31|false
+kunitachicity|aoyagikko|国立市|国立市コミュニティワゴン「あおやぎっこ」|13|CC BY 4.0|2027-01-12|false
+mizuhotown|communitybus|瑞穂町|瑞穂町コミュニティバス|13|CC BY 4.0|2027-03-31|false
+mizuhotown|DemandResponsiveTransport|瑞穂町|瑞穂町デマンド交通「チョイソコみずほまち」|13|CC BY 4.0|2027-03-31|false
+ogasawaravillage|o|小笠原村|小笠原村営バス|13|CC BY 4.0|2027-02-10|false
+tachikawacity|kururinbus|立川市|くるりんバス|13|CC BY 4.0|2027-03-31|false
+chigasakicity|eboshigou|茅ヶ崎市|コミュニティバスえぼし号|14|CC BY 4.0|2027-03-31|false
+daishinto|Radiant-City|大新東株式会社|レイディアントシティ横濱|14|CC0 1.0|2027-02-28|false
+ninomiyatown|Ninomiyatowncommunitybus|二宮町|二宮町コミュニティバス|14|CC BY 4.0|2026-12-31|false
+samukawatown|mokusei-go_kuramiomuraroute|寒川町|寒川町コミュニティバス「もくせい号」倉見大村ルート|14|CC BY 4.0|2026-12-31|false
+samukawatown|mokusei-go_southroute|寒川町|寒川町コミュニティバス「もくせい号」南ルート|14|CC BY 4.0|2026-12-31|false
+samukawatown|mokusei-go_eastroute|寒川町|寒川町コミュニティバス「もくせい号」東ルート|14|CC BY 4.0|2026-12-31|false
+yokosukacity|hamachanbus|横須賀市|ハマちゃんバス|14|CC BY 4.0|2028-03-31|false
+itoigawabus|itoigawabus|糸魚川バス株式会社|糸魚川バス|15|CC BY 4.0|2027-03-31|false
+joetsucity|kushiike-line|上越市|【清里区】櫛池線|15|CC BY 2.1 JP|2025-03-31|true
+joetsucity|higashihiyama-line|上越市|【名立区】東飛山線|15|CC BY 2.1 JP|2025-03-31|true
+joetsucity|utsunomata-line|上越市|【牧区】宇津俣線|15|CC BY 2.1 JP|2025-03-31|true
+joetsucity|joetsu|上越市|上越市市営バス|15|CC BY 2.1 JP|2027-03-31|false
+joetsucity|asahi-line|上越市|【大島区】旭線|15|CC BY 2.1 JP|2025-03-31|true
+joetsucity|shobu-line|上越市|【大島区】菖蒲線|15|CC BY 2.1 JP|2025-03-31|true
+joetsucity|kamisekida-line|上越市|【板倉区】上関田線|15|CC BY 2.1 JP|2025-03-31|true
+joetsucity|tuboyma-line|上越市|【牧区】坪山線|15|CC BY 2.1 JP|2025-03-31|true
+joetsucity|yamaderayakushi-komodate-line|上越市|【板倉区】山寺薬師・菰立線|15|CC BY 2.1 JP|2025-03-31|true
+joetsucity|takatani-tairayama-line|上越市|【牧区】高谷・平山線|15|CC BY 2.1 JP|2025-03-31|true
+joetsucity|oike-line|上越市|【頸城区】大池線|15|CC BY 2.1 JP|2025-03-31|true
+kamocity|kamonbus|加茂市|加茂市営バス かもんバス|15|CC BY 4.0|2027-05-31|false
+murakamicity|murakamisicommunitybus|村上市|村上市コミュニティバス|15|CC BY 4.0|2027-07-29|false
+sanjocity|guruttosan|三条市|三条市循環バスぐるっとさん|15|CC BY 2.1 JP|2026-03-31|false
+tsubamecity|tsubame_bus|燕市|燕市コミュニティバス|15|CC BY 4.0|2027-10-05|false
+chitetsu|chitetsushinaidensha|富山地方鉄道|富山地方鉄道市内電車|16|CC0 1.0|2027-03-13|false
+chitetsu|chitetsubus|富山地方鉄道|富山地方鉄道バス|16|CC0 1.0|2027-09-30|false
+imizucity|imizushi|射水市|きときとバス|16|CC0 1.0|2027-03-31|false
+kaetsunou|kaetsunousekaiisan|加越能バス|加越能バス（世界遺産バス）|16|CC0 1.0|2027-03-31|false
+kaetsunou|kaetsunouhimi|加越能バス|加越能バス（氷見市街地周遊バス）|16|CC0 1.0|2027-03-31|false
+kaetsunou|kaetsunouippan|加越能バス|加越能バス（一般路線）|16|CC0 1.0|2027-03-31|false
+kamiichitown|kamiichi|上市町|上市町営バス|16|CC0 1.0|2027-03-31|false
+kurobecity|shinkansenikuji-ishida-aimoto-minibus|黒部市|新幹線生地、石田三日市、愛本、電動ミニバス|16|CC0 1.0|2027-03-31|false
+kurobecity|shinkansenikujisen|黒部市|新幹線生地線|16|CC0 1.0|2026-03-31|true
+kurobecity|ishida-aimoto|黒部市|石田・愛本|16|CC0 1.0|2026-09-30|true
+manyosen|manyosen|万葉線|万葉線|16|CC0 1.0|2027-08-31|false
+namerikawacity|norumycar|滑川市|コミュニティバス「のるmycar」|16|CC0 1.0|2027-09-30|false
+nantocity|nanbus|南砺市|南砺市営バス|16|CC0 1.0|2027-03-31|false
+nishinihonjrbus|meikinsen|西日本ジェイアールバス|名金線（金沢～福光）（2022年6月30日廃止）|16|CC0 1.0|2022-06-30|true
+nyuzentown|noranmaicar|入善町|のらんマイ・カー|16|CC0 1.0|2027-03-31|false
+oyabecity|oyabecitybus|小矢部市|小矢部市営バス|16|CC0 1.0|2027-03-31|false
+takaokacity|koueibus|高岡市|高岡市公営バス|16|CC0 1.0|2027-03-31|false
+tateyamatown|tateyama|立山町|立山町営バス|16|CC0 1.0|2027-03-31|false
+tonamicity|tonamishieibasu|砺波市|砺波市営バス|16|CC0 1.0|2027-03-31|false
+toyama-asahitown|asahimachibus|富山県朝日町|あさひまちバス|16|CC0 1.0|2027-03-31|false
+toyamacity|jojocommunitybus|富山市|上条コミバス（2025/10/1  デマンド運行に移行）|16|CC0 1.0|2025-10-31|true
+toyamacity|yamadacommunitybus|富山市|山田コミュニティバス|16|CC0 1.0|2027-03-31|false
+toyamacity|fuchucommunitybus|富山市|婦中コミュニティバス|16|CC0 1.0|2027-03-31|false
+toyamacity|oyamacommunitybus|富山市|大山コミュニティバス|16|CC0 1.0|2027-03-31|false
+toyamacity|maidohayabus|富山市|まいどはやバス|16|CC0 1.0|2027-03-31|false
+toyamacity|horikawaminamicommunitybus|富山市|堀川南地域コミュニティバス|16|CC0 1.0|2027-03-31|false
+toyamacity|yatsuocommunitybus|富山市|八尾コミュニティバス|16|CC0 1.0|2027-03-31|false
+toyamacity|mizuhashifureaicommunitybus|富山市|水橋ふれあいコミュニティバス（2025/10/1 デマンド運行に移行）|16|CC0 1.0|2025-10-31|true
+toyamacity|kurehaikiikibus|富山市|呉羽いきいきバス|16|CC0 1.0|2027-03-31|false
+uozucity|junkai|魚津市|魚津市民バス|16|CC0 1.0|2027-03-31|false
+uozucity|omotenashi|魚津市|おもてなし魚津直行便|16|CC0 1.0|2026-03-16|false
+hakusancity|hakusan_bus_meguru|白山市|白山市コミュニティバス「めぐーる」|17|CC BY 4.0|2027-03-15|false
+komatsucity|kibagatasen|小松市|木場潟線|17|CC0 1.0|2027-09-30|false
+komatsucity|blue|小松市|市内循環線北コース|17|CC0 1.0|2027-03-31|false
+komatsucity|orange|小松市|市内循環線南コース|17|CC0 1.0|2027-03-31|false
+nonoichicity|communitybus|野々市市|コミュニティバス|17|CC BY 4.0|2027-03-31|false
+uchinadatown|communitybus|内灘町|コミュニティバス|17|CC BY 4.0|2026-12-31|false
+ichikawamisatotown|ichikawamisatobus|市川三郷町|市川三郷町コミュニティバス|19|CC BY 4.0|2027-03-31|false
+kaicity|kaicitybus|甲斐市|甲斐市民バス|19|CC0 1.0|2027-03-31|false
+kiyosato|kiyosato-picnicbus|NPO法人清里観光振興会|清里ピクニックバス|19|CC0 1.0|2026-03-31|false
+kosugevillage|kosugesoneibus|小菅村|小菅村営バス|19|CC0 1.0|2027-03-31|false
+minobutown|iitomimotosukosen|身延町|飯富本栖湖線|19|CC0 1.0|2026-03-31|false
+minobutown|furusekizyunkansen|身延町|古関循環線|19|CC0 1.0|2026-03-31|false
+minobutown|furusekikaiiwamasen|身延町|古関甲斐岩間線|19|CC0 1.0|2026-03-31|false
+nirasakicity|shiminbus|韮崎市|韮崎市民バス|19|CC0 1.0|2026-03-31|false
+yamanashi-hokutocity|hokuto-bus|北杜市|北杜市民バス|19|CC BY 4.0|2027-03-31|false
+yamanashi-nanbutown|nanbucyoueibasu|南部町|南部町営バス|19|CC BY 4.0|2027-03-31|false
+agematsutown|agematu|上松町|上松町公共交通|20|CC0 1.0|2027-09-30|false
+aokivillage|aokisoneibus|青木村|青木村営バス|20|CC BY 4.0|2027-09-30|false
+chikuma-bus|rosenbus|千曲バス株式会社|路線バス|20|CC BY 4.0|2027-09-30|false
+chikumacity|chikumajunkanbus|千曲市|千曲市循環バス|20|CC BY 4.0|2027-03-31|false
+iijimatown|iichanbus|飯島町|いいちゃんバス|20|CC BY 4.0|2025-12-09|false
+iiyamacity|nanohanabus|飯山市|菜の花バス市街地循環線|20|CC BY 4.0|2027-03-31|false
+karuizawatown|junkan-bus|軽井沢町|軽井沢町町内循環バス|20|CC BY 4.0|2027-03-31|false
+kisokoikirengo|kiso-bus|木曽広域連合|きそバス|20|CC BY 2.1 JP|2027-09-30|false
+kisotown|kisotown|木曽町|木曽町公共交通|20|CC BY 2.1 JP|2027-09-30|false
+kisovillage|kisovill|木祖村|木祖村公共交通|20|CC BY 2.1 JP|2027-09-30|false
+kitaaikivillage|soneibus|北相木村|北相木村村営バス|20|CC BY 4.0|2024-03-31|false
+kusakarukotsu|kusakarubus|草軽交通株式会社|軽井沢草津長野原草津口バス|20|CC BY 4.0|2027-10-31|false
+matsumotocity|guruttomatsumotobus2|松本市|地域連携バス|20|CC BY 4.0|2028-03-31|false
+matsumotocity|guruttomatsumotobus1|松本市|松本駅・バスターミナル発着バス|20|CC BY 4.0|2028-03-31|false
+minamishinshu|Minamishinshu-Iidacity-1|南信州地域交通問題協議会（南信州広域連合）|【飯田市】L1市民バス循環線/C2市民バス久堅線/C3市民バス千代線/C4市民バス三穂線/C5市民バス大休線/E2平岡線|20|CC BY 4.0|2027-03-31|false
+minamishinshu|Minamishinshu-toyooka-1|南信州地域交通問題協議会（南信州広域連合）|【豊丘村】T3豊丘村村営バス堀越線/T4豊丘村村営バス佐原線/T5豊丘村村営バス福島線/T6豊丘村村営バス壬生沢福島線/T7豊丘村村営バス壬生沢線/T2豊丘村村営バス滝川阿島北県道線|20|CC BY 4.0|2027-03-31|false
+minamishinshu|Minamishinshu-seibu-1|南信州地域交通問題協議会（南信州広域連合）|【阿智村・根羽村・平谷村】W1　西部コミュニティバス|20|CC BY 4.0|2027-04-02|false
+minamishinshu|Minamishinshu-iidacity-3|南信州地域交通問題協議会（南信州広域連合）|【飯田市】飯田☆中津川線|20|CC BY 4.0|2027-03-31|false
+minamishinshu|Minamishinshu-achi-1|南信州地域交通問題協議会（南信州広域連合）|【阿智村】W2巡回バス伍和線/W3巡回バス春日・智里線/W4巡回バス浪合線/W5巡回バス清内路線/W6巡回バス智里東線|20|CC BY 4.0|2027-03-31|false
+minamishinshu|Minamishinshu-Matsukawa-1|南信州地域交通問題協議会（南信州広域連合）|【松川町】M3まつかわフルーツバス部奈線/M6 まつかわフルーツバス 上片桐・大島通学便/M7 まつかわフルーツバス 生田線|20|CC BY 4.0|2027-03-31|false
+minamishinshu|Minamishinshu-Nanbu-1|南信州地域交通問題協議会（南信州広域連合）|S0南部公共バス阿南線/S1南部公共バス温田線|20|CC BY 4.0|2027-03-31|false
+minamishinshu|Minamishinshu-takamori-1|南信州地域交通問題協議会（南信州広域連合）|【高森町】K1 柿丸あったかバス山吹エリア/K2柿丸あったかバス市田エリア/K3おはようバス山吹回り/K4おはようバス市田回り|20|CC BY 4.0|2027-03-31|false
+minamishinshu|Minamishinshu-iida-2|南信州地域交通問題協議会（南信州広域連合）|電気小型バス「プッチー」（飯田市内）|20|CC BY 4.0|2027-03-31|false
+minamishinshu|Minamishinshu-Shinnan-1|南信州地域交通問題協議会（南信州広域連合）|【信南交通㈱】W0駒場線/E0 阿島線/E1遠山郷線|20|CC BY 4.0|2027-03-31|false
+minamishinshu|Minamishinshu-takagi-1|南信州地域交通問題協議会（南信州広域連合）|【喬木村】E3喬木大島線せせらぎ/E4氏乗線そよかぜ/E5 たかぎコミュニティバス阿島線/E6 たかぎコミュニティバス伊久間線/E7たかぎコミュニティバス厚生病院線/E8上平線/E9富田線|20|CC BY 4.0|2026-12-15|false
+nagadenbus|nagadenbus-iizuna|長電バス株式会社|長電バス飯綱営業所管内|20|CC BY 4.0|2027-04-14|false
+nagadenbus|nagadenbus-exp|長電バス株式会社|長電バス急行|20|CC BY 4.0|2026-12-04|false
+nagadenbus|nagadenbus-nakano|長電バス株式会社|長電バス中野３路線|20|CC BY 4.0|2027-04-14|false
+nagadenbus|nagadenbus-nagano|長電バス株式会社|長電バス長野営業所管内|20|CC BY 4.0|2027-03-29|false
+nagadenbus|obuse-romango|長電バス株式会社|おぶせロマン号|20|CC BY 4.0|2026-11-23|false
+nagano-ikedatown|IkedaTownBus|池田町|池田町営バス|20|CC BY 4.0|2027-03-17|false
+nagano-kawakamivillage|kawakamibus|川上村|川上村営バス|20|CC BY 4.0|2027-03-31|false
+nagano-nakanocity|fureaibus|中野市|中野市ふれあいバス|20|CC0 1.0|2025-01-11|false
+naganocity|shiei_noriaibus|長野市|長野市営バス・循環バス（RT対応）|20|CC BY 4.0|2027-03-31|false
+naganocity|noriai|長野市|乗合タクシー（RT非対応）|20|CC BY 4.0|2027-03-31|false
+nagisotown|communitybus|南木曽町|南木曽町地域バス|20|CC BY 4.0|2027-03-31|false
+okayacity|silkybus|岡谷市|シルキーバス|20|CC BY 4.0|2026-03-31|false
+okuwavillage|kuwachan-bus|大桑村|くわちゃんバス|20|CC0 1.0|2027-09-30|false
+omachicity|omachiraicholiner|大町市|特急バス「雷鳥ライナー」|20|CC BY 4.0|2026-11-30|false
+omachicity|omachisiminbus|大町市|大町市民バス|20|CC BY 4.0|2027-03-31|false
+otakivillage|otaki-village|王滝村|王滝村|20|CC0 1.0|2027-03-31|false
+shinanotown|rosenbus|信濃町|信濃町路線バス|20|CC0 1.0|2024-03-31|false
+shiojiricity|suteppukunn|塩尻市|塩尻市地域振興バス「すてっぷくん」|20|CC BY 4.0|2028-04-01|false
+suwacity|karinchanbas|諏訪市|かりんちゃんバス|20|CC BY 4.0|2027-03-31|false
+suzakicity|suzakashiminbus|須坂市|すざか市民バス|20|CC BY 2.1 JP|2027-04-30|false
+tateshinatown|tateshinasmile|立科町|たてしなスマイル交通|20|CC BY 4.0|2026-03-31|false
+toshinkanko-bus|rosenbus|東信観光バス株式会社|路線バス|20|CC0 1.0|2027-03-31|false
+uedabus|noriai_bus|上田バス株式会社|路線バス|20|CC BY 4.0|2027-09-30|false
+uedacity|uedashigaitizyunkanbus|上田市|上田市街地循環バス・オレンジバス|20|CC BY 4.0|2027-03-31|false
+aketetsu|akechirailway|明知鉄道|明知鉄道|21|CC BY 4.0|2027-03-31|false
+enacity|communitybus|恵那市|恵那市自主運行バス（コミュニティバス）|21|CC BY 4.0|2027-03-31|false
+gerocity|gerobus|下呂市|下呂市　げろバス|21|CC BY 4.0|2027-03-31|false
+gifu-yamagatacity|communitybus|山県市|山県市自主運行バス|21|CC BY 4.0|2027-03-31|false
+gifucity|communitybus|岐阜市|岐阜市コミュニティバス|21|CC BY 4.0|2027-08-31|false
+gujocity|citybus|郡上市|郡上市自主運行バス|21|CC BY 4.0|2027-03-31|false
+hachikanbus|hachimanbus|八幡観光バス|八幡バス|21|CC BY 4.0|2027-03-31|false
+hashimacity|HashimaCityCommunityBus|羽島市|羽島市コミュニティバス|21|CC BY 4.0|2027-03-31|false
+hichisotown|choeibus|七宗町|七宗町営バス|21|CC BY 4.0|2027-03-31|false
+hidacity|communitybus|飛騨市|飛騨市営バス「ひだまる」|21|CC BY 4.0|2027-09-30|false
+ibigawatown|communitybus|揖斐川町|揖斐川町ふれあいバス|21|CC BY 4.0|2027-09-30|false
+kaizucity|communitybus|海津市|海津市コミュニティバス|21|CC BY 4.0|2027-03-31|false
+kanicity|satsukibus|可児市|さつきバス|21|CC BY 4.0|2027-03-31|false
+kasamatsutown|communitybus|笠松町|笠松町公共施設巡回町民バス|21|CC BY 4.0|2027-09-30|false
+kitaena|kitaena|北恵那交通|北恵那交通|21|CC BY 4.0|2027-10-08|false
+minokamocity|communitybus|美濃加茂市|美濃加茂市コミュニティバス「あい愛バス」|21|CC BY 4.0|2027-09-30|false
+mitaketown|communitybus|御嵩町|御嵩町コミュニティバス「ふれあいバス」|21|CC BY 4.0|2027-10-01|false
+mizunamicity|communitybus|瑞浪市|瑞浪市コミュニティバス|21|CC BY 4.0|2027-03-31|false
+motosucity|shieibus|本巣市|本巣市営バス|21|CC BY 4.0|2027-06-30|false
+nakatsugawacity|communitybus|中津川市|中津川市コミュニティバス|21|CC BY 4.0|2027-09-30|false
+nouhibus|nouhibus_kanko|濃飛乗合自動車（濃飛バス）|濃飛バス（観光路線）|21|CC BY 4.0|2027-03-31|false
+nouhibus|nouhibus|濃飛乗合自動車（濃飛バス）|濃飛バス（一般路線）|21|CC BY 4.0|2027-03-31|false
+nouhibus|takayama_shuyu|濃飛乗合自動車（濃飛バス）|飛騨高山周遊バス|21|CC BY 4.0|2027-03-31|false
+ogakicity|meihankintetsubus|大垣市|名阪近鉄バス|21|CC BY 4.0|2027-03-31|false
+sekicity|itadorifureaibus|関市|板取ふれあいバス|21|CC BY 4.0|2027-03-31|false
+shirotori-kotsu|shirotorikotsu|白鳥交通|白鳥交通|21|CC BY 4.0|2027-03-31|false
+tajimicity|kikyobus|多治見市|ききょうバス|21|CC BY 4.0|2027-09-30|false
+takayamacity|noramaicar|高山市|のらマイカー|21|CC BY 4.0|2027-03-31|false
+takayamacity|takanego|高山市|たかね号|21|CC BY 4.0|2027-03-31|false
+tohtetsu|tohtetsu_ena|東濃鉄道|東濃鉄道（東鉄バス）恵那営業所管内|21|CC BY 4.0|2027-09-04|false
+tohtetsu|tohtetsu_tajimi|東濃鉄道|東濃鉄道（東鉄バス）多治見営業所管内|21|CC BY 4.0|2027-03-31|false
+tohtetsu|tohtetsu_kani|東濃鉄道|東濃鉄道（東鉄バス）可児営業所管内|21|CC BY 4.0|2027-03-31|false
+tokicity|communitybus|土岐市|土岐市民バス|21|CC BY 4.0|2026-12-31|false
+yaotsutown|communitybus|八百津町|八百津町コミュニティバス|21|CC BY 4.0|2027-03-31|false
+yaotsutown|yaobus|八百津町|YAOバス|21|CC BY 4.0|2027-07-21|false
+fujiedacity|gtfsfjed|藤枝市|藤枝市自主運行バス（駅南循環+アクセスバス）|22|CC BY 4.0|2027-03-27|false
+hamabus|iwata_seikatsubus|浜松バス株式会社|磐田市生活バス路線|22|CC BY 4.0|2026-12-31|true
+kakegawacity|kakegawa6|掛川市|桜木、居尻、倉真、東山、粟本線、市街地循環線南回り、市街地循環線北回り|22|CC-BY|2027-10-18|false
+kakegawacity|kakegawaosuka|掛川市|掛川大須賀線|22|CC-BY|2027-03-31|false
+shimadacity|shimada_combus|島田市|島田市コミュニティバス|22|CC BY 4.0|2027-03-31|false
+shizuokacity|ikawa|静岡市|葵区井川地区：井川地区自主運行バス|22|CC BY 4.0|2027-06-30|false
+shizuokacity|iryo-fukushi|静岡市|葵区中心市街地：医療・福祉施設路線|22|CC BY 4.0|2026-09-30|true
+shizuokacity|ryougouchi|静岡市|清水区両河内地区：両河内線但沼系統、大平系統、板井沢系統（ココバス）|22|CC BY 4.0|2027-06-30|false
+shizuokacity|sunpu-roman|静岡市|葵区中心市街地：駿府浪漫バス|22|CC BY 4.0|2025-09-30|true
+shizuokacity|ojima|静岡市|清水区小島地区：両河内線宍原系統|22|CC BY 4.0|2026-06-30|true
+shizuokacity|yui|静岡市|清水区由比地区：ゆいばす|22|CC BY 4.0|2027-06-30|false
+shizuokacity|yui-kanbara|静岡市|清水区由比・蒲原地区：由比・蒲原病院線|22|CC BY 4.0|2027-06-30|false
+aichi-miyoshicity|sansanbus|みよし市|みよし市さんさんバス|23|CC0 1.0|2027-03-31|false
+amacity|amashijunkaibasu|あま市|あま市巡回バス|23|CC BY 4.0|2027-03-31|false
+anjocity|AnkuruBus|安城市|あんくるバス|23|CC BY 4.0|2027-05-31|false
+aoi-komaki|aoikotsu|あおい交通|あおい交通|23|CC BY 4.0|2027-03-31|false
+chiryucity|communitybus|知立市|知立市「ミニバス」（コミュニティバス）|23|CC BY 2.1 JP|2026-12-31|false
+chitabus|chitabus|知多乗合（知多バス）|知多バス|23|CC BY 4.0|2027-09-30|false
+chitacity|chita-aiaibus|知多市|知多市コミュニティバス「あいあいバス」|23|CC BY 4.0|2027-03-31|false
+gamagoricity|communitybus|蒲郡市|蒲郡市コミュニティバス|23|CC BY 4.0|2027-08-31|false
+hekinancity|kurukuru-bus|碧南市|くるくるバス|23|CC BY 4.0|2027-09-30|false
+higashiuratown|communitybus|東浦町|東浦町運行バス　う・ら・ら|23|CC BY 4.0|2027-03-31|false
+kariyacity|communitybus|刈谷市|刈谷市コミュニティバス「かりまる」|23|CC BY 4.0|2027-06-15|false
+kasugaicity|kasugaicitybus|春日井市|かすがいシティバス|23|CC0 1.0|2027-09-30|false
+kitanagoyacity|communitybus|北名古屋市|北名古屋市　市内循環バス「きたバス」|23|CC BY 4.0|2027-03-31|false
+kitashitara|odekakehokusetsu|北設楽郡公共交通活性化協議会|おでかけ北設（設楽町・東栄町・豊根村）|23|CC BY 4.0|2027-10-31|false
+meikaijo|ship|名鉄海上観光船株式会社|高速船|23|CC BY 4.0|2027-03-31|false
+minamichitatown|communitybus|南知多町|南知多町海っ子バス|23|CC BY 4.0|2027-09-30|false
+nagakutecity|communitybus|長久手市|長久手市N-バス|23|CC BY 4.0|2027-03-31|false
+nishiocity|meitestu_tobu|西尾市|名鉄東部交通バス|23|CC0 1.0|2027-09-30|false
+nishiocity|tosen|西尾市|佐久島渡船|23|CC0 1.0|2027-09-30|false
+nishiocity|rokumangokukururinbus|西尾市|六万石くるりんバス|23|CC0 1.0|2027-03-31|false
+nisshincity|communitybus|日進市|くるりんばす（日進市巡回バス）|23|CC BY 4.0|2027-01-10|false
+oguchitown|communitybus|大口町|大口町コミュニティバス|23|CC BY 4.0|2027-05-31|false
+owariasahicity|communitybus|尾張旭市|尾張旭市あさぴー号|23|CC BY 4.0|2026-11-30|false
+setocity|setocitybus|瀬戸市|瀬戸市コミュニティバス|23|CC BY 4.0|2027-03-31|false
+shinshirocity|sbus|新城市|新城市Ｓバス|23|CC BY 4.0|2027-03-31|false
+taketoyotown|communitybus|武豊町|武豊町コミュニティバス「ゆめころん」|23|CC BY 4.0|2027-03-31|false
+tokaicity|tokai-ranranbus|東海市|東海市らんらんバス|23|CC BY 4.0|2027-03-31|false
+tokonamecity|Gruun|常滑市|コミュニティバスグルーン|23|CC0 1.0|2026-12-31|false
+toyoakecity|himawaribus|豊明市|豊明市ひまわりバス|23|CC0 1.0|2027-03-31|false
+toyotacity|chiikibus|豊田市|豊田市　地域バス|23|CC BY 4.0|2027-03-31|false
+toyotacity|kikanbus|豊田市|とよたおいでんバス|23|CC BY 4.0|2027-03-31|false
+toyoyamatown|communitybus|豊山町|とよやまタウンバス|23|CC BY 4.0|2027-03-31|false
+busnet-tsu|guruttotsubus|バスネット津|ぐるっと・つーバス|24|CC BY 4.0|2027-01-05|false
+igacity|communitybus|伊賀市|伊賀市行政バス・コミュニティバス|24|CC BY 4.0|2027-03-31|false
+inabecity|fukushibus|いなべ市|いなべ市福祉バス|24|CC BY 4.0|2027-03-31|false
+isecity|numakibus|伊勢市|伊勢市沼木地区自主運行バス「沼木バス」|24|CC BY 4.0|2027-01-10|false
+isetetu|iserailway|伊勢鉄道|伊勢鉄道|24|CC BY 4.0|2027-03-31|false
+kameyamacity|communitybus|亀山市|亀山市コミュニティバス|24|CC BY 4.0|2027-01-31|false
+kawagoetown|fureaibus|川越町|川越町ふれあいバス|24|CC BY 4.0|2027-03-31|false
+kihotown|chominbus|紀宝町|紀宝町民バス|24|CC BY 4.0|2027-01-31|false
+kisosakitown|communitybus|木曽岬町|木曽岬町自主運行バス|24|CC BY 4.0|2027-03-31|false
+komonotown|communitybus|菰野町|菰野町「かもしか号」|24|CC BY 4.0|2026-11-30|false
+kumanocity|shuyubus|熊野市|熊野市市街地周遊バス|24|CC BY 4.0|2027-01-31|false
+kumanocity|communitybus|熊野市|熊野市バス、御浜町自主運行バス|24|CC BY 4.0|2027-09-30|false
+kuwanacity|communitybus|桑名市|桑名市コミュニティバス「Ｋ－バス」|24|CC BY 4.0|2027-06-30|false
+matsusakacity|communitybus|松阪市|松阪市コミュニティ交通|24|CC BY 4.0|2027-03-31|false
+mie-kotsu|sancoinanki|三重交通|南紀営業所|24|CC BY 4.0|2027-01-14|false
+mie-kotsu|sancochusei|三重交通|中勢営業所|24|CC BY 4.0|2027-01-14|false
+mie-kotsu|sancoiga|三重交通|伊賀営業所|24|CC BY 4.0|2027-01-14|false
+mie-kotsu|sancoshima|三重交通|志摩営業所|24|CC BY 4.0|2027-01-14|false
+mie-kotsu|sancomatsusaka|三重交通|松阪営業所|24|CC BY 4.0|2027-01-14|false
+mie-kotsu|sancoyokkaichi|三重交通|四日市営業所|24|CC BY 4.0|2027-01-14|false
+mie-kotsu|sancokuwana|三重交通|桑名営業所|24|CC BY 4.0|2027-01-18|false
+mie-kotsu|sancoise|三重交通|伊勢営業所|24|CC BY 4.0|2027-01-14|false
+mie-meiwatown|chominbus|明和町|明和町町民バス|24|CC BY 4.0|2027-03-31|false
+minamiisetown|choeibus|南伊勢町|南伊勢町営バス|24|CC BY 4.0|2027-09-30|false
+nabaricity|communitybus|名張市|名張市コミュニティバス|24|CC BY 4.0|2027-03-31|false
+odaitown|choeibus|大台町|大台町営バス|24|CC BY 4.0|2027-09-30|false
+owasecity|fureaibus|尾鷲市|尾鷲市ふれあいバス|24|CC BY 4.0|2027-01-31|false
+seikatsubus-yokkaichi|sbusyokkaichi|生活バス四日市|生活バスよっかいち|24|CC BY 4.0|2027-09-30|false
+shimacity|anori|志摩市|安乗線代替バス|24|CC BY 4.0|2027-03-28|false
+shimacity|agowanteikisen|志摩市|あご湾定期船|24|CC BY 4.0|2027-09-30|false
+suzukacity|communitybus|鈴鹿市|鈴鹿市コミュニティバスC-BUS|24|CC BY 4.0|2027-03-31|false
+takitown|choeibus|多気町|多気町営バス|24|CC BY 4.0|2027-01-31|false
+tobacity|communitybus|鳥羽市|鳥羽市　かもめバス|24|CC BY 4.0|2027-03-31|false
+tobacity|teikisen|鳥羽市|鳥羽市営定期船|24|CC BY 4.0|2028-01-31|false
+tointown|communitybus|東員町|東員町「オレンジバス」|24|CC BY 4.0|2027-09-30|false
+tsu-airportline|airportline|津エアポートライン|津ベルライン・津エアポートライン|24|CC BY 4.0|2027-03-31|false
+tsucity|communitybus|津市|津市コミュニティバス|24|CC BY 4.0|2027-03-31|false
+wataraitown|choeibus|度会町|度会町営バス|24|CC BY 4.0|2027-03-31|false
+yokkaichicity|communitybus|四日市市|四日市市自主運行バス|24|CC BY 4.0|2026-12-31|false
+higashiomicity|higasiohmisicommunitybus|東近江市|東近江市ちょこっとバス|25|CC BY 4.0|2026-09-30|false
+kokacity|sinaicommunitybus|甲賀市|甲賀市コミュニティバス|25|CC BY 4.0|2027-03-31|false
+kusatsucity|kusatsusimamebus|草津市|草津市コミュニティバス　まめバス|25|CC BY 4.0|2027-03-31|false
+moriyamacity|kuruttobus|守山市|草津市、守山市、栗東市　くるっとバス|25|CC BY 4.0|2027-03-31|false
+nagahamacity|nishiazaiodekakewagon|長浜市|長浜市コミュニティバス　西浅井おでかけワゴン　|25|CC BY 4.0|2027-03-31|false
+omihachimancity|akakonbus|近江八幡市|近江八幡市　あかこんバス　|25|CC BY 4.0|2027-05-31|false
+rittocity|rittoukurichanbus|栗東市|栗東市　くりちゃんバス|25|CC BY 4.0|2026-03-31|false
+shiga-hinotown|choueibus|日野町|日野町営バス|25|CC BY 4.0|2027-03-31|false
+shiga-konancity|konansimegurukun|湖南市|湖南市コミバスめぐるくん|25|CC BY 4.0|2027-03-31|false
+takashimacity|takasimasicommunitybus|高島市|高島市コミュニティバス|25|CC BY 4.0|2027-03-31|false
+yasucity|onoriyasu|野洲市|野洲市コミバスおのりやす|25|CC BY 4.0|2027-03-31|false
+shinkikanko|limonbus|神姫観光|Limon Bus|27|CC BY 4.0|2027-03-31|false
+akashicity|tacobustacobusmini|明石市|たこバス/たこバスミニ|28|CC BY 4.0|2027-11-30|false
+akocity|teijuurou|赤穂市|ていじゅうろう|28|CC BY 2.1 JP|2027-04-30|false
+akocity|yuranosuke|赤穂市|ゆらのすけ|28|CC BY 2.1 JP|2027-04-30|false
+asagocity|acobus|朝来市|アコバス（2025年4月1日予約型運行に移行）|28|CC BY 2.1 JP|2025-03-31|true
+awajicity|awajinawahimebus|淡路市|あわ神あわ姫バス|28|CC BY 2.1 JP|2027-03-11|false
+awajicity|awaji-jenova-line-akashi-iwaya|淡路市|淡路ジェノバライン明石岩屋航路|28|CC BY 2.1 JP|2027-03-31|false
+fukusakitown|junkai-fukuhime-fukusakikasairenkei|福崎町|巡回バス/ふくひめ号/福崎町・加西市連携コミュニティバス|28|CC BY 2.1 JP|2027-03-31|false
+himejicity|ieshima-boze-yukihiko|姫路市|家島コミュニティバス/坊勢コミュニティバス/コミュニティバス雪彦|28|CC BY 2.1 JP|2027-09-30|false
+hyogo-kamikawatown|communitybus|神河町|コミュニティバス|28|CC BY 2.1 JP|2027-03-31|false
+hyogo-kamitown|kamichominbus|香美町|香美町民バス|28|CC BY 2.1 JP|2024-03-31|false
+hyogo-ono|ranranbus|小野市|らんらんバス|28|CC BY 2.1 JP|2027-03-31|false
+ichikawatown|communitybus|市川町|コミュニティバス|28|CC BY 2.1 JP|2027-04-30|false
+inagawatown|fureaibus|猪名川町|ふれあいバス|28|CC BY 2.1 JP|2027-09-30|false
+kakogawacity|kakobuskakobusmini|加古川市|かこバス/かこバスミニ|28|CC BY 2.1 JP|2027-09-30|false
+kamigoritown|ainorigo|上郡町|愛のり号|28|CC BY 2.1 JP|2026-10-31|false
+kasaicity|kasaineppihappybus|加西市|KASAIねっぴー号/はっぴーバス|28|CC BY 2.1 JP|2027-03-31|false
+kasaicity|unifureaitomi|加西市|宇仁ふれあいバス/とみバス|28|CC BY 2.1 JP|2027-03-31|false
+katocity|yashiroshigaichinoriaitaxi|加東市|社市街地乗合タクシー|28|CC BY 2.1 JP|2025-03-31|false
+kobecity|kobe-satoyama|神戸市|北区青葉台・柏尾台地区「さとやま」|28|CC BY 4.0|2027-03-31|false
+kobecity|kobe-shiokaze|神戸市|神戸市コミュニティバス|28|CC BY 2.1 JP|2027-09-30|false
+minamiawajicity|lanrunbus|南あわじ市|らん・らんバス|28|CC BY 2.1 JP|2027-03-31|false
+nishinomiyacity|sakurayamanami|西宮市|さくらやまなみバス|28|CC BY 2.1 JP|2026-10-31|false
+nishinomiyacity|najio-ikunokogen|西宮市|名塩・生野高原ふれあいバス|28|CC BY 4.0|2027-04-30|false
+nishinomiyacity|koyoen|西宮市|甲陽地区コミュニティバス（こよたんバス）|28|CC BY 4.0|2027-03-31|false
+nishinomiyacity|guruttonamaze|西宮市|ぐるっと生瀬|28|CC BY 2.1 JP|2027-05-31|false
+nishiwakicity|loopbus-orihimebus|西脇市|ループバス/おりひめバス|28|CC BY 2.1 JP|2027-03-31|false
+sayotown|communitybus|佐用町|コミュニティバス|28|CC BY 2.1 JP|2027-04-30|false
+shinonsentown|yumetsubame|新温泉町|町民バス夢つばめ|28|CC BY 2.1 JP|2027-03-31|false
+shisocity|shitanbus-wingshinki|宍粟市|しーたんバス（蔦沢線・大谷線以外）|28|CC BY 2.1 JP|2027-03-31|false
+shisocity|shitanbus|宍粟市|しーたんバス（蔦沢線・大谷線）|28|CC BY 2.1 JP|2027-03-31|false
+sumotocity|communitybus|洲本市|コミュニティバス|28|CC BY 2.1 JP|2027-03-31|false
+takarazukacity|runrunbus|宝塚市|ランランバス|28|CC BY 2.1 JP|2027-09-30|false
+takasagocity|jotonbus|高砂市|じょうとんバス|28|CC BY 2.1 JP|2027-09-30|false
+tambasasayamacity|communitybusheartrun|丹波篠山市|コミバスハートラン|28|CC BY 2.1 JP|2025-12-31|true
+tatsunocity|communitybus|たつの市|コミュニティバス|28|CC BY 2.1 JP|2027-04-30|false
+toyookacity|inacar|豊岡市|イナカー|28|CC BY 2.1 JP|2027-03-31|false
+toyookacity|kobus|豊岡市|コバス|28|CC BY 2.1 JP|2027-03-31|false
+yabucity|waiwai-sekimiya-yoka|養父市|わいわいバス/関宮ふれあいバス/八鹿コミュニティバス|28|CC BY 2.1 JP|2024-12-31|false
+andotown|andocombus|安堵町|安堵町コミュニティバス|29|CC BY 4.0|2026-03-31|false
+yamatokoriyamacity|kingyobus|大和郡山市|大和郡山市コミュニティバス|29|CC BY 4.0|2027-03-31|false
+yamatotakadacity|communitybuskibougou|大和高田市|コミュニティバスきぼう号|29|CC BY 4.0|2027-03-31|false
+aridagawatown|aridagawatownbus|有田川町|有田川町コミュニティバス|30|CC BY 4.0|2027-03-31|false
+chukibus|chukibus|中紀バス|中紀バス|30|CC BY 4.0|2027-03-31|false
+iwadecity|junkaibus|岩出市|岩出市巡回バス|30|CC BY 4.0|2027-03-31|false
+katsuragitown|community-bus|かつらぎ町|かつらぎ町コミュニティバス|30|CC0 1.0|2027-05-17|false
+kinokawacity|kinokawa_bus|紀の川市|紀の川市地域巡回バス・紀の川コミュニティバス|30|CC BY 4.0|2028-03-31|false
+kumanogobobus|kumanogobobus_kumano|熊野御坊南海バス株式会社|熊野御坊南海バス 熊野エリア|30|CC BY 4.0|2027-03-31|false
+kumanogobobus|kumanogobobus_gobo|熊野御坊南海バス株式会社|熊野御坊南海バス 御坊エリア|30|CC BY 4.0|2026-10-31|false
+kushimoto|bus-kushimotokankoshuyu-wakayama-jp|くしもと観光周遊バス推進協議会（事務局：和歌山県立南紀熊野ジオパークセンター））|くしもと観光周遊バス　まぐトル号|30|CC BY 4.0|2027-03-31|false
+meikobus|meikobus|明光バス株式会社|明光バス|30|CC BY 4.0|2027-03-31|false
+rinkan|koyasan|南海りんかんバス株式会社|南海りんかんバス高野山エリア|30|CC BY 4.0|2027-03-31|false
+rinkan|hashimoto-rinkandenentoshi|南海りんかんバス株式会社|南海りんかんバス橋本・林間田園都市エリア|30|CC BY 4.0|2027-03-31|false
+ryujinbus|ryujinbus|龍神自動車株式会社|龍神自動車|30|CC BY 4.0|2027-03-31|false
+susamitown|Communitybus|すさみ町|すさみ町コミュニティバス|30|CC0 1.0|2025-03-31|false
+tanabecity|Jumin-Bus|田辺市|田辺市住民バス|30|CC BY 4.0|2027-09-30|false
+masudacity|noriai|益田市|益田市乗合タクシー|32|CC BY 4.0|2027-03-31|false
+hayashimatown|hayashimatowncommunitybus|早島町|早島町コミュニティバス|33|CC BY 4.0|2027-03-31|false
+hokushin-bus|ibaraaiaibus|北振バス株式会社|井原あいあいバス|33|CC0 1.0|2027-05-12|false
+hokushin-bus|hokushinbus|北振バス株式会社|北振バス|33|CC0 1.0|2027-03-08|false
+kagaminotown|kagaminotownbus|鏡野町|鏡野町営バス|33|CC BY 4.0|2027-03-31|false
+maniwacity|maniwakun|真庭市|真庭市コミュニティバス「まにわくん」|33|CC0 1.0|2027-03-31|false
+nagitown|nagibus|奈義町|なぎバス|33|CC BY 4.0|2027-03-01|false
+niimicity|niimishieibus|新見市|新見市営バス|33|CC BY 4.0|2027-06-29|false
+setouchicity|setouchicitykankobus|瀬戸内市|長船だがし線|33|CC0 1.0|2027-01-31|false
+setouchicity|setouchicitybus|瀬戸内市|瀬戸内市営バス|33|CC BY 4.0|2027-03-31|false
+tsuyamacity|bus-tsuyamacity-okayama-jp|津山市|のるイコつやま|33|CC BY 4.0|2026-04-30|true
+waketown|wakechoueibasu|和気町|和気町営バス「わけまろ号」|33|CC0 1.0|2025-12-31|false
+asatetu|asakaigantetsudo|阿佐海岸鉄道株式会社|阿佐海岸鉄道株式会社【DMV】|36|CC BY 4.0|2027-06-10|false
+higashimiyoshitown|higashimiyoshitownbus|東みよし町|東みよし町営バス|36|CC BY 4.0|2027-03-31|false
+kaiyotown|kaiyotownbus|海陽町|海陽町営バス|36|CC BY 4.0|2027-03-31|false
+kamikatsutown|kamikatsutownbus|上勝町|上勝町営バス|36|CC BY 4.0|2026-03-31|false
+kitajimatown|kitajimatownfukushibus|北島町|北島町福祉バス|36|CC BY 4.0|2027-02-18|false
+matsushigetown|matsushigetownbus|松茂町|松茂町地域コミュニティバス|36|CC BY 4.0|2027-12-31|false
+nakatown|nakatownbus|那賀町|那賀町営バス|36|CC BY 4.0|2027-03-31|false
+narutocity|narutocitytosen|鳴門市|鳴門市営渡船|36|CC BY 4.0|2027-04-06|false
+narutocity|narutocitychiikibus|鳴門市|鳴門市地域バス|36|CC BY 4.0|2027-04-06|false
+tokubus|tokushimabus|徳島バス株式会社|徳島バス株式会社|36|CC BY 4.0|2027-12-31|false
+tokubus-anan|tokushimabusanan|徳島バス阿南株式会社（2023年10月1日 徳島バス株式会社と合併）|徳島バス阿南株式会社（2023年10月1日 徳島バス株式会社と合併）|36|CC BY 4.0|2023-09-30|true
+tokubus-nanbu|tokushimabusnanbu|徳島バス南部株式会社|徳島バス南部株式会社|36|CC BY 4.0|2026-12-31|false
+tokushima-minamitown|minabubyoinrenrakubus|美波町|美波病院連絡バス|36|CC BY 4.0|2026-03-20|false
+tokushima-miyoshicity|miyoshicitybus|三好市|三好市営バス|36|CC BY 4.0|2027-03-31|false
+tokushima-shiei|tokushimacitybus|徳島市交通局|徳島市営バス|36|CC BY 4.0|2027-03-31|false
+tokushimacity|kamihachimanbus|徳島市|上八万コミュニティバス|36|CC BY 4.0|2027-03-31|false
+tokushimacity|oujinfureaibus|徳島市|応神ふれあいバス|36|CC BY 4.0|2027-03-31|false
+tsurugitown|tsurugitownbus|つるぎ町|つるぎ町コミュニティーバス|36|CC BY 4.0|2027-03-31|false
+yoshinogawacity|yoshinogawacitybus|吉野川市|吉野川市代替バス|36|CC BY 4.0|2027-03-31|false
+kanonjicity|kanonjishi-noriaibus|観音寺市|観音寺市のりあいバス|37|CC0 1.0|2027-03-31|false
+kotosan|sakaide-local|琴参バス株式会社|坂出路線|37|CC BY 4.0|2027-09-30|false
+kotosan|kotohira-local|琴参バス株式会社|琴平路線|37|CC BY 4.0|2026-09-30|false
+kotosan|marugame-community|琴参バス株式会社|丸亀コミュニティバス|37|CC BY 4.0|2027-09-05|false
+mitoyocity|mitoyocommunitybus|三豊市|三豊市コミュニティバス|37|CC BY 4.0|2027-03-31|false
+naoshimatown|naoshima|直島町|直島町|37|CC BY 4.0|2027-05-31|false
+seisan-kanko|seisankanko_limousine|西讃観光|西讃観光（高松空港リムジンバス）|37|CC BY 4.0|2027-03-31|false
+akicity|GTFS-Akicity_Bus|安芸市|安芸市「元気バス」|39|CC BY 4.0|2027-03-31|false
+geiseivillage|GTFS-Geiseivill_Bus|芸西村|芸西村「おでかけバス」|39|CC BY 4.0|2027-04-01|false
+inotown|GTFS-Inotown_Loopbus|いの町|いの町営バス「伊野循環線」|39|CC BY 4.0|2026-12-31|false
+inotown|GTFS-Inotown_HongawaArea|いの町|いの町営バス「本川地区」|39|CC BY 4.0|2027-01-05|false
+jr-shikoku-bus-kochi|GTFS-JRbus_Otochi|ジェイアール四国バス株式会社 高知支店|路線バス|39|CC BY 4.0|2027-03-31|false
+kamicity|GTFS-Kamicity_Bus|香美市|香美市営バス|39|CC BY 4.0|2027-10-01|false
+kamicity|GTFS-Kamicity_Demandbus|香美市|香美市営バス デマンド|39|CC BY 4.0|2027-10-01|false
+khkhokubu-kotsu|GTFS-Hokubutraffic_Localbus|株式会社県交北部交通|路線バス|39|CC BY 4.0|2027-09-30|false
+kitagawavillage|GTFS-Kitagawavill_Bus|北川村|北川村営バス|39|CC BY 4.0|2027-03-31|false
+kochi-ekimae-kanko|GTFS-Ekimae_Expressbus|株式会社高知駅前観光|高速バス|39|CC BY 4.0|2026-12-31|false
+kochi-ekimae-kanko|GTFS-Ekimae_Airportbus|株式会社高知駅前観光|空港連絡バス|39|CC BY 4.0|2026-10-31|false
+kochi-kanko-convention|GTFS-KVCA_MY-YUbus|公益財団法人高知県観光コンベンション協会|MY遊バス|39|CC BY 4.0|2027-03-31|false
+kochi-konancity|GTFS-Konancity_Bus|香南市|香南市営バス|39|CC BY 4.0|2027-10-01|false
+kochi-koryo-kotsu|GTFS-Koryotraffic_Localbus|高知高陵交通株式会社|路線バス|39|CC BY 4.0|2026-12-29|false
+kochi-seinan-kotsu|GTFS-Seinantraffic_Localbus|高知西南交通株式会社|路線バス|39|CC BY 4.0|2027-03-31|false
+kochi-seinan-kotsu|GTFS-Seinan_Expressbus|高知西南交通株式会社|高速バス|39|CC BY 4.0|2027-09-30|false
+kochi-seinan-kotsu|GTFS-Seinantraffic_Shimaashi|高知西南交通株式会社|しまんと・あしずり号|39|CC BY 4.0|2027-03-31|false
+kochi-seinan-kotsu|GTFS-Seinantraffic_Akamego|高知西南交通株式会社|まちなかぐるっと循環周遊バス|39|CC BY 4.0|2027-03-31|false
+kochi-seinan-kotsu|GTFS-Seinantraffic_Riverbus|高知西南交通株式会社|四万十川バス|39|CC BY 4.0|2027-03-31|false
+kochi-suzakicity|GTFS-Susakicity_Bus|須崎市|須崎市営バス|39|CC BY 4.0|2027-01-04|false
+kochi-suzakicity|GTFS-Susakicity_Ferry|須崎市|須崎市営巡航船|39|CC BY 4.0|2027-01-04|false
+kochi-tobu-kotsu|GTFS-Tobutraffic_Localbus|高知東部交通株式会社|路線バス|39|CC BY 4.0|2027-09-30|false
+kochi-tsunotown|GTFS-Tsunotown_Bus|津野町|津野町コミュニティバス「つのバス」|39|CC BY 4.0|2026-12-31|false
+kochi_pref|GTFS-Kochipref_Ferry|高知県|高知県営渡船|39|CC BY 4.0|2027-04-01|false
+kochiap|GTFS-KochIAP_AirportShare|高知県航空利用促進協議会|高知県航空利用促進協議会「空港乗合タクシー」|39|CC BY 4.0|2027-03-31|false
+kuroiwa-kanko|GTFS-Kuroiwakanko_Localbus|有限会社黒岩観光|路線バス|39|CC BY 4.0|2026-12-25|false
+miharavillage|GTFS-Miharavill_Bus|三原村|三原村「三原バス」|39|CC BY 4.0|2026-12-31|false
+motoyamatown|GTFS-Motoyamatown_Bus|本山町|本山町コミュニティバス「さくらバス」|39|CC BY 4.0|2027-10-01|false
+murotocity|GTFS-Murotocity_Bus|室戸市|室戸市コミュニティバス「むろはぴ号」|39|CC BY 4.0|2027-09-30|false
+nakatosatown|GTFS-Nakatosatown_Bus|中土佐町|中土佐町コミュニティバス|39|CC BY 4.0|2027-04-01|false
+nangokucity|GTFS-Nankokucity_AirportShare|南国市|南国市「空港乗合タクシー」|39|CC BY 4.0|2027-03-31|false
+nangokucity|GTFS-Nankokucity_Bus|南国市|南国市コミュニティバス「NACOバス」|39|CC BY 4.0|2027-02-20|false
+niyodogawatown|GTFS-Niyodogawatown_Townsbus|仁淀川町|仁淀川町町民バス|39|CC BY 4.0|2026-12-27|false
+otsukitown|GTFS-Otsukitown_Bus|大月町|大月町「まちなか循環線」|39|CC BY 4.0|2027-04-01|false
+reihoku-kanko|GTFS-Reihokukanko_Localbus|有限会社嶺北観光自動車|路線バス|39|CC BY 4.0|2026-12-27|false
+sakawatown|GTFS-Sakawatown_Bus|佐川町|佐川町コミュニティバス「さかわぐるぐるバス」|39|CC BY 4.0|2027-03-31|false
+shimanto-kotsu|GTFS-Shimantotraffic_Feederbus|株式会社四万十交通|路線バス フィーダー線|39|CC BY 4.0|2027-10-01|false
+shimanto-kotsu|GTFS-Shimantotraffic_Localbus|株式会社四万十交通|路線バス|39|CC BY 4.0|2027-09-30|false
+shimantocity|GTFS-Shimantocity_Demandbus|四万十市|四万十市デマンド交通|39|CC BY 4.0|2027-03-31|true
+shimantocity|GTFS-Shimantocity_Bus|四万十市|四万十市営バス|39|CC BY 4.0|2027-04-01|false
+shimantotown|GTFS-Shimantotown_Bus|四万十町|四万十町コミュニティバス|39|CC BY 4.0|2027-04-01|false
+sukumocity|GTFS-Sukumocity_Yururinbus|宿毛市|宿毛市「ゆるりんバス」|39|CC BY 4.0|2027-04-30|false
+sukumocity|GTFS-Sukumocity_Ferry|宿毛市|宿毛市営定期船航路「沖の島航路」|39|CC BY 4.0|2027-08-10|false
+sukumocity|GTFS-Sukumocity_Hanabus|宿毛市|宿毛市コミュニティバス「はなちゃんバス」|39|CC BY 4.0|2027-04-10|false
+tanotown|GTFS-Tanotown_Bus|田野町|田野町コミュニティーバス「たのくるバス」|39|CC BY 4.0|2027-10-01|false
+tosacity|GTFS-Tosacity_Bus|土佐市|土佐市コミュニティバス「ドラゴンバス」|39|CC BY 4.0|2027-09-30|false
+tosaden-kotsu|GTFS-Tosadentraffic_Regularbus|とさでん交通株式会社|路線バス|39|CC BY 4.0|2027-10-03|false
+tosaden-kotsu|GTFS-Tosadentraffic_Streetcar|とさでん交通株式会社|路面電車|39|CC BY 4.0|2027-04-30|false
+tosaden-kotsu|GTFS-Tosadentraffic_Airportbus|とさでん交通株式会社|空港連絡バス|39|CC BY 4.0|2026-10-25|false
+tosashimizucity|GTFS-Tosashimizucity_Bus|土佐清水市|土佐清水市デマンド交通「おでかけ号」|39|CC BY 4.0|2027-09-30|false
+yasudatown|GTFS-Yasudatown_Bus|安田町|安田町コミュニティバス「やすら号」|39|CC BY 4.0|2027-10-02|false
+amagikankobus|AmagiKankoBus|株式会社甘木観光バス|株式会社甘木観光バス|40|CC BY 4.0|2027-03-31|false
+ashiyatown|AshiyaTownBus|芦屋町|芦屋町コミュニティバス 芦屋タウンバス|40|CC BY 4.0|2027-03-31|false
+buzencity|BuzenCityBus|豊前市|豊前市バス|40|CC BY 4.0|2027-03-31|false
+chikugocity|HainuzukaStationAreaLoopBus|筑後市|羽犬塚駅周辺循環バス（はねバス）|40|CC BY 4.0|2027-03-31|false
+chikujotown|ChikujoTownCommunityBus|築上町|築上町コミュニティバス|40|CC BY 4.0|2027-03-31|false
+dazaifucity|DazaifuCityCommunityBus|太宰府市|太宰府市コミュニティバスまほろば号|40|CC BY 4.0|2027-03-31|false
+fukuoka-kawasakitown|KawasakiTownFureaiBus|川崎町|川崎町ふれあいバス|40|CC BY 4.0|2027-03-31|false
+fukuoka-kogacity|KogaBus|古賀市|コガバス|40|CC BY 4.0|2027-03-31|false
+fukuokacity|ImajukuMeinohamaLine|福岡市|今宿姪浜線乗合バス|40|CC BY 4.0|2027-03-31|false
+fukutsucity|minibus|福津市|ふくつミニバス・ふくつ乗合タクシー|40|CC BY 4.0|2027-03-31|false
+hisayamatown|HisayamaIkoBus|久山町|久山町コミュニティバス イコバス|40|CC BY 4.0|2027-03-31|false
+kamacity|KamaCityBus|嘉麻市|嘉麻市バス|40|CC BY 4.0|2027-03-31|false
+kandatown|KandaTownCommunityBus|苅田町|苅田町コミュニティバス|40|CC BY 4.0|2027-03-31|false
+kasugacity|yayoi_kasuga|春日市|春日市コミュニティバスやよい|40|CC BY 4.0|2027-03-31|false
+kitakyushucity|tsunemi-kitaku|北九州市|門司区恒見・喜多久地区|40|CC BY 4.0|2027-03-31|false
+kitakyushucity|okura|北九州市|八幡東区大蔵地区|40|CC BY 4.0|2027-03-31|false
+kitakyushucity|oma-dobaru|北九州市|小倉南区合馬・道原地区|40|CC BY 4.0|2027-03-31|false
+kitakyushucity|koyanose-kusubashi-hoshigaoka|北九州市|八幡西区木屋瀬・楠橋・星ヶ丘地区|40|CC BY 4.0|2027-03-31|false
+kitakyushucity|higashitani|北九州市|小倉南区東谷地区|40|CC BY 4.0|2027-03-31|false
+kitakyushucity|edamitsu|北九州市|八幡東区枝光地区|40|CC BY 4.0|2027-03-31|false
+kitakyushucity|hiraodai|北九州市|小倉南区平尾台地区|40|CC BY 4.0|2027-03-31|false
+kitakyushucity|tashiro-kawachi|北九州市|八幡東区田代・河内地区|40|CC BY 4.0|2027-03-31|false
+kuratetown|KurateTownSmileBusMiyawakaLine|鞍手町|すまいるバスみやわか線|40|CC BY 4.0|2027-03-31|false
+miyamacity|MiyamaCityCommunityBus|みやま市|みやま市コミュニティバス|40|CC BY 4.0|2027-03-31|false
+miyawakacity|MiyawakaMunakataLine|宮若市|宮田・百合野線|40|CC BY 4.0|2027-03-31|false
+mizumakitown|MizumakiTownBus|水巻町|町内巡回バス・通勤通学バス|40|CC BY 4.0|2027-03-31|false
+munakatacity|MunakataCityCommunityBus|宗像市|宗像市コミュニティバス|40|CC BY 4.0|2027-03-31|false
+munakatacity|MunakataCityFureaiBus|宗像市|宗像市ふれあいバス|40|CC BY 4.0|2027-03-31|false
+munakatacity|MunakataMankitsuShuyuBus|宗像市|宗像満喫周遊バス|40|CC BY 4.0|2025-10-26|true
+munakatacity|MunakataCityOshimaFerry|宗像市|宗像市営渡船大島航路|40|CC BY 4.0|2027-03-31|false
+munakatacity|MiyawakaMunakataLine|宗像市|宮若・宗像線|40|CC BY 4.0|2027-03-31|false
+munakatacity|MunakataCityJinoshimaFerry|宗像市|宗像市営渡船地島航路|40|CC BY 4.0|2027-03-31|false
+nogatacity|NogataCityCommunityBus|直方市|直方市コミュニティバス|40|CC BY 4.0|2027-03-31|false
+ongatown|OngaTownCommunityBus|遠賀町|遠賀町コミュニティバス|40|CC BY 4.0|2027-03-31|false
+shingutown|TownFerryShingu|新宮町|町営渡船しんぐう|40|CC BY 4.0|2027-02-28|false
+shingutown|ShinguTownCommunityBus|新宮町|新宮町コミュニティバス マリンクス|40|CC BY 4.0|2027-02-28|false
+suetown|SueTownCommunityBus|須恵町|須恵町コミュニティバス|40|CC BY 4.0|2027-03-31|false
+tagawacity|TagawaCityCommunityBus|田川市|田川市コミュニティバス|40|CC BY 4.0|2027-09-30|false
+taiyo-koutu|taiyo-koutu|太陽交通株式会社|太陽交通株式会社|40|CC BY 4.0|2027-03-31|false
+yanagawacity|YanagawaCityCommunityBus|柳川市|柳川市コミュニティバス|40|CC BY 4.0|2027-09-30|false
+imaricity|imarinbus|伊万里市|いまりんバス|41|CC0 1.0|2027-03-31|false
+hiradocity|fureaibus|平戸市|ふれあいバス|42|CC BY 4.0|2027-09-30|false
+kuma-bus|kuma-bus|熊本バス|熊本バス|43|CC BY 4.0|2027-01-15|false
+kumamoto-shiden|kumamotoshiden|熊本市交通局|熊本市電|43|CC BY 2.1 JP|2027-03-31|false
+kumamoto-toshibus|kumamoto-toshibus|熊本都市バス|熊本都市バス|43|CC BY 4.0|2027-01-15|false
+kumamotodentetsu|kumamotodentetsu-bus|熊本電鉄|熊本電鉄バス|43|CC BY 4.0|2027-01-15|false
+kumamotodentetsu|kumamotodentetsu|熊本電鉄|熊本電鉄電車|43|CC0 1.0|2026-12-28|false
+sankobus|sankobus|産交バス|産交バス|43|CC BY 4.0|2027-01-15|false
+kusutown|kusucommunity-bus|玖珠町|玖珠町コミュニティバス|44|CC0 1.0|2027-03-31|false
+nakatsucity|OshimaIfuku|中津市|大島伊福線|44|CC BY 4.0|2026-10-31|false
+nakatsucity|UraYabakei|中津市|裏耶馬溪線|44|CC BY 4.0|2027-03-31|false
+nakatsucity|Kii|中津市|城井線|44|CC BY 4.0|2026-10-31|false
+nakatsucity|Tsutami|中津市|津民線|44|CC BY 4.0|2027-03-31|false
+nakatsucity|Yakata|中津市|屋形線|44|CC BY 4.0|2027-03-31|false
+nakatsucity|BuzenNakatsu|中津市|豊前・中津線|44|CC BY 4.0|2027-03-31|false
+nakatsucity|Higashitani|中津市|東谷線|44|CC BY 4.0|2027-03-31|false
+nakatsucity|Miho|中津市|三保線|44|CC BY 4.0|2027-03-31|false
+nakatsucity|ShinyabaNishi|中津市|深耶馬西線|44|CC BY 4.0|2026-10-31|false
+nakatsucity|Nishimakusa|中津市|西秣線|44|CC BY 4.0|2027-03-31|false
+nakatsucity|Nishitani|中津市|西谷線|44|CC BY 4.0|2027-03-31|false
+nakatsucity|OshimadaiKanayoshi|中津市|大島台金吉線|44|CC BY 4.0|2026-10-31|false
+nakatsucity|UenokawauchiMasaki|中津市|上ノ川内柾木線|44|CC BY 4.0|2026-10-31|false
+nakatsucity|HiyamajiKamagi|中津市|樋山路鎌城線|44|CC BY 4.0|2026-10-31|false
+nakatsucity|YamautsuriKita|中津市|山移北線|44|CC BY 4.0|2026-10-31|false
+nakatsucity|Kawaraguchi|中津市|川原口線|44|CC BY 4.0|2026-10-31|false
+nakatsucity|ShinyabaHigashi|中津市|深耶馬東線|44|CC BY 4.0|2026-10-31|false
+nakatsucity|YamautsuriMinami|中津市|山移南線|44|CC BY 4.0|2026-10-31|false
+kagoshimacity|aibus|鹿児島市|鹿児島市コミュニティバス「あいばす」|46|CC BY 4.0|2027-03-31|false
+yaesetown|yaese-town-bus|八重瀬町|八重瀬町バス|47|CC BY 4.0|2027-04-30|false
+yanbaru-expressbus|yanbaru-express-bus|合同会社やんばる急行バス|やんばる急行バス|47|CC BY 4.0|2026-12-31|false
