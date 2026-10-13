@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-hosted AI in a small law office: a confidentiality check against ABA Opinion 512 and state bar guidance</title>
+<meta name="description" content="Running Ollama, Open WebUI or LM Studio in a law office keeps client text off cloud servers, but the bar opinions still ask who can reach the server, what it keeps and who inside the firm can read it. Ten concrete checks mapped to ABA Formal Opinion 512 and nine state bar opinions, each linked to its primary source. By MV2 of Munim, Inc.">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.6rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; }
+  pre { padding: 0.7rem; overflow-x: auto; }
+  nav, .by { color: #555; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f3f3f3; }
+  .note { border-left: 4px solid #b26a00; padding: 0.4rem 0.7rem; background: #fffaf0; margin: 0.8rem 0; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama</a> · <a href="openwebui.html">Open WebUI</a> · <a href="anythingllm.html">AnythingLLM</a> · <a href="paste-safe/">Paste-Safe</a> · <strong>Law offices</strong> · <a href="sample-report.html">Sample health check report</a></nav>
+<h1>Self-hosted AI in a small law office: a confidentiality check against ABA Opinion 512 and state bar guidance</h1>
+<p class="by">By MV2 of Munim, Inc. Written with AI agents working in his name. Every opinion cited below links to the issuing bar or court; links checked on 13 October 2026. This is technical information about software, not legal advice and not an ethics opinion.</p>
+
+<p>Small firms run Ollama, LM Studio, Open WebUI or AnythingLLM on an office machine for one reason: client text never leaves the building. The bar opinions on generative AI reward that choice. Florida's <a href="https://www.floridabar.org/etopinions/opinion-24-1/">Opinion 24-1</a> says informed consent under its Rule 4-1.6 is not needed when an in-house tool discloses nothing to a third party. But the same opinions move the duty onto your setup. North Carolina's <a href="https://www.ncbar.gov/for-lawyers/ethics/adopted-opinions/2024-formal-ethics-opinion-1/">2024 FEO 1</a> says the lawyer stays responsible for keeping information secure whether the tool is hosted by a vendor or runs on the firm's own servers, and the ABA's <a href="https://www.americanbar.org/content/dam/aba/administrative/professional_responsibility/ethics-opinions/aba-formal-opinion-512.pdf">Formal Opinion 512</a> asks about disclosure to people <em>inside</em> the firm who would not know a prompt came from a client. So the questions a self-hosting office has to answer are technical ones. Here they are, with the command or setting that answers each.</p>
+
+<h2>What the opinions ask, and what to check</h2>
+<table>
+  <thead><tr><th>What the guidance asks</th><th>Where it says so</th><th>What to check on a self-hosted setup</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Will the tool disclose client information to anyone outside the firm?</td>
+      <td>ABA 512; DC <a href="https://www.dcbar.org/for-lawyers/legal-ethics/ethics-opinions-210-present/ethics-opinion-388">Opinion 388</a> (provider must not see, keep or reuse it); Texas <a href="https://www.legalethicstexas.com/resources/opinions/opinion-705/">Opinion 705</a></td>
+      <td><strong>Who can reach the model server.</strong> Ollama has no login of its own, so whatever can reach port 11434 can send prompts and read model names. From another machine on the network run <code>curl http://&lt;office-machine-ip&gt;:11434/api/version</code>; it should fail unless you meant to share it. On the machine itself, Ollama should listen on <code>127.0.0.1</code>, not <code>0.0.0.0</code>. <a href="ollama-remote-access.html">How to check and fix</a>.</td>
+    </tr>
+    <tr>
+      <td>Does the tool send anything home, or share by default?</td>
+      <td>California <a href="https://www.calbar.ca.gov/Portals/0/documents/ethics/Generative-AI-Practical-Guidance.pdf">Practical Guidance</a> (review terms, retention and training practices); NC 2024 FEO 1</td>
+      <td><strong>Sharing and community features.</strong> Open WebUI ships with community sharing on; set <code>ENABLE_COMMUNITY_SHARING=False</code> unless you use it. Check whether your chat front end has web search, cloud model providers or a shared prompt library switched on; each is a path for client text to leave. <a href="openwebui.html">Open WebUI settings</a>.</td>
+    </tr>
+    <tr>
+      <td>Can people inside the firm read another matter's prompts without knowing they are a client's?</td>
+      <td>ABA 512 (the intra-firm point); ABA 512 and Texas 705 on self-learning tools</td>
+      <td><strong>Users, workspaces and memory.</strong> A local model does not learn from prompts, but the front end can keep them. List every account in Open WebUI or AnythingLLM, remove shared logins, and switch off <em>memories</em> or long-term context features unless each user understands they persist. AnythingLLM 1.13.0 up to 1.16.2 handed an owner's private Memories to anonymous visitors of an embedded chat widget (<a href="anythingllm.html">details</a>).</td>
+    </tr>
+    <tr>
+      <td>Is the tool kept secure with reasonable efforts?</td>
+      <td>NC 2024 FEO 1 (Rule 1.6(c)); Pennsylvania <a href="https://www.pabar.org/Members/catalogs/Ethics%20Opinions/Formal/Joint%20Formal%20Opinion%202024-200.pdf">Joint Formal Opinion 2024-200</a>; NYC Bar <a href="https://www.nycbar.org/reports/formal-opinion-2024-5-generative-ai-in-the-practice-of-law/">Formal Opinion 2024-5</a></td>
+      <td><strong>Known vulnerabilities in the version you run.</strong> Type your Ollama, Open WebUI, AnythingLLM, vLLM or LiteLLM version into the <a href="index.html">CVE checker</a>. Several 2026 advisories for these tools have no CVE ID and are missing from the databases that dependency scanners read, so a scanner saying "clean" is not proof.</td>
+    </tr>
+    <tr>
+      <td>Do you still paste into a cloud assistant sometimes?</td>
+      <td>Florida 24-1 (informed consent before a third-party tool sees confidential information); DC 388</td>
+      <td><strong>Mask before you paste.</strong> <a href="paste-safe/">Paste-Safe</a> replaces names, organisations, emails and numbers with placeholders in your browser before text goes to ChatGPT, Claude or Gemini, and restores them in the reply. Nothing is uploaded. It reduces risk; it does not anonymise.</td>
+    </tr>
+    <tr>
+      <td>Are citations verified before filing?</td>
+      <td>Pennsylvania 2024-200; Kentucky <a href="https://kybar.org/Portals/0/Admin/Ethics%20Opinions/KBA%20E-457.pdf">KBA E-457</a>; New Jersey <a href="https://www.njcourts.gov/sites/default/files/notices/2024/01/n240125a.pdf">Preliminary Guidelines</a></td>
+      <td><strong>Local models hallucinate too.</strong> The public database kept by Damien Charlotin listed 2,184 decisions involving hallucinated material on 10 October 2026 (<a href="https://www.damiencharlotin.com/hallucinations/">CC BY 4.0</a>). A smaller model on your own GPU is not more reliable than a cloud one, only more private. Check every citation against the court's own text or CourtListener before it leaves the office.</td>
+    </tr>
+    <tr>
+      <td>Is there a written policy?</td>
+      <td>New Jersey's 30 March 2026 Notice to the Bar (sample starter AI policy); Kentucky's sample AI use policy (April 2026)</td>
+      <td><strong>Write down what you checked.</strong> Which machine, which tools and versions, who has accounts, what listens on the network, the date. A one-page record answers most of the questions above if anyone ever asks.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">The opinions are advisory and differ by state. The table paraphrases them; read the one for your jurisdiction. The index MV2 maintains, with the primary link and date for each, is open data: <a href="https://github.com/munimv2/bar-ai-guidance">github.com/munimv2/bar-ai-guidance</a> (CC BY 4.0; ABA plus CA, DC, FL, KY, NJ, NY, NC, PA and TX as of 13 October 2026, more as each link is verified).</div>
+
+<h2>A ten-minute self check</h2>
+<ol>
+  <li>Run the free, read-only <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script on the machine that hosts the model. It reports what is exposed, risky or slow and prints nothing secret.</li>
+  <li>From a second machine on the office network, try the <code>curl</code> line above. A refused connection is the right answer unless you share the server on purpose.</li>
+  <li>Put each tool's version into the <a href="index.html">CVE checker</a>.</li>
+  <li>Open the user list of your chat front end. Remove accounts you cannot name. Turn off community sharing and memory features you do not use.</li>
+  <li>Write the four answers down with today's date.</li>
+</ol>
+
+<h2>Want it checked for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Open WebUI or Ollama server: a written report of what is exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> each machine's <code>local-ai-checkup --json</code> output, its OS and what the office uses the AI for. The report comes within 48 hours. It is a technical review of your machines, not a bar-compliance certification; MV2 never asks for passwords, keys, client files or remote access.</p>
+
+<footer>
+  <p>General technical information, not legal advice, not an ethics opinion and not a security certification. If a link or paraphrase above is wrong, please open an issue at <a href="https://github.com/munimv2/bar-ai-guidance/issues">github.com/munimv2/bar-ai-guidance</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents working in his name.</p>
+</footer>
+</body>
+</html>
