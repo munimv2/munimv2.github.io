@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paste-Safe: mask client names before you paste into a cloud AI</title>
+<meta name="description" content="Swap client names, emails, phone numbers and account numbers for placeholders before you paste text into ChatGPT, Claude or Gemini, then put them back in the answer. Runs in your browser with an open-source model; nothing is uploaded.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Paste-Safe</h1>
+  <p class="lede">Mask client names before you paste into a cloud AI. Put them back in the answer.</p>
+  <p class="small">An open-source name-finding model (<a href="https://huggingface.co/dslim/bert-base-NER">bert-base-NER</a>, MIT) runs <strong>in this browser tab</strong>. Your text is not uploaded: the page downloads the model once and then works on your device. Check it yourself: open your browser's network tab, or switch off Wi-Fi after the model loads.</p>
+</header>
+
+<main>
+<section>
+  <h2><span class="step">1</span> Paste your text</h2>
+  <textarea id="input" rows="10" placeholder="Paste an email, brief, contract clause or meeting notes..."></textarea>
+  <div class="row">
+    <button id="sample" type="button" class="link">Try a sample</button>
+  </div>
+  <details>
+    <summary>What to mask</summary>
+    <div class="options">
+      <label><input type="checkbox" id="ner-PER" checked> People</label>
+      <label><input type="checkbox" id="ner-ORG" checked> Organizations</label>
+      <label><input type="checkbox" id="ner-LOC" checked> Places</label>
+      <label><input type="checkbox" id="ner-MISC"> Other names (events, products, nationalities)</label>
+      <label><input type="checkbox" id="opt-contact" checked> Emails, phone numbers, links</label>
+      <label><input type="checkbox" id="opt-numbers" checked> Card, IBAN, IP and US SSN numbers</label>
+      <label>Model confidence needed
+        <select id="min-score">
+          <option value="0.4">0.4 (mask more)</option>
+          <option value="0.6" selected>0.6</option>
+          <option value="0.8">0.8 (mask less)</option>
+        </select>
+      </label>
+    </div>
+    <div class="lists">
+      <label>Always mask (one per line: client names, code names)
+        <textarea id="always" rows="3"></textarea></label>
+      <label>Never mask (one per line)
+        <textarea id="never" rows="3"></textarea></label>
+    </div>
+  </details>
+  <button id="mask" type="button" class="primary">Mask it</button>
+  <p id="status" role="status" aria-live="polite"></p>
+</section>
+
+<section>
+  <h2><span class="step">2</span> Paste this into your AI</h2>
+  <textarea id="masked" rows="10" readonly></textarea>
+  <div class="row">
+    <button id="copy-masked" type="button">Copy</button>
+  </div>
+  <details>
+    <summary>Key: <span id="key-count">0</span> placeholders (stays on this page)</summary>
+    <table>
+      <thead><tr><th>Placeholder</th><th>Real text</th></tr></thead>
+      <tbody id="key-rows"></tbody>
+    </table>
+    <div class="row">
+      <button id="save-key" type="button">Save key</button>
+      <label class="file">Load key <input id="load-key" type="file" accept=".json,application/json"></label>
+      <button id="clear-key" type="button">Clear key</button>
+    </div>
+    <p class="small">The same name keeps the same placeholder for as long as this tab is open, so you can mask several messages in one chat. Closing the tab forgets the key unless you save it.</p>
+  </details>
+</section>
+
+<section>
+  <h2><span class="step">3</span> Paste the AI's answer here</h2>
+  <textarea id="answer" rows="8" placeholder="The answer with [PERSON_1], [ORG_1] and so on..."></textarea>
+  <button id="restore" type="button" class="primary">Put the names back</button>
+  <textarea id="restored" rows="8" readonly></textarea>
+  <div class="row">
+    <button id="copy-restored" type="button">Copy</button>
+  </div>
+</section>
+</main>
+
+<footer>
+  <p class="small"><strong>Read before you paste.</strong> Automatic detection misses things: unusual names, names written in lower case, details described in words. Paste-Safe lowers the risk; it does not make text anonymous, and it is not legal advice about your contracts or data-protection duties.</p>
+  <p class="small">Paste-Safe <span id="version"></span> is open source (MIT): <a href="https://github.com/munimv2/paste-safe">github.com/munimv2/paste-safe</a>. Model: <a href="https://huggingface.co/Xenova/bert-base-NER">Xenova/bert-base-NER</a> (MIT), via <a href="https://github.com/huggingface/transformers.js">Transformers.js</a> (Apache-2.0). The library loads from jsDelivr and the model from Hugging Face; no text goes to either.</p>
+  <p class="small">By MV2 of Munim, Inc. Built with AI agents working in his name.</p>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>

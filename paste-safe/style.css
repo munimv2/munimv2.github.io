@@ -1,0 +1,27 @@
+:root { --ink: #1d232b; --muted: #5a6573; --line: #d6dbe1; --accent: #1f6feb; --bg: #fbfbfa; }
+* { box-sizing: border-box; }
+body { margin: 0 auto; max-width: 860px; padding: 24px 18px 48px; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+h1 { margin: 0 0 4px; font-size: 2rem; }
+h2 { font-size: 1.15rem; margin: 28px 0 8px; }
+.lede { font-size: 1.15rem; margin: 0 0 8px; }
+.small { font-size: .9rem; color: var(--muted); }
+.step { display: inline-block; width: 1.6em; height: 1.6em; line-height: 1.6em; text-align: center; border-radius: 50%; background: var(--accent); color: #fff; font-size: .9rem; margin-right: 6px; }
+textarea { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: 14px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; background: #fff; color: var(--ink); }
+textarea[readonly] { background: #f3f5f7; }
+button, .file { font: inherit; padding: 6px 14px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; margin: 10px 0 4px; }
+button.link { border: 0; background: none; color: var(--accent); padding: 4px 0; text-decoration: underline; }
+button:disabled { opacity: .6; cursor: wait; }
+.file input { display: none; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 6px 0; }
+details { margin: 10px 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+summary { cursor: pointer; font-weight: 600; }
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 16px; margin: 10px 0; }
+.lists { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lists label { font-size: .9rem; }
+@media (max-width: 600px) { .lists { grid-template-columns: 1fr; } }
+table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: .9rem; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; word-break: break-word; }
+#status { min-height: 1.5em; color: var(--muted); }
+footer { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 12px; }
+a { color: var(--accent); }
