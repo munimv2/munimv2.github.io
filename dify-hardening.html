@@ -123,7 +123,7 @@ curl -s http://127.0.0.1:8080/console/api/setup   # "step": "finished" = the adm
 # from ANOTHER machine: these should fail to connect if you bound them to 127.0.0.1
 curl --max-time 5 http://&lt;server LAN IP&gt;:80/
 nc -vz -w 5 &lt;server LAN IP&gt; 5003</pre>
-<p>The free <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script reads the version of a running <code>langgenius/dify-api</code> container, lists the advisories that apply, and flags AI containers, such as Dify's plugin daemon, whose ports are published on every interface.</p>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script reads the version of a running <code>langgenius/dify-api</code> container, lists the advisories that apply, and flags AI containers, such as Dify's plugin daemon, whose ports are published on every interface.</p>
 
 <h2>Mistakes to avoid</h2>
 <ul>
@@ -139,7 +139,7 @@ nc -vz -w 5 &lt;server LAN IP&gt; 5003</pre>
 <p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared server such as a team's Dify. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> your Dify version, the output of <code>docker compose ps</code>, and the output of <code>python3 local_ai_checkup.py --json</code> from the free script. MV2 never asks for passwords, keys or remote access. Don't send your <code>.env</code>.</p>
 
 <footer>
-  <p>General technical information, not a security certification or professional advice. Only change servers you own or are allowed to manage. Settings are from Dify's docs and release files as of 12 October 2026 and change between releases; check them against your version. Corrections are welcome as issues at <a href="https://github.com/munimv2/local-ai-checkup/issues">github.com/munimv2/local-ai-checkup</a>.</p>
+  <p>General technical information, not a security certification or professional advice. Only change servers you own or are allowed to manage. Settings are from Dify's docs and release files as of 12 October 2026 and change between releases; check them against your version. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
   <p>Made by MV2 of Munim, Inc., with AI agents.</p>
 </footer>
 </body>

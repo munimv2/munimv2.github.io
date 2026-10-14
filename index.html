@@ -143,10 +143,10 @@ netstat -ano | findstr /R ":11434 :3000 :3001 :8000 :8080 :8188 :1234 :6277 :786
 <p>Some reported Ollama flaws have no confirmed fixed version yet (for example CVE-2026-5757, CVE-2026-15685 and CVE-2026-5530). Even an up-to-date Ollama shouldn't be open to untrusted networks. The latest Langflow (1.12.3-1.12.5), Dify (1.17.1) and AnythingLLM (1.17.0) releases list more security fixes that have no advisories yet, so the latest release is always the safest choice. RAGFlow 1.0.0-rc1 is a pre-release; whether it fixes GHSA-c6q8-23rp-32cv isn't stated, so this page doesn't mark it either way. vLLM has published more advisories than this page lists one by one; the rows group them by the release that fixes them.</p>
 
 <h2>Check your whole machine with one script</h2>
-<p><a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> is a free, Apache-2.0 licensed, read-only Python script with no dependencies. It finds the Ollama, Open WebUI and ComfyUI versions for you, reads the versions of n8n, Dify, RAGFlow, AnythingLLM, Langflow, Flowise, LiteLLM and vLLM from their own ports or their running Docker images and checks them against the same data as this page, checks which ports are exposed, reads risky settings such as <code>OLLAMA_HOST</code> and <code>OLLAMA_ORIGINS=*</code>, checks Docker port publishing, and flags models too big for your GPU. To pick a model that fits, see <a href="gpu-picks.html">which models fit your GPU</a> or the <a href="fit.html">model fit calculator</a>. If Ollama is slow, see <a href="ollama-gpu.html">why Ollama isn't using your GPU</a>.</p>
-<pre>curl -O https://raw.githubusercontent.com/munimv2/local-ai-checkup/main/local_ai_checkup.py
+<p><a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> is a free, Apache-2.0 licensed, read-only Python script with no dependencies. It finds the Ollama, Open WebUI and ComfyUI versions for you, reads the versions of n8n, Dify, RAGFlow, AnythingLLM, Langflow, Flowise, LiteLLM and vLLM from their own ports or their running Docker images and checks them against the same data as this page, checks which ports are exposed, reads risky settings such as <code>OLLAMA_HOST</code> and <code>OLLAMA_ORIGINS=*</code>, checks Docker port publishing, and flags models too big for your GPU. To pick a model that fits, see <a href="gpu-picks.html">which models fit your GPU</a> or the <a href="fit.html">model fit calculator</a>. If Ollama is slow, see <a href="ollama-gpu.html">why Ollama isn't using your GPU</a>.</p>
+<pre>curl -O https://raw.githubusercontent.com/munimtechnologies/local-ai-checkup/main/local_ai_checkup.py
 python3 local_ai_checkup.py</pre>
-<p>Step-by-step fixes are in <a href="https://github.com/munimv2/local-ai-checkup/blob/main/HARDENING.md">HARDENING.md</a>.</p>
+<p>Step-by-step fixes are in <a href="https://github.com/munimtechnologies/local-ai-checkup/blob/main/HARDENING.md">HARDENING.md</a>.</p>
 
 <h2>Want a written review of your setup?</h2>
 <p>MV2 of Munim, Inc. does a written <strong>local AI health check</strong>: what's exposed, risky or slow and what to fix first, with exact commands for your OS, plus one follow-up check. <a href="sample-report.html">See a sample report</a>.</p>
@@ -157,7 +157,7 @@ python3 local_ai_checkup.py</pre>
 <p>After paying, email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> the output of <code>python3 local_ai_checkup.py --json</code> from each machine, its OS, and what you use local AI for. If an app runs on a different machine or port than the script checked, add its version and how it's exposed. The report comes back to you by email. MV2 never asks for passwords, keys or remote access.</p>
 
 <footer>
-  <p>This page is general technical information, not a security certification or professional advice. Version ranges come from the linked advisories. If one is wrong or out of date, please open an issue at <a href="https://github.com/munimv2/local-ai-checkup/issues">github.com/munimv2/local-ai-checkup</a>.</p>
+  <p>This page is general technical information, not a security certification or professional advice. Version ranges come from the linked advisories. If one is wrong or out of date, please open an issue at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
   <p>Made by MV2 of Munim, Inc., with AI agents.</p>
 </footer>
 
@@ -389,6 +389,6 @@ function check() {
   if (q.get("v")) { document.getElementById("version").value = q.get("v"); check(); }
 })();
 </script>
-<noscript><p>The checker needs JavaScript. Without it, compare your version with the advisory list in the <a href="https://github.com/munimv2/local-ai-checkup#what-it-checks">local-ai-checkup README</a>.</p></noscript>
+<noscript><p>The checker needs JavaScript. Without it, compare your version with the advisory list in the <a href="https://github.com/munimtechnologies/local-ai-checkup#what-it-checks">local-ai-checkup README</a>.</p></noscript>
 </body>
 </html>

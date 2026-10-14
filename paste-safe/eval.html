@@ -11,7 +11,7 @@
 <header>
   <h1>Paste-Safe test set</h1>
   <p class="lede">How many names does it really hide?</p>
-  <p class="small">This page runs the same masking as <a href="./">Paste-Safe</a> <span id="version"></span> over <span id="count"></span> made-up requests of the kind people paste into a chat AI. Every person, company, place, email, phone number and account number in them is labelled. Some are meant to be hard: names in lower case, names that are also ordinary words, and names from outside the model's English news training. Everything runs in this tab; nothing is uploaded. The messages and labels are in <a href="https://github.com/munimv2/paste-safe/blob/main/eval-data.js">eval-data.js</a>.</p>
+  <p class="small">This page runs the same masking as <a href="./">Paste-Safe</a> <span id="version"></span> over <span id="count"></span> made-up requests of the kind people paste into a chat AI. Every person, company, place, email, phone number and account number in them is labelled. Some are meant to be hard: names in lower case, names that are also ordinary words, and names from outside the model's English news training. Everything runs in this tab; nothing is uploaded. The messages and labels are in <a href="https://github.com/munimtechnologies/paste-safe/blob/main/eval-data.js">eval-data.js</a>.</p>
   <p class="small">A name counts as hidden only if every letter of every mention is masked: "[PERSON_1] Okafor" counts as a miss for "Daniel Okafor". The always-mask list is left empty here, so this measures the models, the patterns and the name rules alone. It is scored three ways: the default, the model with the name rules off, and a lower model confidence. With the box below ticked there is a fourth: the default plus a second look by <a href="https://huggingface.co/onnx-community/gemma-3-270m-it-ONNX">Gemma 3 270M</a> (Gemma Terms of Use), which also runs in this tab. The table shows the default.</p>
 </header>
 
@@ -34,7 +34,7 @@
 </main>
 
 <footer>
-  <p class="small">Paste-Safe is open source (Apache-2.0): <a href="https://github.com/munimv2/paste-safe">github.com/munimv2/paste-safe</a>. By MV2 of Munim, Inc. Built with AI agents working in his name; the test messages were written by those agents.</p>
+  <p class="small">Paste-Safe is open source (Apache-2.0): <a href="https://github.com/munimtechnologies/paste-safe">github.com/munimtechnologies/paste-safe</a>. By MV2 of Munim, Inc. Built with AI agents working in his name; the test messages were written by those agents.</p>
 </footer>
 <script type="module" src="eval.js"></script>
 </body>
