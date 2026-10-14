@@ -129,17 +129,44 @@ test('mask, then restore an answer that bent the placeholders', () => {
   }];
   const spans = findSpans(text, { nerTokens });
   const { masked, key } = maskText(text, spans);
-  assert.equal(masked, '[PERSON_1] met [ORG_1]. [PERSON_2] will call [PHONE_1] or mail [EMAIL_1].');
+  assert.equal(masked, '[PERSON_1] met [ORG_1]. [PERSON_1] will call [PHONE_1] or mail [EMAIL_1].');
   assert.deepEqual(key.entries.map((e) => [e.placeholder, e.original]), [
-    ['[PERSON_1]', 'Sheehan Munim'], ['[ORG_1]', 'Acme Corp'], ['[PERSON_2]', 'Sheehan'],
+    ['[PERSON_1]', 'Sheehan Munim'], ['[ORG_1]', 'Acme Corp'],
     ['[PHONE_1]', '+1 555-123-4567'], ['[EMAIL_1]', 'sheehan@example.com'],
   ]);
 
-  const answer = 'Dear person_1, [ORG_1] agreed. Ask [PERSON 2] to ring [PHONE_1]. [PERSON_9] is new.';
+  const answer = 'Dear person_1, [ORG_1] agreed. Ask [PERSON 1] to ring [PHONE_1]. [PERSON_9] is new.';
   const { restored, count, leftover } = restoreText(answer, key);
-  assert.equal(restored, 'Dear Sheehan Munim, Acme Corp agreed. Ask Sheehan to ring +1 555-123-4567. [PERSON_9] is new.');
+  assert.equal(restored, 'Dear Sheehan Munim, Acme Corp agreed. Ask Sheehan Munim to ring +1 555-123-4567. [PERSON_9] is new.');
   assert.equal(count, 4);
   assert.deepEqual(leftover, ['[PERSON_9]']);
+});
+
+// A PERSON span over the first `word` found at or after `from`.
+const person = (text, word, from = 0) => {
+  const start = text.indexOf(word, from);
+  return { start, end: start + word.length, type: 'PERSON' };
+};
+
+test('a first or last name on its own shares the full name\'s placeholder', () => {
+  const text = "Daniel's line is busy, so Daniel Okafor asked us to write to Okafor's assistant.";
+  const spans = [person(text, 'Daniel'), person(text, 'Daniel Okafor', 1), person(text, 'Okafor', 40)];
+  const { masked, key } = maskText(text, spans);
+  assert.equal(masked, "[PERSON_1]'s line is busy, so [PERSON_1] asked us to write to [PERSON_1]'s assistant.");
+  assert.deepEqual(key.entries.map((e) => [e.placeholder, e.original]), [['[PERSON_1]', 'Daniel Okafor']]);
+  assert.equal(restoreText("Reply to [PERSON_1]'s assistant.", key).restored, "Reply to Daniel Okafor's assistant.");
+});
+
+test('a first name two people share, or one the key already holds alone, keeps its own placeholder', () => {
+  const two = 'Daniel Okafor and Daniel Reyes met. Daniel will write.';
+  const shared = [person(two, 'Daniel Okafor'), person(two, 'Daniel Reyes'), person(two, 'Daniel', 20)];
+  assert.equal(maskText(two, shared).masked, '[PERSON_1] and [PERSON_2] met. [PERSON_3] will write.');
+
+  const key = newKey();
+  maskText('Ask Daniel.', [person('Ask Daniel.', 'Daniel')], key);
+  const later = 'Daniel Okafor agreed. Daniel will call.';
+  const { masked } = maskText(later, [person(later, 'Daniel Okafor'), person(later, 'Daniel', 5)], key);
+  assert.equal(masked, '[PERSON_2] agreed. [PERSON_1] will call.');
 });
 
 test('the key is shared across texts and never confuses 1 with 10', () => {

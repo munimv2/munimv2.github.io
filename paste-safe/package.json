@@ -1,6 +1,6 @@
 {
   "name": "paste-safe",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Mask client names and contact details before you paste text into a cloud AI, then put them back. Runs in the browser with an open-source NER model.",
   "type": "module",
   "private": true,

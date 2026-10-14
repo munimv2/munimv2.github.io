@@ -2,7 +2,7 @@
 // placeholders, and put them back later. Pure functions, no DOM, no network.
 // The NER model output is passed in, so this file runs the same in Node tests.
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.2.1';
 
 // Lower number wins when two findings overlap.
 const PRIORITY = { TERM: 0, EMAIL: 1, URL: 1, CARD: 1, IBAN: 1, ID: 1, IP: 1, PHONE: 2, PERSON: 3, ORG: 3, PLACE: 3, MISC: 4 };
@@ -227,13 +227,42 @@ function placeholderFor(key, type, original) {
   return placeholder;
 }
 
+// A first or last name on its own takes the placeholder of the one full name
+// it belongs to, so "Daniel Okafor ... Daniel's line" stays one person for the
+// AI. A part two full names share ("Daniel Okafor", "Daniel Reyes") keeps its
+// own placeholder, and so does a name the key already holds on its own.
+function personAliases(text, spans, key) {
+  const fullNames = new Set([
+    ...key.entries.filter((e) => e.type === 'PERSON').map((e) => e.original),
+    ...spans.filter((s) => s.type === 'PERSON').map((s) => text.slice(s.start, s.end)),
+  ]);
+  const owners = new Map();
+  for (const full of fullNames) {
+    if (!/\s/.test(full)) continue;
+    for (const part of full.match(/\p{Lu}[\p{L}'’-]{2,}/gu) || []) {
+      if (!owners.has(part)) owners.set(part, new Set());
+      owners.get(part).add(full);
+    }
+  }
+  const aliases = new Map();
+  for (const [part, fulls] of owners) {
+    if (fulls.size !== 1) continue;
+    if (key.entries.some((e) => e.type === 'PERSON' && e.original === part)) continue;
+    aliases.set(part, [...fulls][0]);
+  }
+  return aliases;
+}
+
 // Swap each chosen span for its placeholder. The key is reused across texts,
 // so the same name gets the same placeholder all session.
 export function maskText(text, spans, key = newKey()) {
+  const aliases = personAliases(text, spans, key);
   let masked = '';
   let last = 0;
   for (const s of spans) {
-    masked += text.slice(last, s.start) + placeholderFor(key, s.type, text.slice(s.start, s.end));
+    let original = text.slice(s.start, s.end);
+    if (s.type === 'PERSON' && aliases.has(original)) original = aliases.get(original);
+    masked += text.slice(last, s.start) + placeholderFor(key, s.type, original);
     last = s.end;
   }
   masked += text.slice(last);
