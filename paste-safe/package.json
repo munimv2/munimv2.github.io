@@ -1,6 +1,6 @@
 {
   "name": "paste-safe",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Mask client names and contact details before you paste text into a cloud AI, then put them back. Runs in the browser with open models (BERT NER, optional Gemma 3 270M second look).",
   "type": "module",
   "private": true,

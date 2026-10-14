@@ -2,7 +2,7 @@
 // placeholders, and put them back later. Pure functions, no DOM, no network.
 // The NER model output is passed in, so this file runs the same in Node tests.
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.3.1';
 
 // Lower number wins when two findings overlap.
 const PRIORITY = { TERM: 0, EMAIL: 1, URL: 1, CARD: 1, IBAN: 1, ID: 1, IP: 1, PHONE: 2, PERSON: 3, ORG: 3, PLACE: 3, NAME: 3, MISC: 4 };

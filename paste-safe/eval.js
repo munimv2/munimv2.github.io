@@ -4,7 +4,7 @@ import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers
 import { VERSION, chunkText, findSpans, maskText } from './core.js';
 import { CASES } from './eval-data.js';
 import { scoreCase, summarize, resultLine, reportMarkdown } from './evalcore.js';
-import { loadGemma, secondLook } from './gemma.js';
+import { loadGemma, secondLook, gemmaDtype, DTYPE_NAMES } from './gemma.js';
 
 const MODEL = 'Xenova/bert-base-NER';
 const NER_TYPES = ['PER', 'ORG', 'LOC'];
@@ -49,7 +49,9 @@ async function run() {
     const ner = await pipeline('token-classification', MODEL, { dtype: 'q8' });
     const useGemma = $('use-gemma').checked;
     if (useGemma) await loadGemma((pct, mb) => status(`Loading Gemma 3 270M: ${pct}% of ${mb} MB`));
-    const settings = SETTINGS.filter((setting) => useGemma || !setting.gemma);
+    // The Gemma row names the weights that loaded (4-bit, or 8-bit if 4-bit failed).
+    const settings = SETTINGS.filter((setting) => useGemma || !setting.gemma)
+      .map((setting) => (setting.gemma ? { ...setting, label: `${setting.label} (${DTYPE_NAMES[gemmaDtype]})` } : setting));
     const scores = settings.map(() => []);
     const examples = [];
     for (const [i, c] of CASES.entries()) {
