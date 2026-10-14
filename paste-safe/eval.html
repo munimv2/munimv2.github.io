@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paste-Safe test set: how many names does it really hide?</title>
+<meta name="description" content="Run Paste-Safe's masking over 30 labelled made-up client messages in your browser and see which names it hides, which it misses and which ordinary words it masks by mistake.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Paste-Safe test set</h1>
+  <p class="lede">How many names does it really hide?</p>
+  <p class="small">This page runs the same masking as <a href="./">Paste-Safe</a> over <span id="count"></span> made-up requests of the kind people paste into a chat AI. Every person, company, place, email, phone number and account number in them is labelled. Some are meant to be hard: names in lower case, names that are also ordinary words, and names from outside the model's English news training. Everything runs in this tab; nothing is uploaded. The messages and labels are in <a href="https://github.com/munimv2/paste-safe/blob/main/eval-data.js">eval-data.js</a>.</p>
+  <p class="small">A name counts as hidden only if every letter of every mention is masked: "[PERSON_1] Okafor" counts as a miss for "Daniel Okafor". The always-mask list is left empty here, so this measures the model and the patterns alone.</p>
+</header>
+
+<main>
+  <button id="run" type="button" class="primary">Run the test</button>
+  <p id="status" role="status" aria-live="polite"></p>
+  <pre id="result"></pre>
+  <table>
+    <thead><tr><th>#</th><th>Masked text</th><th>Names hidden</th><th>Missed</th><th>Masked but not private</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</main>
+
+<footer>
+  <p class="small">Paste-Safe is open source (MIT): <a href="https://github.com/munimv2/paste-safe">github.com/munimv2/paste-safe</a>. By MV2 of Munim, Inc. Built with AI agents working in his name; the test messages were written by those agents.</p>
+</footer>
+<script type="module" src="eval.js"></script>
+</body>
+</html>

@@ -23,5 +23,6 @@ summary { cursor: pointer; font-weight: 600; }
 table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: .9rem; }
 th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; word-break: break-word; }
 #status { min-height: 1.5em; color: var(--muted); }
+pre { white-space: pre-wrap; word-break: break-word; font: 13px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; }
 footer { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 12px; }
 a { color: var(--accent); }
