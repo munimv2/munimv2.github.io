@@ -25,7 +25,7 @@
 </style>
 </head>
 <body>
-<nav><a href="../index.html">CVE-Checker (Englisch)</a> · <strong>Ollama absichern</strong> · Sprachen: <a href="../secure-ollama.html" hreflang="en">English</a> · Deutsch · <a href="../es/secure-ollama.html" hreflang="es">Español</a> · <a href="../fr/secure-ollama.html" hreflang="fr">Français</a> · <a href="../ja/secure-ollama.html" hreflang="ja">日本語</a> · <a href="../pt-br/secure-ollama.html" hreflang="pt-BR">Português (Brasil)</a></nav>
+<nav><a href="../index.html">CVE-Checker (Englisch)</a> · <strong>Ollama absichern</strong> · <a href="ollama-remote-access.html">Ollama aus der Ferne nutzen</a> · <a href="ollama-api-key.html">Ollama-API-Schlüssel</a> · <a href="docker-ollama.html">Docker erreicht Ollama nicht</a> · Sprachen: <a href="../secure-ollama.html" hreflang="en">English</a> · Deutsch · <a href="../es/secure-ollama.html" hreflang="es">Español</a> · <a href="../fr/secure-ollama.html" hreflang="fr">Français</a> · <a href="../ja/secure-ollama.html" hreflang="ja">日本語</a> · <a href="../pt-br/secure-ollama.html" hreflang="pt-BR">Português (Brasil)</a></nav>
 <h1>Ist mein Ollama offen im Netz? Eine Checkliste zum Absichern</h1>
 <p class="by">Von MV2 von Munim, Inc. Einstellungen geprüft anhand der <a href="https://docs.ollama.com/faq">Ollama-FAQ</a> am 12. Oktober 2026. Nur für Ihre eigenen Rechner. Diese Seite wurde mit KI aus dem <a href="../secure-ollama.html" hreflang="en">englischen Original</a> übersetzt; bei Abweichungen gilt das Original.</p>
 
@@ -51,7 +51,7 @@ Environment="OLLAMA_HOST=127.0.0.1:11434"</pre>
   <li><strong>macOS (App):</strong> <code>launchctl setenv OLLAMA_HOST "127.0.0.1:11434"</code> (oder <code>launchctl unsetenv OLLAMA_HOST</code>), dann Ollama beenden und neu öffnen.</li>
   <li><strong>Windows:</strong> Beenden Sie Ollama über die Taskleiste. Öffnen Sie „Umgebungsvariablen für dieses Konto bearbeiten“, löschen oder ändern Sie <code>OLLAMA_HOST</code> und starten Sie Ollama wieder über das Startmenü.</li>
 </ul>
-<p>Haben Sie <code>OLLAMA_HOST=0.0.0.0</code> nur gesetzt, damit ein Docker-Container zugreifen kann, gibt es Wege, die Ollama aus Ihrem Netz heraushalten: siehe <a href="../docker-ollama.html">Docker can't reach Ollama (Englisch)</a>. Haben Sie es gesetzt, damit ein Laptop oder Handy zugreifen kann, siehe <a href="../ollama-remote-access.html">Ollama von einem anderen Rechner oder Handy nutzen (Englisch)</a>.</p>
+<p>Haben Sie <code>OLLAMA_HOST=0.0.0.0</code> nur gesetzt, damit ein Docker-Container zugreifen kann, gibt es Wege, die Ollama aus Ihrem Netz heraushalten: siehe <a href="docker-ollama.html">Open WebUI oder n8n in Docker kann sich nicht mit Ollama verbinden</a>. Haben Sie es gesetzt, damit ein Laptop oder Handy zugreifen kann, siehe <a href="ollama-remote-access.html">Ollama von einem anderen Rechner oder vom Handy nutzen</a>.</p>
 
 <h2>3. Wenn Sie Ollama in Docker betreiben</h2>
 <p><code>-p 11434:11434</code> veröffentlicht den Port auf allen Schnittstellen. Unter Linux schreibt Docker eigene Firewall-Regeln, deshalb <strong>blockieren ufw und firewalld ihn nicht</strong>. Nutzen Sie stattdessen eine dieser Varianten:</p>
@@ -83,8 +83,8 @@ volumes:
         header_up Host localhost:11434
     }
 }</pre>
-<p>Die <code>Host</code>-Zeile ist wichtig. Die Proxy-Beispiele der Ollama-FAQ schreiben den Host-Header auf <code>localhost:11434</code> um, und Anfragen mit anderen Host-Werten können abgewiesen werden. Ein privates Netz wie Tailscale oder WireGuard ist eine weitere Möglichkeit: Nur Ihre eigenen Geräte erreichen den Port, und nichts wird ins Internet veröffentlicht. <a href="../ollama-remote-access.html">Use Ollama remotely (Englisch)</a> zeigt einen SSH-Tunnel, Tailscale (einschließlich der Frage, warum <code>tailscale serve</code> vor Ollama 403 liefert) und eine Firewall-Regel nur fürs LAN.</p>
-<p><strong>Apps statt Menschen?</strong> Open WebUI, n8n und OpenAI-kompatible Clients senden einen API-Schlüssel als <code>Authorization: Bearer</code>, den Basic Auth ablehnt. <a href="../ollama-api-key.html">Ollama API key (Englisch)</a> enthält Caddy- und nginx-Konfigurationen, die einen Schlüssel prüfen, und die passenden Einstellungen für jeden dieser Clients.</p>
+<p>Die <code>Host</code>-Zeile ist wichtig. Die Proxy-Beispiele der Ollama-FAQ schreiben den Host-Header auf <code>localhost:11434</code> um, und Anfragen mit anderen Host-Werten können abgewiesen werden. Ein privates Netz wie Tailscale oder WireGuard ist eine weitere Möglichkeit: Nur Ihre eigenen Geräte erreichen den Port, und nichts wird ins Internet veröffentlicht. <a href="ollama-remote-access.html">Ollama aus der Ferne nutzen</a> zeigt einen SSH-Tunnel, Tailscale (einschließlich der Frage, warum <code>tailscale serve</code> vor Ollama 403 liefert) und eine Firewall-Regel nur fürs LAN.</p>
+<p><strong>Apps statt Menschen?</strong> Open WebUI, n8n und OpenAI-kompatible Clients senden einen API-Schlüssel als <code>Authorization: Bearer</code>, den Basic Auth ablehnt. <a href="ollama-api-key.html">Ollama-API-Schlüssel</a> enthält Caddy- und nginx-Konfigurationen, die einen Schlüssel prüfen, und die passenden Einstellungen für jeden dieser Clients.</p>
 <p><strong>Tunnel:</strong> Die FAQ zeigt auch Befehle für <code>ngrok</code> und <code>cloudflared</code>. Für sich allein veröffentlichen sie Ihr Ollama ohne Login im ganzen Internet. Nutzen Sie sie nur mit eingeschalteter Zugriffskontrolle des Tunnel-Anbieters.</p>
 
 <h2>5. OLLAMA_ORIGINS eng halten</h2>

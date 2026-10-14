@@ -25,7 +25,7 @@
 </style>
 </head>
 <body>
-<nav><a href="../index.html">Comprobador de CVE (en inglés)</a> · <strong>Asegurar Ollama</strong> · Idiomas: <a href="../secure-ollama.html" hreflang="en">English</a> · <a href="../de/secure-ollama.html" hreflang="de">Deutsch</a> · Español · <a href="../fr/secure-ollama.html" hreflang="fr">Français</a> · <a href="../ja/secure-ollama.html" hreflang="ja">日本語</a> · <a href="../pt-br/secure-ollama.html" hreflang="pt-BR">Português (Brasil)</a></nav>
+<nav><a href="../index.html">Comprobador de CVE (en inglés)</a> · <strong>Asegurar Ollama</strong> · <a href="ollama-remote-access.html">Usar Ollama en remoto</a> · <a href="ollama-api-key.html">Clave de API de Ollama</a> · <a href="docker-ollama.html">Docker no llega a Ollama</a> · Idiomas: <a href="../secure-ollama.html" hreflang="en">English</a> · <a href="../de/secure-ollama.html" hreflang="de">Deutsch</a> · Español · <a href="../fr/secure-ollama.html" hreflang="fr">Français</a> · <a href="../ja/secure-ollama.html" hreflang="ja">日本語</a> · <a href="../pt-br/secure-ollama.html" hreflang="pt-BR">Português (Brasil)</a></nav>
 <h1>¿Mi Ollama está expuesto? Una lista de comprobación para asegurarlo</h1>
 <p class="by">Por MV2 de Munim, Inc. Ajustes comprobados con las <a href="https://docs.ollama.com/faq">preguntas frecuentes de Ollama</a> el 12 de octubre de 2026. Solo para sus propias máquinas. Esta página se tradujo con IA del <a href="../secure-ollama.html" hreflang="en">original en inglés</a>; si hay diferencias, prevalece el original.</p>
 
@@ -51,7 +51,7 @@ Environment="OLLAMA_HOST=127.0.0.1:11434"</pre>
   <li><strong>macOS (aplicación):</strong> <code>launchctl setenv OLLAMA_HOST "127.0.0.1:11434"</code> (o <code>launchctl unsetenv OLLAMA_HOST</code>); después cierre Ollama y vuelva a abrirlo.</li>
   <li><strong>Windows:</strong> cierre Ollama desde la barra de tareas. Abra «Editar las variables de entorno de esta cuenta», borre o cambie <code>OLLAMA_HOST</code> y vuelva a iniciar Ollama desde el menú Inicio.</li>
 </ul>
-<p>Si definió <code>OLLAMA_HOST=0.0.0.0</code> solo para que un contenedor de Docker pudiera conectarse, hay formas de mantener Ollama fuera de su red: vea <a href="../docker-ollama.html">Docker can't reach Ollama (en inglés)</a>. Si lo definió para conectarse desde un portátil o un teléfono, vea <a href="../ollama-remote-access.html">Usar Ollama desde otro ordenador o desde el teléfono (en inglés)</a>.</p>
+<p>Si definió <code>OLLAMA_HOST=0.0.0.0</code> solo para que un contenedor de Docker pudiera conectarse, hay formas de mantener Ollama fuera de su red: vea <a href="docker-ollama.html">Open WebUI o n8n en Docker no se conectan a Ollama</a>. Si lo definió para conectarse desde un portátil o un teléfono, vea <a href="ollama-remote-access.html">Usar Ollama desde otro ordenador o desde el teléfono</a>.</p>
 
 <h2>3. Si ejecuta Ollama en Docker</h2>
 <p><code>-p 11434:11434</code> publica el puerto en todas las interfaces. En Linux, Docker escribe sus propias reglas de cortafuegos, así que <strong>ufw y firewalld no lo bloquean</strong>. Use en su lugar una de estas opciones:</p>
@@ -83,8 +83,8 @@ volumes:
         header_up Host localhost:11434
     }
 }</pre>
-<p>La línea <code>Host</code> importa. Los ejemplos de proxy de las preguntas frecuentes de Ollama reescriben la cabecera Host a <code>localhost:11434</code>, y las peticiones con otros valores de Host pueden ser rechazadas. Una red privada como Tailscale o WireGuard es otra opción: solo sus propios dispositivos llegan al puerto y nada se publica en internet. <a href="../ollama-remote-access.html">Use Ollama remotely (en inglés)</a> explica un túnel SSH, Tailscale (incluido por qué <code>tailscale serve</code> delante de Ollama devuelve 403) y una regla de cortafuegos solo para la red local.</p>
-<p><strong>¿Aplicaciones en lugar de personas?</strong> Open WebUI, n8n y los clientes compatibles con OpenAI envían una clave de API como <code>Authorization: Bearer</code>, que la autenticación básica rechaza. <a href="../ollama-api-key.html">Ollama API key (en inglés)</a> tiene configuraciones de Caddy y nginx que comprueban una clave, y los ajustes de cada uno de esos clientes.</p>
+<p>La línea <code>Host</code> importa. Los ejemplos de proxy de las preguntas frecuentes de Ollama reescriben la cabecera Host a <code>localhost:11434</code>, y las peticiones con otros valores de Host pueden ser rechazadas. Una red privada como Tailscale o WireGuard es otra opción: solo sus propios dispositivos llegan al puerto y nada se publica en internet. <a href="ollama-remote-access.html">Usar Ollama en remoto</a> explica un túnel SSH, Tailscale (incluido por qué <code>tailscale serve</code> delante de Ollama devuelve 403) y una regla de cortafuegos solo para la red local.</p>
+<p><strong>¿Aplicaciones en lugar de personas?</strong> Open WebUI, n8n y los clientes compatibles con OpenAI envían una clave de API como <code>Authorization: Bearer</code>, que la autenticación básica rechaza. <a href="ollama-api-key.html">Clave de API de Ollama</a> tiene configuraciones de Caddy y nginx que comprueban una clave, y los ajustes de cada uno de esos clientes.</p>
 <p><strong>Túneles:</strong> las preguntas frecuentes también muestran comandos de <code>ngrok</code> y <code>cloudflared</code>. Por sí solos publican su Ollama en todo internet sin inicio de sesión. Úselos solo con el control de acceso del proveedor del túnel activado.</p>
 
 <h2>5. Mantenga OLLAMA_ORIGINS restringido</h2>

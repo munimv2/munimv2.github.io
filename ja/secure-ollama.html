@@ -14,8 +14,8 @@
 <link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/secure-ollama.html">
 <link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/secure-ollama.html">
 <style>
-  body { font: 16px/1.7 system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", Meiryo, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
-  h1 { font-size: 1.6rem; line-height: 1.35; }
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.6rem; line-height: 1.25; }
   h2 { font-size: 1.25rem; margin-top: 2rem; }
   code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
   code { padding: 0 0.2rem; }
@@ -25,7 +25,7 @@
 </style>
 </head>
 <body>
-<nav><a href="../index.html">CVE チェッカー（英語）</a> · <strong>Ollama を締める</strong> · 言語: <a href="../secure-ollama.html" hreflang="en">English</a> · <a href="../de/secure-ollama.html" hreflang="de">Deutsch</a> · <a href="../es/secure-ollama.html" hreflang="es">Español</a> · <a href="../fr/secure-ollama.html" hreflang="fr">Français</a> · 日本語 · <a href="../pt-br/secure-ollama.html" hreflang="pt-BR">Português (Brasil)</a></nav>
+<nav><a href="../index.html">CVE チェッカー（英語）</a> · <strong>Ollama を締める</strong> · <a href="ollama-remote-access.html">Ollama をリモートで使う</a> · <a href="ollama-api-key.html">Ollama の API キー</a> · <a href="docker-ollama.html">Docker から Ollama に届かない</a> · 言語: <a href="../secure-ollama.html" hreflang="en">English</a> · <a href="../de/secure-ollama.html" hreflang="de">Deutsch</a> · <a href="../es/secure-ollama.html" hreflang="es">Español</a> · <a href="../fr/secure-ollama.html" hreflang="fr">Français</a> · 日本語 · <a href="../pt-br/secure-ollama.html" hreflang="pt-BR">Português (Brasil)</a></nav>
 <h1>Ollama が外部に公開されていないか？ 締めるためのチェックリスト</h1>
 <p class="by">Munim, Inc. の MV2 による。設定は 2026 年 10 月 12 日に <a href="https://docs.ollama.com/faq">Ollama FAQ</a> と照合済み。ご自身のマシンにのみ使ってください。このページは<a href="../secure-ollama.html" hreflang="en">英語の原文</a>から AI で翻訳したものです。内容に食い違いがある場合は原文が優先します。</p>
 
@@ -51,7 +51,7 @@ Environment="OLLAMA_HOST=127.0.0.1:11434"</pre>
   <li><strong>macOS（アプリ）:</strong> <code>launchctl setenv OLLAMA_HOST "127.0.0.1:11434"</code>（または <code>launchctl unsetenv OLLAMA_HOST</code>）を実行し、Ollama を終了してから開き直します。</li>
   <li><strong>Windows:</strong> タスクバーから Ollama を終了します。「アカウントの環境変数を編集」を開いて <code>OLLAMA_HOST</code> を削除または変更し、スタートメニューから Ollama を再び起動します。</li>
 </ul>
-<p>Docker コンテナから接続するためだけに <code>OLLAMA_HOST=0.0.0.0</code> を設定したのなら、Ollama をネットワークに出さずに済む方法があります。<a href="../docker-ollama.html">Docker can't reach Ollama（英語）</a>を参照してください。ノート PC やスマートフォンから接続するために設定したのなら、<a href="../ollama-remote-access.html">別のコンピューターやスマートフォンから Ollama を使う（英語）</a>を参照してください。</p>
+<p>Docker コンテナから接続するためだけに <code>OLLAMA_HOST=0.0.0.0</code> を設定したのなら、Ollama をネットワークに出さずに済む方法があります。<a href="docker-ollama.html">Docker の Open WebUI や n8n が Ollama に接続できない</a>を参照してください。ノート PC やスマートフォンから接続するために設定したのなら、<a href="ollama-remote-access.html">別のコンピューターやスマートフォンから Ollama を使う</a>を参照してください。</p>
 
 <h2>3. Ollama を Docker で動かしている場合</h2>
 <p><code>-p 11434:11434</code> はすべてのインターフェースでポートを公開します。Linux では Docker が独自のファイアウォールルールを書き込むため、<strong>ufw や firewalld ではブロックされません</strong>。代わりに次のいずれかを使ってください:</p>
@@ -83,8 +83,8 @@ volumes:
         header_up Host localhost:11434
     }
 }</pre>
-<p><code>Host</code> の行が重要です。Ollama FAQ のプロキシ例は Host ヘッダーを <code>localhost:11434</code> に書き換えており、ほかの Host 値のリクエストは拒否されることがあります。Tailscale や WireGuard のようなプライベートネットワークも選択肢です。ポートに届くのはご自身の端末だけで、インターネットには何も公開されません。<a href="../ollama-remote-access.html">Use Ollama remotely（英語）</a>では、SSH トンネル、Tailscale（Ollama の前に <code>tailscale serve</code> を置くと 403 が返る理由を含む）、LAN 内だけを許可するファイアウォールルールを順に説明しています。</p>
-<p><strong>人ではなくアプリから使う場合:</strong> Open WebUI、n8n、OpenAI 互換のクライアントは API キーを <code>Authorization: Bearer</code> として送るため、Basic 認証では拒否されます。<a href="../ollama-api-key.html">Ollama API key（英語）</a>に、キーを検証する Caddy と nginx の設定と、それぞれのクライアント側の設定があります。</p>
+<p><code>Host</code> の行が重要です。Ollama FAQ のプロキシ例は Host ヘッダーを <code>localhost:11434</code> に書き換えており、ほかの Host 値のリクエストは拒否されることがあります。Tailscale や WireGuard のようなプライベートネットワークも選択肢です。ポートに届くのはご自身の端末だけで、インターネットには何も公開されません。<a href="ollama-remote-access.html">Ollama をリモートで使う</a>では、SSH トンネル、Tailscale（Ollama の前に <code>tailscale serve</code> を置くと 403 が返る理由を含む）、LAN 内だけを許可するファイアウォールルールを順に説明しています。</p>
+<p><strong>人ではなくアプリから使う場合:</strong> Open WebUI、n8n、OpenAI 互換のクライアントは API キーを <code>Authorization: Bearer</code> として送るため、Basic 認証では拒否されます。<a href="ollama-api-key.html">Ollama の API キー</a>に、キーを検証する Caddy と nginx の設定と、それぞれのクライアント側の設定があります。</p>
 <p><strong>トンネル:</strong> FAQ には <code>ngrok</code> と <code>cloudflared</code> のコマンドも載っています。それだけでは、あなたの Ollama がログインなしでインターネット全体に公開されます。トンネル事業者のアクセス制御をオンにした場合にのみ使ってください。</p>
 
 <h2>5. OLLAMA_ORIGINS は狭く保つ</h2>

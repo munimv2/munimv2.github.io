@@ -13,7 +13,7 @@
   </url>
   <url>
     <loc>https://munimv2.github.io/de/secure-ollama.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <lastmod>2026-10-14</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/secure-ollama.html"/>
@@ -24,7 +24,7 @@
   </url>
   <url>
     <loc>https://munimv2.github.io/es/secure-ollama.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <lastmod>2026-10-14</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/secure-ollama.html"/>
@@ -35,7 +35,7 @@
   </url>
   <url>
     <loc>https://munimv2.github.io/fr/secure-ollama.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <lastmod>2026-10-14</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/secure-ollama.html"/>
@@ -46,7 +46,7 @@
   </url>
   <url>
     <loc>https://munimv2.github.io/ja/secure-ollama.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <lastmod>2026-10-14</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/secure-ollama.html"/>
@@ -57,7 +57,7 @@
   </url>
   <url>
     <loc>https://munimv2.github.io/pt-br/secure-ollama.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <lastmod>2026-10-14</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/secure-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/secure-ollama.html"/>
@@ -197,5 +197,71 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/ollama-api-key.html"/>
     <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/ollama-api-key.html"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/ollama-api-key.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/docker-ollama.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/docker-ollama.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/de/docker-ollama.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/docker-ollama.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/es/docker-ollama.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/docker-ollama.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/fr/docker-ollama.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/docker-ollama.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/ja/docker-ollama.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/docker-ollama.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/pt-br/docker-ollama.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/docker-ollama.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/docker-ollama.html"/>
   </url>
 </urlset>
