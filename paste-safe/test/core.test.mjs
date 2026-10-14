@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  chunkText, alignTokens, entitySpans, patternSpans, termSpans, resolveSpans,
+  chunkText, alignTokens, entitySpans, patternSpans, termSpans, resolveSpans, ruleSpans,
   findSpans, maskText, restoreText, newKey,
 } from '../core.js';
 
@@ -59,6 +59,32 @@ test('chunk offsets carry through alignment', () => {
   }));
   const spans = findSpans(text, { nerTokens });
   assert.deepEqual(surfaces(text, spans), ['Maria']);
+});
+
+test('name rules find names after titles, greetings and sign-offs', () => {
+  const text = "Hi Maria,\nMr. Kowalczyk asked Dr Laurent Mercier about Madame Dubois's file. Dear Team, thanks.\nKind regards, Linh Tran.";
+  const spans = ruleSpans(text);
+  assert.deepEqual(surfaces(text, spans).sort(), ['Dubois', 'Kowalczyk', 'Laurent Mercier', 'Linh Tran', 'Maria']);
+  assert.ok(spans.every((s) => s.type === 'PERSON'));
+  assert.deepEqual(surfaces('Thanks,\nSam', ruleSpans('Thanks,\nSam')), ['Sam']);
+  assert.deepEqual(surfaces('Dear Mr Nguyen, thank you.', ruleSpans('Dear Mr Nguyen, thank you.')), ['Nguyen', 'Nguyen']);
+});
+
+test('name rules leave ordinary sentences alone', () => {
+  for (const text of [
+    'This is the brief. Hi there, team.',
+    'Thanks, Maria will call you.',
+    'Please tell the Dr about it.',
+    'hey, Rob says hello.',
+    'Dear All, the office is closed.',
+  ]) assert.deepEqual(ruleSpans(text), [], text);
+});
+
+test('a name found by a rule is masked everywhere, and the rules can be turned off', () => {
+  const text = 'Dear Rose, the lease is ready. Rose can sign on Friday.';
+  assert.equal(maskText(text, findSpans(text)).masked, 'Dear [PERSON_1], the lease is ready. [PERSON_1] can sign on Friday.');
+  assert.deepEqual(findSpans(text, { rules: false }), []);
+  assert.deepEqual(findSpans(text, { nerTypes: ['ORG', 'LOC'] }), []);
 });
 
 test('patterns find contact details and numbers but not dates or versions', () => {

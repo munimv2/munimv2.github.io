@@ -81,6 +81,7 @@ async function runMask() {
     const spans = findSpans(text, {
       nerTokens,
       nerTypes: types,
+      rules: $('opt-rules').checked,
       contact: $('opt-contact').checked,
       numbers: $('opt-numbers').checked,
       terms: lines('always'),

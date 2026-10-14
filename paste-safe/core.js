@@ -2,7 +2,7 @@
 // placeholders, and put them back later. Pure functions, no DOM, no network.
 // The NER model output is passed in, so this file runs the same in Node tests.
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 
 // Lower number wins when two findings overlap.
 const PRIORITY = { TERM: 0, EMAIL: 1, URL: 1, CARD: 1, IBAN: 1, ID: 1, IP: 1, PHONE: 2, PERSON: 3, ORG: 3, PLACE: 3, MISC: 4 };
@@ -90,6 +90,37 @@ export function entitySpans(text, aligned, { minScore = 0.6, nerTypes = ['PER', 
   return spans;
 }
 
+// A capitalised name of one to three words: "Rose", "Laurent Mercier", "Siobhán Ní Bhriain".
+const NAME = String.raw`\p{Lu}[\p{L}'’-]*\p{L}(?:[ \t]+\p{Lu}[\p{L}'’-]*\p{L}){0,2}`;
+const TITLES = String.raw`(?:Mr|Mrs|Ms|Miss|Mx|Dr|Prof|Professor|Sir|Dame|Madame|Mme|Mademoiselle|Mlle|Monsieur|Herr|Frau|Señor|Señora|Signor|Signora)`;
+const NAME_RULES = [
+  // A title: "Mr. Kowalczyk", "Dr Laurent Mercier", "Madame Dubois".
+  new RegExp(String.raw`(?<![\p{L}\p{N}_])${TITLES}\.?[ \t]+(${NAME})`, 'gu'),
+  // A greeting that ends at a comma or line end: "Hi Maria,", "Dear Rose,".
+  new RegExp(String.raw`(?<![\p{L}\p{N}_])(?:[Hh]i|[Hh]ello|[Hh]ey|[Dd]ear|[Gg]ood (?:morning|afternoon|evening))[ \t]+(?:${TITLES}\.?[ \t]+)?(${NAME})(?=[ \t]*(?:[,!:;\r\n]|$))`, 'gu'),
+  // A sign-off followed by the name on its own: "Kind regards, Linh Tran." or "Thanks,\nSam".
+  new RegExp(String.raw`(?<![\p{L}\p{N}_])(?:[Rr]egards|[Bb]est wishes|[Bb]est|[Cc]heers|[Ss]incerely|[Tt]hanks|[Tt]hank you|[Yy]ours(?: sincerely| truly| faithfully)?)[ \t]*,[ \t]*\r?\n?[ \t]*(${NAME})(?=[ \t]*(?:[.,!"”\r\n]|$))`, 'gu'),
+];
+// Words a greeting is often followed by that are not anyone's name.
+const NOT_NAMES = new Set(['All', 'Everyone', 'Everybody', 'There', 'Team', 'Folks', 'Friends', 'Colleagues', 'Sir', 'Madam',
+  'Customer', 'Client', 'Hiring', 'Valued', 'Guys', 'Both', 'Again', 'Partners', 'Members', 'Neighbours', 'Neighbors', 'Parents']);
+
+// Names that the words around them give away, which the model misses most
+// often outside its English news training. Each becomes a PERSON span.
+export function ruleSpans(text) {
+  const spans = [];
+  for (const re of NAME_RULES) {
+    for (const m of text.matchAll(re)) {
+      let name = m[1];
+      if (NOT_NAMES.has(name.split(/[ \t]/)[0])) continue;
+      const start = m.index + m[0].length - name.length;
+      name = name.replace(/['’]s$/, '');
+      spans.push({ start, end: start + name.length, type: 'PERSON', source: 'rule' });
+    }
+  }
+  return spans;
+}
+
 function luhn(digits) {
   let sum = 0;
   for (let i = 0; i < digits.length; i++) {
@@ -151,12 +182,12 @@ export function termSpans(text, terms) {
   return spans;
 }
 
-// Once the model has found a name, mask every other mention of it too,
-// including a person's first or last name used on its own later.
+// Once the model or a name rule has found a name, mask every other mention
+// of it too, including a person's first or last name used on its own later.
 export function propagate(text, spans) {
   const seen = new Map();
   for (const s of spans) {
-    if (s.source !== 'ner') continue;
+    if (s.source !== 'ner' && s.source !== 'rule') continue;
     const surface = text.slice(s.start, s.end);
     if (surface.length >= 2 && !seen.has(surface)) seen.set(surface, s.type);
     if (s.type !== 'PERSON') continue;
@@ -228,13 +259,15 @@ export function restoreText(text, key) {
   return { restored, count, leftover: [...new Set(leftover)] };
 }
 
-// Everything except the model call, in one step.
-export function findSpans(text, { nerTokens = [], contact = true, numbers = true, terms = [], keep = [], minScore = 0.6, nerTypes } = {}) {
+// Everything except the model call, in one step. The name rules only add
+// people, so they are off when people are not being masked.
+export function findSpans(text, { nerTokens = [], contact = true, numbers = true, terms = [], keep = [], minScore = 0.6, nerTypes = ['PER', 'ORG', 'LOC'], rules = true } = {}) {
   let spans = [];
   for (const chunk of nerTokens) {
     const aligned = alignTokens(chunk.text, chunk.tokens, chunk.offset);
     spans.push(...entitySpans(text, aligned, { minScore, nerTypes }));
   }
+  if (rules && nerTypes.includes('PER')) spans.push(...ruleSpans(text));
   spans = propagate(text, spans);
   spans.push(...patternSpans(text, { contact, numbers }));
   spans.push(...termSpans(text, terms));

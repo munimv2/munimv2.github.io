@@ -58,3 +58,46 @@ export function resultLine(label, sum) {
   return `${label}: names hidden ${sum.namesHidden}/${sum.names}, contact details and numbers hidden ${sum.detailsHidden}/${sum.details}, `
     + `non-private words masked ${sum.extra.length} | missed: ${sum.missed.join(', ') || 'none'} | over-masked: ${sum.extra.join(', ') || 'none'}`;
 }
+
+export function shortList(items, max = 12) {
+  if (!items.length) return 'nothing';
+  if (items.length <= max) return items.join(', ');
+  return `${items.slice(0, max).join(', ')} and ${items.length - max} more (all listed on the test page)`;
+}
+
+// The "How well it works" section of a write-up, in Markdown, so the numbers
+// are copied from the run rather than retyped. rows: [{ label, sum }], the
+// first row being the default setting; examples: [{ id, masked }].
+export function reportMarkdown({ version, date, url, rows, examples = [] }) {
+  const s = rows[0].sum;
+  const lines = [
+    '### How well it works',
+    '',
+    `Paste-Safe ${version} was run over its [test set](${url}): ${s.cases} made-up requests of the kind people paste into a chat AI, `
+      + `with ${s.names} names of people, organizations and places and ${s.details} contact details and numbers labelled. `
+      + 'A name counts as hidden only if every letter of every mention is masked. '
+      + 'The always-mask list was left empty, so this measures the model, the patterns and the name rules on their own.',
+    '',
+    '| Setting | Names hidden | Contact details and numbers hidden | Ordinary words masked by mistake |',
+    '|---|---|---|---|',
+    ...rows.map(({ label, sum }) => `| ${label} | ${sum.namesHidden}/${sum.names} | ${sum.detailsHidden}/${sum.details} | ${sum.extra.length} |`),
+    '',
+    `**Missed at the default setting:** ${shortList(s.missed)}.`,
+    '',
+    `**Masked by mistake at the default setting:** ${shortList(s.extra)}.`,
+  ];
+  if (examples.length) {
+    lines.push('', `How ${examples.length === 1 ? 'one of the misses' : `${examples.length} of the misses`} looked after masking:`);
+    for (const ex of examples) lines.push('', `> #${ex.id}: ${ex.masked.replace(/\s*\n\s*/g, ' ')}`);
+  }
+  lines.push(
+    '',
+    'The name rules (a capitalised name after a title such as Mr or Dr, after a greeting such as Dear or Hi, or under a sign-off such as Kind regards) '
+      + 'were added after the test set was written, by the same AI agents who wrote it, so read the default row as a best case on these messages, not a promise. '
+      + 'The messages themselves were made up by those agents, not taken from real clients. '
+      + 'For a name that must never leak, the fix is the always-mask list: add it once and it is masked every time, whatever the model thinks.',
+    '',
+    `*Measured in a desktop browser on ${date}. The test page runs in your browser, so anyone can re-run it.*`,
+  );
+  return lines.join('\n');
+}
