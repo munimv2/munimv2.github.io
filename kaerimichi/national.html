@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>かえりみち 全国版 — バスで病院へ日帰りで往復できる停留所の割合 / Kaerimichi: all of Japan</title>
+<meta name="description" content="全国の公開GTFSのすべての停留所について、病院名の停留所へバスで行き、その日のうちに戻ってこられるかを判定した集計（平日・土曜、都道府県別・データ別、停留所ごとの地図、CSVはCC BY 4.0）。 / For every stop in Japan's open GTFS feeds: can you reach a hospital-named stop by bus and get back the same day? Weekday and Saturday, by prefecture and feed, with a map and open CSV data.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; font-family: system-ui, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif; color: #212121; background: #fafafa; }
+  header { padding: 10px 16px; background: #0d47a1; color: #fff; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 1.5rem; }
+  header p { margin: 0; font-size: 1rem; opacity: .9; }
+  header nav { margin-left: auto; display: flex; gap: 14px; }
+  header a { color: #fff; }
+  main { max-width: 1200px; margin: 0 auto; padding: 8px 16px 24px; }
+  section { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+  h2 { font-size: 1.15rem; margin: 4px 0 8px; }
+  .lead { font-size: 1.1rem; line-height: 1.6; }
+  .grid { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr); gap: 12px; }
+  .grid section { margin: 0; }
+  #map { height: 520px; border-radius: 6px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 4px 0 8px; }
+  select { font-size: 1rem; padding: 6px; border: 1px solid #bbb; border-radius: 6px; }
+  .scroll { max-height: 560px; overflow-y: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+  th { text-align: left; position: sticky; top: 0; background: #f5f5f5; padding: 5px 6px; border-bottom: 1px solid #ccc; white-space: nowrap; }
+  th[data-sort] { cursor: pointer; }
+  td { padding: 4px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+  td.n, td.share { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .bar { display: inline-block; width: 48px; height: 8px; background: #eee; border-radius: 4px; margin-right: 6px; vertical-align: middle; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: #1a9850; }
+  #maplegend ul { list-style: none; padding: 0; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .88rem; }
+  #maplegend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #424242; vertical-align: middle; margin-right: 4px; }
+  #maplegend p { margin: 4px 0; }
+  .muted { color: #666; } .small { font-size: .85rem; }
+  footer { font-size: .82rem; color: #555; margin-top: 18px; border-top: 1px solid #eee; padding-top: 8px; }
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: 1fr; }
+    #map { height: 60vh; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 data-t="title">かえりみち 全国版</h1>
+  <p data-t="tagline">バスで病院へ行って、その日のうちに帰ってこられる停留所は？</p>
+  <nav><a id="applink" href="./" data-t="app">アプリで調べる</a><a id="lang" href="?lang=en">English</a></nav>
+</header>
+<main>
+  <section><div id="lead">読み込み中…</div></section>
+
+  <div class="grid">
+    <section>
+      <h2 data-t="prefHead">都道府県別</h2>
+      <p class="muted small" data-t="sortHint">見出しをクリックすると並べ替えます。</p>
+      <div class="scroll" id="prefs"></div>
+    </section>
+    <section>
+      <h2 data-t="mapHead">停留所ごとの判定</h2>
+      <div class="tools">
+        <select id="pref" aria-label="都道府県 / prefecture"><option value="">全国</option></select>
+        <label><input type="radio" name="day" value="wed" checked> <span data-t="weekday">平日（水）</span></label>
+        <label><input type="radio" name="day" value="sat"> <span data-t="saturday">土曜</span></label>
+      </div>
+      <div id="map"></div>
+      <div id="maplegend" class="small"></div>
+    </section>
+  </div>
+
+  <section>
+    <h2 data-t="feedHead">データ（事業者）別</h2>
+    <div class="scroll" id="feeds"></div>
+  </section>
+
+  <section>
+    <h2 data-t="methodHead">方法と限界</h2>
+    <div id="method"></div>
+    <h2 data-t="filesHead">データのダウンロード（CC BY 4.0）</h2>
+    <p class="small" data-t="files"></p>
+    <p id="files"></p>
+  </section>
+
+  <footer>
+    <p data-t="credit"></p>
+    <p data-t="by"></p>
+    <p>かえりみち / Kaerimichi — MV2 of Munim, Inc.
+      ・<a href="https://github.com/munimtechnologies/kaerimichi">source (Apache-2.0)</a>
+      ・お問い合わせ / contact: <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a></p>
+  </footer>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module" src="./national.js"></script>
+</body>
+</html>
