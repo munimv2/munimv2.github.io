@@ -5,7 +5,7 @@
 // MV2 of Munim, Inc. - Apache-2.0 license.
 import { loadFeed, loadFlex, dayView, journeys, roundTrip, serviceGaps, serviceRange, weekday, addDays, fmtTime, fmtSpan, parseFeedList, flexDay, flexCover, flexLinks, flexOk } from './gtfs.js';
 
-const VERSION = '0.6';
+const VERSION = '0.7';
 const API = 'https://api.gtfs-data.jp/v2';
 // The repository's feed list has no CORS header, so a snapshot ships with the app (feeds.txt).
 // The zip files themselves are served with CORS and are fetched live.
@@ -50,7 +50,8 @@ const FLEX_FEEDS = [
 
 // One-click destinations, found by stop name in the loaded feed.
 const PRESETS = [
-  { key: 'hospital', re: /病院|医院|クリニック|診療所|医療センター/ },
+  // v0.7: dentists and vets are not hospitals (歯科医院 and 動物病院 matched before).
+  { key: 'hospital', re: /病院|医院|クリニック|診療所|医療センター/, not: /歯科|動物病院|獣医/ },
   { key: 'station', re: /駅/ },
   { key: 'office', re: /役場|役所|支所|庁舎/ },
   { key: 'shop', re: /イオン|スーパー|ショッピング|マート|モール|ストア|生協|コープ|ベイシア|ヤオコー|西友|ヨーカドー|ドラッグ|ホームセンター/ },
@@ -350,12 +351,16 @@ function clearFlex() {
   render();
 }
 
-async function loadFlexFeed(id) {
+async function loadFlexFeed(id, fromLink) {
   const f = FLEX_FEEDS.find(x => x.id === id);
   if (!f) return;
   const box = $('#flexstatus');
   box.textContent = t.loading;
-  if (f.bus && !state.model && !state.feedKey && state.feeds.some(x => x.org + '/' + x.feed === f.bus)) {
+  // The town's own buses load when none are open or, when picked from the menu, when the open
+  // network is in another prefecture (v0.7). A same-prefecture operator stays, so a regional bus can be overlaid.
+  const cur = state.feeds.find(x => x.org + '/' + x.feed === state.feedKey);
+  const swap = !fromLink && state.feedKey && (!cur || cur.pref !== f.pref);
+  if (f.bus && state.feedKey !== f.bus && ((!state.model && !state.feedKey) || swap) && state.feeds.some(x => x.org + '/' + x.feed === f.bus)) {
     $('#feed').value = f.bus;
     loadFromRepo(f.bus);
   }
@@ -515,7 +520,7 @@ function drawLegend() {
     const cls = w.ymd === state.ymd ? ' class="now"' : '';
     return `<a href="#" data-day="${w.ymd}"${cls}>${esc(label)}</a> <b>${esc(count)}</b>`;
   }).join(sep) + '</p>';
-  lines.push(`${t.week}: ` + days.map(d => `${d.label} ${d.count}`).join(sep), location.href);
+  lines.push(`${t.week}: ` + days.map(d => `${d.label} ${d.count}`).join(sep), shareHref());
   html += toolsHtml(t.gapCopy, t.gapPrint);
   html += `<p class="muted small">${t.gapNote}</p>`;
   if (state.flex) html += `<p class="muted small">${t.flexNote}</p>`;
@@ -624,10 +629,10 @@ function printAs(kind) {
 
 // ---- one-click destinations ----
 
-function presetMatches(re) {
+function presetMatches(pr) {
   const { model, view } = state;
   const list = [];
-  model.places.forEach((p, i) => { if (re.test(p.name)) list.push(i); });
+  model.places.forEach((p, i) => { if (pr.re.test(p.name) && !(pr.not && pr.not.test(p.name))) list.push(i); });
   list.sort((a, b) => (view.stat[b].n - view.stat[a].n) || (model.served[b] - model.served[a]));
   return list;
 }
@@ -638,7 +643,7 @@ function drawPresets() {
   if (!state.model) return;
   let any = false;
   for (const pr of PRESETS) {
-    const list = presetMatches(pr.re);
+    const list = presetMatches(pr);
     if (!list.length) continue;
     any = true;
     const b = document.createElement('button');
@@ -861,6 +866,13 @@ function updateUrl() {
   $('#lang').href = '?' + q.toString();
 }
 
+// The link in copied or printed text opens in the language the text is written in (v0.7).
+function shareHref() {
+  const u = new URL(location.href);
+  u.searchParams.set('lang', lang);
+  return u.href;
+}
+
 // ---- result ----
 
 function routeChip(trip) {
@@ -971,13 +983,13 @@ function render() {
   }
   if (outs.length) card.push(`${t.plansLine}: ${journeyList(outs)}`);
   if (backs.length) card.push(`${t.backsLine}: ${journeyList(backs)}`);
-  card.push(t.note, location.href);
+  card.push(t.note, shareHref());
   html += toolsHtml(t.copy, t.print);
   if (outs.length || backs.length) {
     html += `<h3>${t.goTable} <small>${t.trips(outs.length)}</small></h3>${table(rt.plans, true)}`;
     html += `<h3>${t.backTable} <small>${t.trips(backs.length)}</small></h3>${table(backs, false)}`;
   }
-  html += `<p class="muted small">${t.note}</p><p class="small noprint"><a href="${esc(location.href)}">${t.share}</a></p><p class="printonly small">${esc(location.href)}</p>`;
+  html += `<p class="muted small">${t.note}</p><p class="small noprint"><a href="${esc(location.href)}">${t.share}</a></p><p class="printonly small">${esc(shareHref())}</p>`;
   box.innerHTML = html;
   const text = card.join('\n');
   wireTools(box, text, 'card');
@@ -1068,6 +1080,6 @@ loadFeedList().then(() => {
   const want = params.get('flex');
   if (want && FLEX_FEEDS.some(f => f.id === want)) {
     $('#flex').value = want;
-    loadFlexFeed(want);
+    loadFlexFeed(want, true);
   }
 });

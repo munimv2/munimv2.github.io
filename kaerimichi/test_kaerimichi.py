@@ -93,6 +93,45 @@ def test_stay_is_kept_in_the_url():
     assert '<option value="%s" selected>' % default in html, "DEFAULT_STAY must match the selected stay option"
 
 
+def test_hospital_preset_skips_dentists_and_vets():
+    # v0.7: 歯科医院 and 動物病院 matched the 病院 button (and could be a feed's top hospital stop).
+    app = read("app.js")
+    m = re.search(r"\{ key: 'hospital', re: /([^/]+)/, not: /([^/]+)/ \}", app)
+    assert m, "the hospital preset has no not: pattern"
+    keep, skip = re.compile(m.group(1)), re.compile(m.group(2))
+
+    def hits(name):
+        return bool(keep.search(name)) and not skip.search(name)
+
+    for name in ("山形済生病院", "市立病院前", "南六クリニック", "診療所前", "医療センター"):
+        assert hits(name), name
+    for name in ("村上歯科医院", "さくら歯科クリニック", "ひまわり動物病院", "獣医科病院前"):
+        assert not hits(name), name
+    body = app[app.index("function presetMatches"):app.index("function drawPresets")]
+    assert "pr.not" in body, "presetMatches ignores the not: pattern"
+    assert "presetMatches(pr)" in app[app.index("function drawPresets"):]
+
+
+def test_overlay_loads_its_own_town_buses():
+    # v0.7: picking 「ごしょくる」 (Aomori) while 瑞穂町's buses (Tokyo) were open kept 瑞穂町 in section 1.
+    app = read("app.js")
+    body = app[app.index("async function loadFlexFeed"):app.index("function fillFlexList")]
+    assert "cur.pref !== f.pref" in body, "an overlay from another prefecture must load its own buses"
+    assert "!fromLink" in body, "the feed of a shared link must not be replaced"
+    assert "loadFlexFeed(want, true)" in app
+    assert "loadFlexFeed(e.target.value)" in app
+
+
+def test_copied_and_printed_links_keep_the_language():
+    # v0.7: the link in copied text had no lang=, so it opened in the reader's browser language.
+    app = read("app.js")
+    body = app[app.index("function shareHref"):app.index("// ---- result ----")]
+    assert "searchParams.set('lang', lang)" in body
+    assert "card.push(t.note, shareHref())" in app
+    assert ".join(sep), shareHref())" in app
+    assert "esc(shareHref())" in app
+
+
 def test_version_constant():
     assert re.search(r"const VERSION = '\d+\.\d+'", read("app.js"))
 
