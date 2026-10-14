@@ -1,6 +1,7 @@
 // gtfs.js - a small GTFS reader that runs in the browser.
 // Reads a GTFS (or GTFS-JP) zip, works out which trips run on a date,
-// and finds direct and one-transfer journeys and same-day round trips between two stops.
+// and finds direct and one-transfer journeys and same-day round trips between two stops,
+// or from every stop to one destination (the service-gap map).
 // MV2 of Munim, Inc. - MIT license.
 
 // ---- zip ----
@@ -320,11 +321,16 @@ export function buildModel(files) {
     if (place.length >= 2) trips.push({ ...info, place, arr, dep });
   }
 
+  // served[p]: how many trips call at place p on any day (0 = the timetable never stops there).
+  const served = places.map(() => 0);
+  for (const t of trips) for (const p of new Set(t.place)) served[p]++;
+
   const agency = readTable(files, 'agency.txt');
   return {
     places,
     routes,
     trips,
+    served,
     calendar: readTable(files, 'calendar.txt'),
     calendarDates: readTable(files, 'calendar_dates.txt'),
     agencies: agency ? agency.rows.map(r => cell(agency, r, 'agency_name')).filter(Boolean) : [],
@@ -459,6 +465,110 @@ export function roundTrip(outs, backs, minStay) {
     latestOut: ok[ok.length - 1].out,
     plans,
   };
+}
+
+// ---- service gaps (every stop against one destination) ----
+
+// Keeps the journeys {dep, arr, n (legs), trip} that are not dominated, sorted by departure;
+// arrivals then rise too. On a tie the journey with fewer legs wins.
+function frontier(list) {
+  const s = list.slice().sort((x, y) => y.dep - x.dep || x.arr - y.arr || x.n - y.n);
+  const keep = [];
+  let best = Infinity;
+  for (const j of s) {
+    if (j.arr < best) { keep.push(j); best = j.arr; }
+  }
+  return keep.reverse();
+}
+
+// First index in list (sorted ascending by key) whose key is >= x.
+function lowerBound(list, key, x) {
+  let lo = 0, hi = list.length;
+  while (lo < hi) {
+    const m = (lo + hi) >> 1;
+    if (list[m][key] < x) lo = m + 1; else hi = m;
+  }
+  return lo;
+}
+
+// Journeys from every place to `hub` and back on the day, direct plus (if transfers > 0)
+// one change with at least minConn seconds. Per place index: frontier lists of {dep, arr, n}.
+// {to, from} include transfers; {toDirect, fromDirect} are direct only.
+export function hubJourneys(view, hub, transfers = 1, minConn = 300) {
+  const count = view.stat.length;
+  const toD = Array.from({ length: count }, () => []);
+  const fromD = Array.from({ length: count }, () => []);
+  for (const t of view.byPlace.get(hub) || []) {
+    for (let h = 0; h < t.place.length; h++) {
+      if (t.place[h] !== hub) continue;
+      if (t.arr[h] !== null) {
+        for (let k = h - 1; k >= 0 && t.place[k] !== hub; k--) {
+          if (t.dep[k] !== null) toD[t.place[k]].push({ dep: t.dep[k], arr: t.arr[h], n: 1, trip: t });
+        }
+      }
+      if (t.dep[h] !== null) {
+        for (let k = h + 1; k < t.place.length && t.place[k] !== hub; k++) {
+          if (t.arr[k] !== null) fromD[t.place[k]].push({ dep: t.dep[h], arr: t.arr[k], n: 1, trip: t });
+        }
+      }
+    }
+  }
+  const toDirect = toD.map(frontier);
+  const fromDirect = fromD.map(frontier);
+  if (!transfers) return { to: toDirect, from: fromDirect, toDirect, fromDirect };
+
+  const toAll = toDirect.map(l => l.slice());
+  const fromAll = fromDirect.map(l => l.slice());
+  for (let q = 0; q < count; q++) {
+    // To the hub: ride any trip to q, then the earliest direct bus q -> hub.
+    const toConn = toDirect[q];
+    if (toConn.length) {
+      for (const t of view.byPlace.get(q) || []) {
+        for (let kq = 1; kq < t.place.length; kq++) {
+          if (t.place[kq] !== q || t.arr[kq] === null) continue;
+          let i = lowerBound(toConn, 'dep', t.arr[kq] + minConn);
+          while (i < toConn.length && toConn[i].trip === t) i++;
+          if (i >= toConn.length) continue;
+          const c = toConn[i];
+          for (let k = kq - 1; k >= 0 && t.place[k] !== q && t.place[k] !== hub; k--) {
+            if (t.dep[k] !== null) toAll[t.place[k]].push({ dep: t.dep[k], arr: c.arr, n: 2, trip: t });
+          }
+        }
+      }
+    }
+    // From the hub: the latest direct bus hub -> q that still makes a trip leaving q.
+    const fromConn = fromDirect[q];
+    if (fromConn.length) {
+      for (const t of view.byPlace.get(q) || []) {
+        for (let kq = 0; kq < t.place.length - 1; kq++) {
+          if (t.place[kq] !== q || t.dep[kq] === null) continue;
+          let i = lowerBound(fromConn, 'arr', t.dep[kq] - minConn + 1) - 1;
+          while (i >= 0 && fromConn[i].trip === t) i--;
+          if (i < 0) continue;
+          const c = fromConn[i];
+          for (let k = kq + 1; k < t.place.length && t.place[k] !== q && t.place[k] !== hub; k++) {
+            if (t.arr[k] !== null) fromAll[t.place[k]].push({ dep: c.dep, arr: t.arr[k], n: 2, trip: t });
+          }
+        }
+      }
+    }
+  }
+  return { to: toAll.map(frontier), from: fromAll.map(frontier), toDirect, fromDirect };
+}
+
+// Same-day round trip from every place to `hub`. Per place: {status, rt} where status is
+// 'ok' (works with direct buses), 'okx' (works only with a transfer), 'noreturn', 'oneway',
+// 'none', 'idle' (no departures there this day) or 'hub'; rt is the roundTrip() result.
+export function serviceGaps(view, hub, transfers = 1, minConn = 300, minStay = 0) {
+  const hj = hubJourneys(view, hub, transfers, minConn);
+  return view.stat.map((s, p) => {
+    if (p === hub) return { status: 'hub', rt: null };
+    const rt = roundTrip(hj.to[p], hj.from[p], minStay);
+    let status = rt.status;
+    if (status === 'ok' && transfers && roundTrip(hj.toDirect[p], hj.fromDirect[p], minStay).status !== 'ok') status = 'okx';
+    if (status === 'none' && !s.n) status = 'idle';
+    return { status, rt };
+  });
 }
 
 // Parses feeds.txt (pipe-separated snapshot of the GTFS Data Repository list) or the

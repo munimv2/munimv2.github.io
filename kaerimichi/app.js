@@ -1,8 +1,9 @@
 // app.js - Kaerimichi UI: pick a feed, a date and two stops; see if you can go and come back.
+// The service-gap map colours every stop by whether that round trip works to the chosen destination.
 // MV2 of Munim, Inc. - MIT license.
-import { loadGTFS, dayView, journeys, roundTrip, serviceRange, weekday, fmtTime, fmtSpan, parseFeedList } from './gtfs.js';
+import { loadGTFS, dayView, journeys, roundTrip, serviceGaps, serviceRange, weekday, fmtTime, fmtSpan, parseFeedList } from './gtfs.js';
 
-const VERSION = '0.2';
+const VERSION = '0.3';
 const API = 'https://api.gtfs-data.jp/v2';
 // The repository's feed list has no CORS header, so a snapshot ships with the app (feeds.txt).
 // The zip files themselves are served with CORS and are fetched live.
@@ -13,6 +14,8 @@ const PREFS = ['北海道', '青森県', '岩手県', '宮城県', '秋田県', 
   '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
   '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県',
   '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'];
+const GAP_ORDER = ['ok', 'okx', 'noreturn', 'oneway', 'none', 'idle'];
+const GAP_COLOURS = { ok: '#1a9850', okx: '#91cf60', noreturn: '#fc8d59', oneway: '#d73027', none: '#762a83', idle: '#9e9e9e', hub: '#ffffff' };
 
 const TEXT = {
   ja: {
@@ -32,10 +35,22 @@ const TEXT = {
     ok: '往復できます', arrive: '最も早い到着', lastBack: '帰りの最終', maxStay: '最大の滞在時間', latest: '帰ってこられる最後の行き便',
     goTable: '行き', backTable: '帰り', dep: '発', arr: '着', backOn: '帰り', cantReturn: '帰れません',
     via: '乗換', direct: '直通',
-    stopInfo: (n, f, l) => `この日の発車 ${n}本（始発 ${f}・最終 ${l}）`, noDep: 'この日の発車はありません',
+    stopInfo: (n, f, l) => `この日の発車 ${n}本（始発 ${f}・最終 ${l}）`,
+    otherDays: 'この日の発車はありません（ほかの日には運行があります）', noTrips: '時刻表にこの停留所に止まる便がありません',
     legend: 'この日の発車本数', source: '出典', modified: '本アプリで加工（直通便・乗り継ぎの抽出、集計）',
     note: '時刻は公開GTFSデータの予定時刻です。予約制の便やダイヤ改正、運休は各事業者の情報をご確認ください。乗り継ぎは同じデータ内の便だけを対象にしています。',
     trips: n => `${n}本`, share: 'この条件のURL', ending: d => `（データは${d}まで）`,
+    mapMode: '地図の色', modeCount: 'この日の発車本数', modeGap: '行き先へ日帰りで往復できるか（交通空白マップ）',
+    gapNeedTo: '行き先（4.）を選ぶと、すべての停留所を「その行き先へ行って、その日のうちに帰ってこられるか」で色分けします。',
+    gapHead: name => `「${name}」へ日帰りで往復できるか`,
+    gap: {
+      ok: '往復できる（直通）', okx: '往復できる（乗り換えあり）', noreturn: '行けるが、帰りの最終に間に合わない',
+      oneway: '行けるが、帰りの便がない', none: '行けない（便なし・乗り換え2回以上）', idle: 'この日は発車なし', hub: '行き先',
+    },
+    gapCount: n => `${n}か所`,
+    gapFacts: (a, b, s) => `着 ${a}／帰りの最終 ${b}／最大 ${s}`,
+    gapNote: '判定は上の「目的地での最低滞在」と「乗り換え」の設定に従います。CSVは路線の見直しや交通空白の把握にお使いください（出典の表示をお願いします）。',
+    csv: 'CSVでダウンロード（停留所ごとの判定）',
   },
   en: {
     title: 'Kaerimichi', tagline: 'Can you get there by bus and back the same day?',
@@ -54,10 +69,22 @@ const TEXT = {
     ok: 'Round trip possible', arrive: 'Earliest arrival', lastBack: 'Last bus back', maxStay: 'Longest stay', latest: 'Last bus there that still gets you home',
     goTable: 'There', backTable: 'Back', dep: 'dep', arr: 'arr', backOn: 'back', cantReturn: 'no way back',
     via: 'change at', direct: 'direct',
-    stopInfo: (n, f, l) => `${n} departures this day (first ${f}, last ${l})`, noDep: 'No departures this day',
+    stopInfo: (n, f, l) => `${n} departures this day (first ${f}, last ${l})`,
+    otherDays: 'No departures this day (buses run here on other days)', noTrips: 'No trip in the timetable stops here',
     legend: 'Departures this day', source: 'Source', modified: 'processed by this app (direct trips and connections extracted and counted)',
     note: 'Times are the scheduled times in the published GTFS data. Check with the operator for on-demand trips, timetable changes and cancellations. Connections only use trips in the same data set.',
     trips: n => `${n} trips`, share: 'Link to this view', ending: d => `(data until ${d})`,
+    mapMode: 'Map colours', modeCount: 'Departures this day', modeGap: 'Same-day round trip to the destination (service-gap map)',
+    gapNeedTo: 'Choose a destination (4.) to colour every stop by whether you can get there and back the same day.',
+    gapHead: name => `Same-day round trip to ${name}`,
+    gap: {
+      ok: 'Round trip, direct buses', okx: 'Round trip with a transfer', noreturn: 'Can go, but the last bus back leaves too early',
+      oneway: 'Can go, but no bus back', none: "Can't get there (no bus, or 2+ transfers)", idle: 'No departures this day', hub: 'Destination',
+    },
+    gapCount: n => `${n} stops`,
+    gapFacts: (a, b, s) => `arrive ${a}, last bus back ${b}, stay up to ${s}`,
+    gapNote: 'Uses the minimum stay and transfer settings above. The CSV is meant for route reviews and service-gap planning (please credit the data source).',
+    csv: 'Download CSV (verdict per stop)',
   },
 };
 
@@ -69,7 +96,7 @@ const t = TEXT[lang];
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const state = { model: null, view: null, from: null, to: null, ymd: null, stay: 30, transfer: true, meta: null, feedKey: null, feeds: [] };
+const state = { model: null, view: null, from: null, to: null, ymd: null, stay: 30, transfer: true, mode: 'count', meta: null, feedKey: null, feeds: [], gaps: null, gapKey: null };
 
 // ---- map ----
 
@@ -93,13 +120,39 @@ function placeName(p) {
   return lang === 'en' && p.en ? `${p.en} (${p.name})` : p.name;
 }
 
+// One line about a stop's departures on the chosen day.
+function stopLine(i) {
+  const s = state.view.stat[i];
+  if (s.n) return t.stopInfo(s.n, fmtTime(s.first, lang), fmtTime(s.last, lang));
+  return state.model.served[i] ? t.otherDays : t.noTrips;
+}
+
+// Round-trip verdict of every stop against the destination, or null when the map shows departures.
+function gapView() {
+  if (state.mode !== 'gap' || state.to === null || !state.view) return null;
+  const key = [state.ymd, state.to, state.transfer, state.stay].join('|');
+  if (state.gapKey !== key) {
+    state.gaps = serviceGaps(state.view, state.to, state.transfer ? 1 : 0, MIN_CONNECTION, state.stay * 60);
+    state.gapKey = key;
+  }
+  return state.gaps;
+}
+
+function gapLine(i) {
+  const gaps = gapView();
+  if (!gaps || i === state.to) return '';
+  const g = gaps[i];
+  let line = t.gap[g.status];
+  if (g.status === 'ok' || g.status === 'okx') line += ' — ' + t.gapFacts(fmtTime(g.rt.firstArr, lang), fmtTime(g.rt.lastBack, lang), fmtSpan(g.rt.maxStay, lang));
+  return line;
+}
+
 function popup(i) {
   const p = state.model.places[i];
-  const s = state.view.stat[i];
   const el = document.createElement('div');
   el.className = 'pop';
-  const info = s.n ? t.stopInfo(s.n, fmtTime(s.first, lang), fmtTime(s.last, lang)) : t.noDep;
-  el.innerHTML = `<b>${esc(placeName(p))}</b><br>${esc(info)}<br>`;
+  const gap = gapLine(i);
+  el.innerHTML = `<b>${esc(placeName(p))}</b><br>${esc(stopLine(i))}<br>` + (gap ? `<b>${esc(gap)}</b><br>` : '');
   for (const [label, which] of [[t.setFrom, 'from'], [t.setTo, 'to']]) {
     const b = document.createElement('button');
     b.textContent = label;
@@ -113,6 +166,7 @@ function drawStops() {
   layer.clearLayers();
   const { model, view } = state;
   if (!model) return;
+  const gaps = gapView();
   model.places.forEach((p, i) => {
     if (p.lat === undefined) return;
     const picked = i === state.from || i === state.to;
@@ -120,13 +174,65 @@ function drawStops() {
       radius: picked ? 10 : 6,
       color: picked ? (i === state.from ? '#1565c0' : '#6a1b9a') : '#424242',
       weight: picked ? 4 : 1,
-      fillColor: colour(view.stat[i].n),
+      fillColor: gaps ? GAP_COLOURS[gaps[i].status] : colour(view.stat[i].n),
       fillOpacity: 0.9,
     });
     m.bindTooltip(placeName(p));
     m.bindPopup(() => popup(i));
     m.addTo(layer);
   });
+}
+
+// The legend: departures per day, or the service-gap counts with a CSV download.
+function drawLegend() {
+  const gapMode = state.mode === 'gap';
+  $('#legend-count').hidden = gapMode;
+  const box = $('#legend-gap');
+  box.hidden = !gapMode;
+  if (!gapMode) return;
+  const gaps = gapView();
+  if (!gaps) { box.innerHTML = `<p class="muted small">${t.gapNeedTo}</p>`; return; }
+  const n = {};
+  for (const g of gaps) n[g.status] = (n[g.status] || 0) + 1;
+  let html = `<b>${esc(t.gapHead(placeName(state.model.places[state.to])))}</b><ul>`;
+  for (const k of GAP_ORDER) {
+    if (k === 'okx' && !state.transfer) continue;
+    html += `<li><i style="background:${GAP_COLOURS[k]}"></i>${esc(t.gap[k])}: <b>${t.gapCount(n[k] || 0)}</b></li>`;
+  }
+  box.innerHTML = html + `</ul><p class="muted small">${t.gapNote}</p>`;
+  const a = document.createElement('a');
+  a.href = '#';
+  a.textContent = t.csv;
+  a.onclick = e => { e.preventDefault(); downloadCsv(gaps); };
+  const p = document.createElement('p');
+  p.className = 'small';
+  p.appendChild(a);
+  box.appendChild(p);
+}
+
+function downloadCsv(gaps) {
+  const { model, view } = state;
+  const q = v => /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const hub = model.places[state.to];
+  const lines = [['stop_id', 'stop_name', 'lat', 'lon', 'departures_this_day', 'status', 'earliest_arrival', 'last_bus_back', 'max_stay_min', 'destination', 'date', 'min_stay_min', 'transfers'].join(',')];
+  model.places.forEach((p, i) => {
+    const g = gaps[i];
+    const ok = g.status === 'ok' || g.status === 'okx';
+    lines.push([
+      p.key, p.name, p.lat !== undefined ? p.lat.toFixed(6) : '', p.lon !== undefined ? p.lon.toFixed(6) : '',
+      view.stat[i].n, g.status,
+      ok ? fmtTime(g.rt.firstArr, 'en') : '', ok ? fmtTime(g.rt.lastBack, 'en') : '', ok ? Math.floor(g.rt.maxStay / 60) : '',
+      hub.name, dashed(state.ymd), state.stay, state.transfer ? 1 : 0,
+    ].map(v => q(String(v))).join(','));
+  });
+  const blob = new Blob(['﻿' + lines.join('\r\n') + '\r\n'], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `kaerimichi-${state.ymd}-${hub.key.replace(/[^\w.-]/g, '_')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 // ---- feed list ----
@@ -212,6 +318,7 @@ async function useZip(buf, meta, key) {
   state.meta = meta;
   state.feedKey = key;
   state.from = state.to = null;
+  state.gaps = state.gapKey = null;
   const range = serviceRange(state.model);
   state.range = range;
   const today = ymdOf(new Date());
@@ -303,6 +410,7 @@ function updateUrl() {
   if (state.from !== null) q.set('from', state.model.places[state.from].key);
   if (state.to !== null) q.set('to', state.model.places[state.to].key);
   if (!state.transfer) q.set('transfer', '0');
+  if (state.mode === 'gap') q.set('map', 'gap');
   if (lang !== 'ja') q.set('lang', lang);
   history.replaceState(null, '', '?' + q.toString());
   q.set('lang', lang === 'ja' ? 'en' : 'ja');
@@ -343,6 +451,7 @@ function table(rows, withBack) {
 function render() {
   const box = $('#result');
   const { model } = state;
+  drawLegend();
   if (!model) { box.innerHTML = ''; return; }
   drawStops();
   updateUrl();
@@ -354,10 +463,7 @@ function render() {
   let html = notes.map(n => `<p class="warn">${esc(n)}</p>`).join('');
   if (state.from === null || state.to === null) {
     const one = state.from !== null ? state.from : state.to;
-    if (one !== null) {
-      const s = state.view.stat[one];
-      html += `<p><b>${esc(placeName(model.places[one]))}</b>: ${esc(s.n ? t.stopInfo(s.n, fmtTime(s.first, lang), fmtTime(s.last, lang)) : t.noDep)}</p>`;
-    }
+    if (one !== null) html += `<p><b>${esc(placeName(model.places[one]))}</b>: ${esc(stopLine(one))}</p>`;
     box.innerHTML = html + `<p class="muted">${t.pickBoth}</p>`;
     return;
   }
@@ -435,5 +541,11 @@ document.addEventListener('drop', async e => {
 });
 
 if (params.get('transfer') === '0') { state.transfer = false; $('#transfer').checked = false; }
+if (params.get('map') === 'gap') state.mode = 'gap';
+for (const r of document.querySelectorAll('input[name=mode]')) {
+  r.checked = r.value === state.mode;
+  r.addEventListener('change', e => { if (e.target.checked) { state.mode = e.target.value; render(); } });
+}
 applyText();
+drawLegend();
 loadFeedList();
