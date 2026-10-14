@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>かえりみち Kaerimichi — バスで行って、帰ってこられる？</title>
-<meta name="description" content="地域のバスで目的地へ行き、その日のうちに帰ってこられるかを調べるウェブアプリ。全国約600のGTFSデータに対応、乗り換え1回まで。行き先への往復可否で全停留所を色分けする交通空白マップとCSV出力つき。 / Can you get there by bus and back the same day? A round-trip checker and service-gap map for Japan's community buses, built on open GTFS data.">
+<meta name="description" content="地域のバスで目的地へ行き、その日のうちに帰ってこられるかを調べるウェブアプリ。全国約600のGTFSデータに対応、乗り換え1回まで。行き先への往復可否で全停留所を色分けする交通空白マップとCSV出力、デマンド交通（GTFS-Flex）の重ね合わせつき。 / Can you get there by bus and back the same day? A round-trip checker and service-gap map for Japan's community buses, with demand-responsive transit (GTFS-Flex), built on open data.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   * { box-sizing: border-box; }
@@ -25,14 +25,17 @@
   .row > * { flex: 1; }
   #weekday { flex: 0 0 auto; font-weight: 600; }
   #swap { flex: 0 0 auto; margin-top: 8px; padding: 6px 12px; font-size: 1rem; }
+  .presets { margin-top: 6px; }
+  .presets button { margin: 4px 6px 0 0; padding: 4px 10px; font-size: .95rem; }
   .file { font-size: .9rem; color: #555; margin-top: 6px; }
-  #status { min-height: 1.4em; margin: 8px 0; color: #37474f; }
+  #status, #flexstatus { min-height: 1.4em; margin: 8px 0; color: #37474f; }
   .mode { margin-top: 14px; padding: 6px 10px; background: #f5f5f5; border-radius: 8px; }
   .mode .step { margin: 4px 0 0; }
   .mode label.inline { margin: 6px 0 0; }
   .verdict { font-size: 1.3rem; font-weight: 700; padding: 10px 12px; border-radius: 8px; margin: 14px 0 8px; }
   .verdict.ok { background: #e8f5e9; color: #1b5e20; }
   .verdict.no { background: #ffebee; color: #b71c1c; font-size: 1.1rem; }
+  .verdict.fx { background: #e3f2fd; color: #0d47a1; font-size: 1rem; }
   .facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 1.05rem; }
   .facts dt { color: #555; } .facts dd { margin: 0; font-weight: 700; }
   h3 { margin: 16px 0 4px; font-size: 1.05rem; } h3 small { font-weight: 400; color: #666; }
@@ -50,7 +53,9 @@
   .gaplegend { margin-top: 12px; font-size: .9rem; }
   .gaplegend ul { list-style: none; padding: 0; margin: 6px 0; }
   .gaplegend li { margin: 3px 0; }
+  .week a.now { font-weight: 700; text-decoration: none; color: #212121; }
   .pop button { margin: 6px 6px 0 0; padding: 6px 10px; font-size: .95rem; }
+  .pop .fx { color: #0d47a1; }
   footer { font-size: .8rem; color: #555; margin-top: 18px; border-top: 1px solid #eee; padding-top: 8px; }
   @media (max-width: 760px) {
     main { grid-template-columns: 1fr; grid-template-rows: auto 60vh; height: auto; }
@@ -90,7 +95,13 @@
     <button id="swap" type="button" data-t="swap">入れ替え</button>
     <label for="to" data-t="to">4. 行き先（病院・駅・買い物など）</label>
     <input id="to" list="places" data-ph="search" autocomplete="off">
+    <div class="presets" id="presets"></div>
     <datalist id="places"></datalist>
+
+    <label for="flex" data-t="flexHead">5. デマンド交通（予約制）を重ねる（任意）</label>
+    <select id="flex"><option value="">デマンド交通のデータを選ぶ…</option><option value="off">重ねない</option></select>
+    <div class="file"><span data-t="flexOrFile">またはGTFS-Flexのzipを開く</span>: <input type="file" id="flexfile" accept=".zip"></div>
+    <div id="flexstatus" class="small"></div>
 
     <div class="mode">
       <span class="step" data-t="mapMode">地図の色</span>
@@ -116,6 +127,7 @@
         ・<a href="https://github.com/munimv2/kaerimichi">source (MIT)</a>
         ・お問い合わせ / contact: <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a></p>
       <p>本アプリについてのお問い合わせは上記へお願いします（データ提供事業者へのお問い合わせはご遠慮ください）。データはブラウザ内で処理され、どこにも送信されません。
+        データ: <a href="https://gtfs-data.jp/" target="_blank" rel="noopener">GTFSデータリポジトリ</a>、<a href="https://ckan.odpt.org/" target="_blank" rel="noopener">公共交通オープンデータセンター</a>（デマンド交通）、地理院タイル。
         このアプリはMV2の名のもと、AIエージェントが作成しました。<br>
         Questions about this app go to the address above, not to the transit operators. Your data stays in your browser.
         This app was built by AI agents working in MV2's name.</p>

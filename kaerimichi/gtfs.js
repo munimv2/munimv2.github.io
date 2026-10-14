@@ -2,11 +2,12 @@
 // Reads a GTFS (or GTFS-JP) zip, works out which trips run on a date,
 // and finds direct and one-transfer journeys and same-day round trips between two stops,
 // or from every stop to one destination (the service-gap map).
+// Also reads demand-responsive transit in GTFS-Flex (zones, stop groups, pickup windows).
 // MV2 of Munim, Inc. - MIT license.
 
 // ---- zip ----
 
-// ArrayBuffer -> Map(basename -> Uint8Array) for every *.txt in the zip.
+// ArrayBuffer -> Map(basename -> Uint8Array) for every *.txt and *.geojson in the zip.
 export async function unzip(buf) {
   const dv = new DataView(buf);
   const u8 = new Uint8Array(buf);
@@ -31,7 +32,7 @@ export async function unzip(buf) {
     const name = names.decode(u8.subarray(p + 46, p + 46 + nameLen));
     p += 46 + nameLen + extraLen + commentLen;
     const base = name.split('/').pop();
-    if (!base.endsWith('.txt') || base.startsWith('.') || name.includes('__MACOSX')) continue;
+    if (!(base.endsWith('.txt') || base.endsWith('.geojson')) || base.startsWith('.') || name.includes('__MACOSX')) continue;
     if (out.has(base)) continue;
     const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
     const data = u8.subarray(start, start + csize);
@@ -154,6 +155,12 @@ export function weekday(ymd) {
   return new Date(Date.UTC(+ymd.slice(0, 4), +ymd.slice(4, 6) - 1, +ymd.slice(6, 8))).getUTCDay();
 }
 
+// "20261014" plus n days -> "YYYYMMDD"
+export function addDays(ymd, n) {
+  const d = new Date(Date.UTC(+ymd.slice(0, 4), +ymd.slice(4, 6) - 1, +ymd.slice(6, 8)) + n * 86400000);
+  return d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, '0') + String(d.getUTCDate()).padStart(2, '0');
+}
+
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 // service_ids running on ymd, from calendar.txt plus calendar_dates.txt exceptions.
@@ -265,6 +272,27 @@ export async function loadGTFS(buf) {
     if (!files.has(f)) throw new Error('missing ' + f);
   }
   return buildModel(files);
+}
+
+// zip ArrayBuffer -> {model, flex}: the fixed-route model (null if the zip has only
+// demand-responsive service) and the GTFS-Flex part (null if there is none).
+export async function loadFeed(buf) {
+  const files = await unzip(buf);
+  // Only look for Flex trips when the feed has a Flex file or column (stop_times.txt can be large).
+  const st = files.get('stop_times.txt');
+  const head = st ? new TextDecoder('utf-8').decode(st.subarray(0, 2048)).split(/\r?\n/)[0] : '';
+  const maybe = ['locations.geojson', 'location_groups.txt', 'booking_rules.txt'].some(f => files.has(f)) || /pickup_drop_off_window|location_id/.test(head);
+  const flex = maybe ? buildFlex(files) : { trips: [] };
+  const hasFlex = flex.trips.length > 0;
+  for (const f of ['stops.txt', 'trips.txt', 'stop_times.txt']) {
+    if (!files.has(f)) {
+      if (hasFlex) return { model: null, flex };
+      throw new Error('missing ' + f);
+    }
+  }
+  const model = buildModel(files);
+  if (hasFlex && !model.trips.length) return { model: null, flex };
+  return { model, flex: hasFlex ? flex : null };
 }
 
 export function buildModel(files) {
@@ -569,6 +597,225 @@ export function serviceGaps(view, hub, transfers = 1, minConn = 300, minStay = 0
     if (status === 'none' && !s.n) status = 'idle';
     return { status, rt };
   });
+}
+
+// ---- demand-responsive transit (GTFS-Flex) ----
+
+// Ray casting on one ring of [lon, lat] points.
+function inRing(lon, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+// Is (lon, lat) inside a GeoJSON Polygon or MultiPolygon? Holes count as outside.
+export function inArea(lon, lat, geometry) {
+  if (!geometry) return false;
+  const polys = geometry.type === 'Polygon' ? [geometry.coordinates]
+    : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+  return polys.some(rings => rings.length > 0 && inRing(lon, lat, rings[0]) && !rings.slice(1).some(h => inRing(lon, lat, h)));
+}
+
+// [minLon, minLat, maxLon, maxLat] of a geometry's coordinates.
+function bbox(geometry) {
+  const b = [Infinity, Infinity, -Infinity, -Infinity];
+  const walk = c => {
+    if (typeof c[0] === 'number') {
+      if (c[0] < b[0]) b[0] = c[0];
+      if (c[1] < b[1]) b[1] = c[1];
+      if (c[0] > b[2]) b[2] = c[0];
+      if (c[1] > b[3]) b[3] = c[1];
+    } else for (const x of c) walk(x);
+  };
+  walk(geometry.coordinates || []);
+  return b;
+}
+
+// The GTFS-Flex part of a feed: trips whose calls are zones (locations.geojson), stop groups
+// (location_groups.txt + location_group_stops.txt) or stops with a pickup/drop-off window.
+// trips: [{id, route, service, calls: [{loc, start, end, pickup, drop, rule}]}] (start/end in
+// seconds or null); locations: Map(loc -> {kind: 'zone'|'group'|'stop', name, geometry, bbox, points}).
+export function buildFlex(files) {
+  const stops = new Map();
+  const st = readTable(files, 'stops.txt');
+  if (st) for (const r of st.rows) {
+    const lat = parseFloat(cell(st, r, 'stop_lat')), lon = parseFloat(cell(st, r, 'stop_lon'));
+    const ok = isFinite(lat) && isFinite(lon) && !!(lat || lon);
+    stops.set(cell(st, r, 'stop_id'), { name: cell(st, r, 'stop_name'), lat, lon, ok });
+  }
+
+  const zones = new Map();
+  const gj = files.get('locations.geojson');
+  if (gj) {
+    let data = null;
+    try { data = JSON.parse(new TextDecoder('utf-8').decode(gj).replace(/^﻿/, '')); } catch (e) { data = null; }
+    for (const f of (data && data.features) || []) {
+      const props = f.properties || {};
+      const id = String(f.id !== undefined && f.id !== null ? f.id : (props.location_id || props.id || ''));
+      const g = f.geometry;
+      if (!id || !g || (g.type !== 'Polygon' && g.type !== 'MultiPolygon')) continue;
+      zones.set(id, { name: props.stop_name || props.name || '', desc: props.stop_desc || '', geometry: g, bbox: bbox(g) });
+    }
+  }
+
+  const groups = new Map();
+  const group = id => {
+    if (!groups.has(id)) groups.set(id, { name: '', stopIds: [] });
+    return groups.get(id);
+  };
+  const lg = readTable(files, 'location_groups.txt');
+  if (lg) for (const r of lg.rows) {
+    const g = group(cell(lg, r, 'location_group_id'));
+    g.name = g.name || cell(lg, r, 'location_group_name');
+    // Older Flex drafts listed the member stops in this file.
+    const member = cell(lg, r, 'stop_id') || cell(lg, r, 'location_id');
+    if (member) g.stopIds.push(member);
+  }
+  const lgs = readTable(files, 'location_group_stops.txt');
+  if (lgs) for (const r of lgs.rows) group(cell(lgs, r, 'location_group_id')).stopIds.push(cell(lgs, r, 'stop_id'));
+
+  const rules = new Map();
+  const br = readTable(files, 'booking_rules.txt');
+  if (br) for (const r of br.rows) {
+    const get = k => cell(br, r, k);
+    rules.set(get('booking_rule_id'), {
+      type: get('booking_type'), minBefore: get('prior_notice_duration_min'),
+      lastDay: get('prior_notice_last_day'), lastTime: get('prior_notice_last_time'),
+      message: get('message') || get('pickup_message'), phone: get('phone_number'),
+      url: get('booking_url') || get('info_url'),
+    });
+  }
+
+  const routes = new Map();
+  const rt = readTable(files, 'routes.txt');
+  if (rt) for (const r of rt.rows) {
+    routes.set(cell(rt, r, 'route_id'), { short: cell(rt, r, 'route_short_name'), long: cell(rt, r, 'route_long_name') });
+  }
+
+  const tripInfo = new Map();
+  const tt = readTable(files, 'trips.txt');
+  if (tt) for (const r of tt.rows) {
+    tripInfo.set(cell(tt, r, 'trip_id'), { id: cell(tt, r, 'trip_id'), route: cell(tt, r, 'route_id'), service: cell(tt, r, 'service_id') });
+  }
+
+  const byTrip = new Map();
+  const stt = readTable(files, 'stop_times.txt');
+  if (stt) for (const r of stt.rows) {
+    const get = k => cell(stt, r, k);
+    const zone = get('location_id'), grp = get('location_group_id'), stopId = get('stop_id');
+    const start = toSeconds(get('start_pickup_drop_off_window'));
+    const end = toSeconds(get('end_pickup_drop_off_window'));
+    // Fixed-time calls belong to the ordinary timetable; keep only the flexible ones.
+    if (!zone && !grp && start === null && end === null) continue;
+    const loc = zone ? 'z:' + zone : grp ? 'g:' + grp : 's:' + stopId;
+    const id = get('trip_id');
+    if (!byTrip.has(id)) byTrip.set(id, []);
+    byTrip.get(id).push({
+      seq: +get('stop_sequence') || 0, loc, start, end,
+      pickup: get('pickup_type') !== '1', drop: get('drop_off_type') !== '1',
+      rule: get('pickup_booking_rule_id') || get('drop_off_booking_rule_id'),
+    });
+  }
+  const trips = [];
+  for (const [id, calls] of byTrip) {
+    const info = tripInfo.get(id);
+    if (!info) continue;
+    calls.sort((a, b) => a.seq - b.seq);
+    trips.push({ ...info, calls });
+  }
+
+  const locations = new Map();
+  for (const t of trips) for (const c of t.calls) {
+    if (locations.has(c.loc)) continue;
+    const kind = c.loc[0], id = c.loc.slice(2);
+    if (kind === 'z') {
+      const z = zones.get(id);
+      locations.set(c.loc, { kind: 'zone', name: (z && z.name) || id, geometry: z ? z.geometry : null, bbox: z ? z.bbox : null, points: [] });
+    } else {
+      const g = kind === 'g' ? (groups.get(id) || { name: '', stopIds: [] }) : null;
+      const ids = g ? g.stopIds : [id];
+      const points = ids.map(s => stops.get(s)).filter(s => s && s.ok);
+      const name = g ? (g.name || id) : ((stops.get(id) || {}).name || id);
+      locations.set(c.loc, { kind: g ? 'group' : 'stop', name, geometry: null, bbox: null, points });
+    }
+  }
+
+  const agency = readTable(files, 'agency.txt');
+  return {
+    trips,
+    locations,
+    routes,
+    rules,
+    calendar: readTable(files, 'calendar.txt'),
+    calendarDates: readTable(files, 'calendar_dates.txt'),
+    agencies: agency ? agency.rows.map(r => cell(agency, r, 'agency_name')).filter(Boolean) : [],
+  };
+}
+
+export async function loadFlex(buf) {
+  return buildFlex(await unzip(buf));
+}
+
+// The demand-responsive trips that run on ymd (all of them if the feed has no calendar).
+export function flexDay(flex, ymd) {
+  if (!flex.calendar && !flex.calendarDates) return flex.trips;
+  const on = activeServices(flex, ymd);
+  return flex.trips.filter(t => on.has(t.service));
+}
+
+// Which places each Flex location covers: inside a zone, or within `radius` metres of
+// one of a group's (or a single flexible stop's) points. Map(loc -> Set of place indices).
+export function flexCover(flex, places, radius = 300) {
+  const cover = new Map();
+  for (const [key, loc] of flex.locations) {
+    const set = new Set();
+    places.forEach((p, i) => {
+      if (p.lat === undefined) return;
+      if (loc.kind === 'zone') {
+        const b = loc.bbox;
+        if (b && p.lon >= b[0] && p.lon <= b[2] && p.lat >= b[1] && p.lat <= b[3] && inArea(p.lon, p.lat, loc.geometry)) set.add(i);
+      } else if (loc.points.some(q => metres(p, q) <= radius)) set.add(i);
+    });
+    cover.set(key, set);
+  }
+  return cover;
+}
+
+const lo = (a, b) => (a === null || b === null ? null : Math.min(a, b));
+const hi = (a, b) => (a === null || b === null ? null : Math.max(a, b));
+
+// Demand-responsive links between every place and `hub` on the day. Per place index:
+// {there, back}, each null or {start, end, trip}: the widest pickup-to-drop-off window
+// (null start/end = not limited in the data). A place links to the hub when a trip picks
+// up at a call covering it and drops off at the same or a later call covering the hub.
+export function flexLinks(flex, ymd, cover, hub, count) {
+  const links = Array.from({ length: count }, () => ({ there: null, back: null }));
+  const widen = (cur, start, end, trip) => (cur ? { start: lo(cur.start, start), end: hi(cur.end, end), trip: cur.trip } : { start, end, trip });
+  for (const t of flexDay(flex, ymd)) {
+    const c = t.calls;
+    for (let j = 0; j < c.length; j++) {
+      const sj = cover.get(c[j].loc);
+      if (!sj || !sj.size || !c[j].drop) continue;
+      for (let i = 0; i <= j; i++) {
+        const si = cover.get(c[i].loc);
+        if (!si || !si.size || !c[i].pickup) continue;
+        if (sj.has(hub)) for (const p of si) if (p !== hub) links[p].there = widen(links[p].there, c[i].start, c[j].end, t);
+        if (si.has(hub)) for (const p of sj) if (p !== hub) links[p].back = widen(links[p].back, c[i].start, c[j].end, t);
+      }
+    }
+  }
+  return links;
+}
+
+// A same-day demand-responsive round trip: a way there and back, with the service open
+// long enough for a stay of minStay seconds (when the data gives the windows).
+export function flexOk(link, minStay = 0) {
+  if (!link || !link.there || !link.back) return false;
+  if (link.there.start === null || link.back.end === null) return true;
+  return link.back.end - link.there.start >= minStay;
 }
 
 // Parses feeds.txt (pipe-separated snapshot of the GTFS Data Repository list) or the
