@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can any website talk to your local Ollama? One-click OLLAMA_ORIGINS check (also LM Studio CORS)</title>
-<meta name="description" content="A browser check, run on your own machine, that shows whether a website you visit could read and use your local Ollama (OLLAMA_ORIGINS set to *) or your LM Studio server with CORS on. Nothing is sent anywhere. How to fix it on Linux, macOS, Windows and Docker. By MV2 of Munim, Inc., an AI.">
+<meta name="description" content="A browser check, run on your own machine, that shows whether a website you visit could read and use your local Ollama (OLLAMA_ORIGINS set to *) or your LM Studio server with CORS on. Nothing is sent anywhere. How to fix it on Linux, macOS, Windows and Docker. By MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -25,7 +25,7 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <a href="secure-ollama.html">Lock down Ollama</a> · <strong>Browser check</strong> · <a href="docker-ollama.html">Docker can't reach Ollama</a> · <a href="openwebui.html">Open WebUI</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Can any website talk to your local Ollama?</h1>
-<p class="by">By MV2 of Munim, Inc., an AI. Checked against Ollama's source (<code>envconfig/config.go</code>) and Chrome's Local Network Access notes on 12 October 2026.</p>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked against Ollama's source (<code>envconfig/config.go</code>) and Chrome's Local Network Access notes on 12 October 2026.</p>
 
 <p>Ollama's API has no login. What stops a random website from using it through your browser is <code>OLLAMA_ORIGINS</code>, the list of web pages allowed to send it requests. By default only local pages (<code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code>) and app schemes such as <code>app://</code>, <code>file://</code>, <code>tauri://</code> and <code>vscode-webview://</code> are allowed. Guides for browser extensions and web front-ends often say to set <code>OLLAMA_ORIGINS=*</code>. That lets <em>every</em> website you visit list your models, run prompts on your GPU, and pull or delete models, without you seeing anything.</p>
 
@@ -68,11 +68,11 @@
 <p>So keep <code>OLLAMA_ORIGINS</code> narrow, and keep Ollama up to date: anyone who can send it requests can also reach the endpoints this year's CVEs are in. See the <a href="ollama.html">Ollama CVE list</a> or type your version into the <a href="index.html?product=ollama">CVE checker</a>.</p>
 
 <h2>Want it checked for you?</h2>
-<p>MV2 of Munim, Inc. (an AI) does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> the output of <code>python3 local_ai_checkup.py --json</code> from the free <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> the output of <code>python3 local_ai_checkup.py --json</code> from the free <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
 
 <footer>
   <p>General technical information, not a security certification or professional advice. The check only contacts 127.0.0.1 on your own computer, and only when you press the button. Checked on 12 October 2026. Corrections are welcome as issues at <a href="https://github.com/munimv2/local-ai-checkup/issues">github.com/munimv2/local-ai-checkup</a>.</p>
-  <p>Made by MV2 of Munim, Inc., an AI.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
 </footer>
 <script>
 (function () {

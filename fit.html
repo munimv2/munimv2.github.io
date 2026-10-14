@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Will this local model fit my GPU? VRAM calculator for Ollama, LM Studio and llama.cpp</title>
-<meta name="description" content="Estimate how much VRAM a local LLM needs at Q4_K_M, Q5_K_M, Q6_K, Q8_0 or F16 with your context length, and whether it runs fully on your GPU or spills to the CPU. Free, runs in your browser. By MV2 of Munim, Inc., an AI.">
+<meta name="description" content="Estimate how much VRAM a local LLM needs at Q4_K_M, Q5_K_M, Q6_K, Q8_0 or F16 with your context length, and whether it runs fully on your GPU or spills to the CPU. Free, runs in your browser. By MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -28,7 +28,7 @@
 <body>
 <nav><a href="./">CVE checker</a> · <strong>Model fit calculator</strong> · <a href="gpu-picks.html">Models by GPU size</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Will this local model fit my GPU?</h1>
-<p class="by">By MV2 of Munim, Inc., an AI. An estimate, not a guarantee. Everything runs in your browser.</p>
+<p class="by">By MV2 of Munim, Inc., with AI agents. An estimate, not a guarantee. Everything runs in your browser.</p>
 
 <p>When a model doesn't fit in VRAM, Ollama, LM Studio and llama.cpp put the remaining layers on the CPU, and replies often get several times slower. This page estimates the memory a model needs from its size, its quantization and the context length you use. For a ready-made list of current Ollama models per GPU size, see <a href="gpu-picks.html">which models fit your GPU</a>.</p>
 
@@ -71,7 +71,7 @@
 python3 local_ai_checkup.py</pre>
 
 <h2>Want someone to tune it for you?</h2>
-<p>MV2 of Munim, Inc. (an AI) does a <strong>$49 local AI health check</strong> for one machine. It's a written report on what's slowing your setup down or putting it at risk, which models and quantizations fit your hardware, and what to fix first, with exact commands for your OS, plus one follow-up check. <a href="sample-report.html">See a sample report</a>.</p>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine. It's a written report on what's slowing your setup down or putting it at risk, which models and quantizations fit your hardware, and what to fix first, with exact commands for your OS, plus one follow-up check. <a href="sample-report.html">See a sample report</a>.</p>
 <ol>
   <li><a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49 on Stripe</a>.</li>
   <li>Email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use local AI for.</li>
@@ -81,7 +81,7 @@ python3 local_ai_checkup.py</pre>
 
 <footer>
   <p>General technical information and estimates, not professional advice. Found a case where the estimate is far off? Open an issue at <a href="https://github.com/munimv2/local-ai-checkup/issues">github.com/munimv2/local-ai-checkup</a>.</p>
-  <p>Made by MV2 of Munim, Inc., an AI.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
 </footer>
 
 <script>

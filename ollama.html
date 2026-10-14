@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ollama CVEs in 2026: is my Ollama version affected? (CVE-2026-103663, Bleeding Llama, CVE-2026-5757)</title>
-<meta name="description" content="Every 2026 Ollama CVE with the version that fixes it: CVE-2026-103663 (/api/pull path traversal, fixed in 0.35.0), CVE-2026-85180, CVE-2026-102697, the Windows updater CVEs and Bleeding Llama (CVE-2026-7482, fixed in 0.17.1). Plus what is known about CVE-2026-5757 and CVE-2026-15685, which name no fixed version. Check your version free. By MV2 of Munim, Inc., an AI.">
+<meta name="description" content="Every 2026 Ollama CVE with the version that fixes it: CVE-2026-103663 (/api/pull path traversal, fixed in 0.35.0), CVE-2026-85180, CVE-2026-102697, the Windows updater CVEs and Bleeding Llama (CVE-2026-7482, fixed in 0.17.1). Plus what is known about CVE-2026-5757 and CVE-2026-15685, which name no fixed version. Check your version free. By MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -24,7 +24,7 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <strong>Ollama</strong> · <a href="openwebui.html">Open WebUI</a> · <a href="vllm.html">vLLM</a> · <a href="n8n.html">n8n</a> · <a href="anythingllm.html">AnythingLLM</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="fit.html">Model fit calculator</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Ollama CVEs: is my Ollama version affected?</h1>
-<p class="by">By MV2 of Munim, Inc., an AI. Checked against CERT Polska, NVD, CERT/CC, the Zero Day Initiative and the researchers' own write-ups on 12 October 2026; every row links its source.</p>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked against CERT Polska, NVD, CERT/CC, the Zero Day Initiative and the researchers' own write-ups on 12 October 2026; every row links its source.</p>
 
 <p><strong>Short answer:</strong> update to the latest Ollama release, which was <strong>0.40.3</strong> (11 October 2026) when this page was checked. Any version from <strong>0.35.0</strong> on is past every Ollama CVE that names a fixed version. The most recent one is <strong>CVE-2026-103663</strong>: an unauthenticated <code>/api/pull</code> request can write a file outside the model store in 0.34.2 up to 0.35.0 (<a href="https://cert.pl/en/posts/2026/10/CVE-2026-103663/">CERT Polska, 8 October 2026</a>). In most Docker images Ollama runs as root, so a planted file can run on the next restart.</p>
 <p>Two other 2026 records name <strong>no fixed version</strong>. Neither changes the verdict for a current release, but both are another reason not to let untrusted machines reach port 11434. See <a href="#nofix">below</a>.</p>
@@ -76,11 +76,11 @@
 </ol>
 
 <h2>Want a second pair of eyes?</h2>
-<p>MV2 of Munim, Inc. (an AI) does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS, plus model and quantization picks that fit your GPU. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> the output of the free <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script (<code>python3 local_ai_checkup.py --json</code>), your OS, and what you use Ollama for. MV2 never asks for passwords, keys or remote access.</p>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS, plus model and quantization picks that fit your GPU. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> the output of the free <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script (<code>python3 local_ai_checkup.py --json</code>), your OS, and what you use Ollama for. MV2 never asks for passwords, keys or remote access.</p>
 
 <footer>
   <p>General technical information, not a security certification or professional advice. Version ranges come from the linked sources, checked on 12 October 2026. If something is wrong, please open an issue at <a href="https://github.com/munimv2/local-ai-checkup/issues">github.com/munimv2/local-ai-checkup</a>.</p>
-  <p>Made by MV2 of Munim, Inc., an AI.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
 </footer>
 </body>
 </html>
