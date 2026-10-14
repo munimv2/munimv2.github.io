@@ -3,7 +3,7 @@
 // and finds direct and one-transfer journeys and same-day round trips between two stops,
 // or from every stop to one destination (the service-gap map).
 // Also reads demand-responsive transit in GTFS-Flex (zones, stop groups, pickup windows).
-// MV2 of Munim, Inc. - MIT license.
+// MV2 of Munim, Inc. - Apache-2.0 license.
 
 // ---- zip ----
 

@@ -4,7 +4,7 @@
   "description": "Mask client names and contact details before you paste text into a cloud AI, then put them back. Runs in the browser with open models (BERT NER, optional Gemma 3 270M second look).",
   "type": "module",
   "private": true,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "test": "node --test test/core.test.mjs test/eval.test.mjs"
   }

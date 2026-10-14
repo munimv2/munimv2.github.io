@@ -95,7 +95,7 @@
 
 <h2>Check that it really fits</h2>
 <p>Send the model one message, then run <code>ollama ps</code>. <code>100% GPU</code> means it fits. A split like <code>30%/70% CPU/GPU</code> means it doesn't, and <code>100% CPU</code> means Ollama isn't using your GPU at all. The <a href="ollama-gpu.html">Ollama GPU diagnoser</a> reads that output for you, and the <a href="fit.html">model fit calculator</a> estimates other sizes, quantizations and context lengths.</p>
-<p>The free, MIT-licensed <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script checks every installed model against your VRAM in one go, and checks your setup for exposed ports and known CVEs:</p>
+<p>The free, Apache-2.0 licensed <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> script checks every installed model against your VRAM in one go, and checks your setup for exposed ports and known CVEs:</p>
 <pre>curl -O https://raw.githubusercontent.com/munimv2/local-ai-checkup/main/local_ai_checkup.py
 python3 local_ai_checkup.py</pre>
 

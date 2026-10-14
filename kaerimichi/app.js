@@ -2,7 +2,7 @@
 // The service-gap map colours every stop by whether that round trip works to the chosen destination,
 // and can overlay demand-responsive transit (GTFS-Flex) to show where a booked ride fills the gap.
 // A trip card (copy or print) and a printable service-gap summary carry the answer off the screen.
-// MV2 of Munim, Inc. - MIT license.
+// MV2 of Munim, Inc. - Apache-2.0 license.
 import { loadFeed, loadFlex, dayView, journeys, roundTrip, serviceGaps, serviceRange, weekday, addDays, fmtTime, fmtSpan, parseFeedList, flexDay, flexCover, flexLinks, flexOk } from './gtfs.js';
 
 const VERSION = '0.5';

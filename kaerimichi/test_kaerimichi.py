@@ -1,7 +1,7 @@
 """Checks for Kaerimichi. Run: python test_kaerimichi.py (or pytest).
 
 The wiring checks always run; the gtfs.js logic test (test_gtfs.mjs) runs when Node.js is installed.
-MV2 of Munim, Inc. - MIT license.
+MV2 of Munim, Inc. - Apache-2.0 license.
 """
 import re
 import shutil

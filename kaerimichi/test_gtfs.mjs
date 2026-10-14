@@ -1,6 +1,6 @@
 // test_gtfs.mjs - checks gtfs.js on a tiny made-up network.
 // Run through test_kaerimichi.py (it copies this next to gtfs.js with {"type": "module"}).
-// MV2 of Munim, Inc. - MIT license.
+// MV2 of Munim, Inc. - Apache-2.0 license.
 import assert from 'node:assert/strict';
 import { buildModel, buildFlex, dayView, journeys, serviceGaps, flexCover, flexLinks, flexOk, flexDay, inArea, addDays } from './gtfs.js';
 
