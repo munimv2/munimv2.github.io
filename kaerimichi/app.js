@@ -1,10 +1,11 @@
 // app.js - Kaerimichi UI: pick a feed, a date and two stops; see if you can go and come back.
 // The service-gap map colours every stop by whether that round trip works to the chosen destination,
 // and can overlay demand-responsive transit (GTFS-Flex) to show where a booked ride fills the gap.
+// A trip card (copy or print) and a printable service-gap summary carry the answer off the screen.
 // MV2 of Munim, Inc. - MIT license.
 import { loadFeed, loadFlex, dayView, journeys, roundTrip, serviceGaps, serviceRange, weekday, addDays, fmtTime, fmtSpan, parseFeedList, flexDay, flexCover, flexLinks, flexOk } from './gtfs.js';
 
-const VERSION = '0.4';
+const VERSION = '0.5';
 const API = 'https://api.gtfs-data.jp/v2';
 // The repository's feed list has no CORS header, so a snapshot ships with the app (feeds.txt).
 // The zip files themselves are served with CORS and are fetched live.
@@ -20,6 +21,8 @@ const GAP_COLOURS = { ok: '#1a9850', okx: '#91cf60', flex: '#4393c3', noreturn: 
 // Bus verdicts that a demand-responsive ride can turn into "possible".
 const FLEX_FILLS = new Set(['noreturn', 'oneway', 'none', 'idle']);
 const ZONE_COLOUR = '#2166ac';
+// Journeys listed per direction on the trip card.
+const CARD_TRIPS = 20;
 
 // Demand-responsive transit published as GTFS-Flex by the Public Transportation Open Data Center
 // (ODPT, CC BY 4.0; most are public only during the Open Data Challenge 2026). `bus` is a
@@ -51,6 +54,8 @@ const PRESETS = [
   { key: 'office', re: /役場|役所|支所|庁舎/ },
   { key: 'shop', re: /イオン|スーパー|ショッピング|マート|モール|ストア|生協|コープ|ベイシア|ヤオコー|西友|ヨーカドー|ドラッグ|ホームセンター/ },
 ];
+
+const MLIT_PLAN = 'https://www.mlit.go.jp/sogoseisaku/transport/content/002005758.pdf';
 
 const TEXT = {
   ja: {
@@ -106,6 +111,15 @@ const TEXT = {
     },
     flexNote: 'デマンド交通は、区域・乗降ポイントと運行時間帯だけで判定しています。予約の締切や定員、利用登録などの条件は各自治体・事業者の案内をご確認ください。',
     flexSource: '出典（デマンド交通）', odpt: '公共交通オープンデータセンター',
+    copy: 'コピー（LINE・メール用）', copied: 'コピーしました。', copyFail: '自動でコピーできませんでした。下の文を選んでコピーしてください。',
+    print: '印刷・PDFで保存',
+    cardTitle: '【かえりみち】バスの往復メモ', cardFrom: '出発', cardTo: '行き先',
+    dateLine: (ymd, wd) => `${+ymd.slice(0, 4)}年${+ymd.slice(4, 6)}月${+ymd.slice(6, 8)}日（${wd}）`,
+    settings: (stay, x) => `目的地での最低滞在${stay}分・${x ? '乗り換え1回まで' : '直通のみ'}`,
+    plansLine: '行きの便', backsLine: '帰りの便', more: n => `ほか${n}本`,
+    gapTitle: '【かえりみち 交通空白マップ】', gapCopy: '集計をコピー', gapPrint: '地図と集計を印刷',
+    aboutHead: '「交通空白」について',
+    aboutBody: `国土交通省は2024年7月に「交通空白」解消本部を設け、地域の人の移動手段が足りない「交通空白」の解消に取り組んでいます。2025〜2027年度は集中対策期間で、対象は全国で2,000地区を超えます（<a href="${MLIT_PLAN}" target="_blank" rel="noopener">「交通空白」解消に向けた取組方針2026</a>）。この地図は、公開されている時刻表データ（GTFS）から、停留所ごとに「行き先へ行って、その日のうちに帰ってこられるか」を判定して見える化します。デマンド交通を重ねると、予約制の乗合交通で埋まっている所も分かります。正式な「交通空白」の判断は自治体や運輸局が行うもので、この地図はその検討の材料です。`,
   },
   en: {
     title: 'Kaerimichi', tagline: 'Can you get there by bus and back the same day?',
@@ -160,6 +174,15 @@ const TEXT = {
     },
     flexNote: 'Demand-responsive service is judged only by its areas, pickup points and hours. Check booking deadlines, capacity and registration with the town or operator.',
     flexSource: 'Source (demand-responsive)', odpt: 'Public Transportation Open Data Center',
+    copy: 'Copy (for messages and email)', copied: 'Copied.', copyFail: 'Could not copy automatically. Select the text below and copy it.',
+    print: 'Print / save as PDF',
+    cardTitle: 'Kaerimichi bus round-trip note', cardFrom: 'From', cardTo: 'To',
+    dateLine: (ymd, wd) => `${wd} ${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`,
+    settings: (stay, x) => `(minimum stay ${stay} min, ${x ? 'up to one transfer' : 'direct buses only'})`,
+    plansLine: 'Buses there', backsLine: 'Buses back', more: n => `${n} more`,
+    gapTitle: 'Kaerimichi service-gap map:', gapCopy: 'Copy the counts', gapPrint: 'Print the map and counts',
+    aboutHead: 'About "transport gaps" (交通空白)',
+    aboutBody: `In July 2024 Japan's Ministry of Land, Infrastructure, Transport and Tourism (MLIT) set up a headquarters to close "transport gaps" (交通空白), places where residents lack a way to get around. FY2025–2027 is its intensive period, covering more than 2,000 districts nationwide (<a href="${MLIT_PLAN}" target="_blank" rel="noopener">MLIT action plan 2026, in Japanese</a>). This map uses the published timetables (GTFS) to check, stop by stop, whether you can reach the destination and get back the same day. With a demand-responsive service overlaid, it also shows where a booked ride fills the gap. Official decisions on transport gaps are made by municipalities and MLIT's regional bureaus; this map is input for that work.`,
   },
 };
 
@@ -398,6 +421,11 @@ function weekdayName(ymd) {
   return lang === 'ja' ? '日月火水木金土'[weekday(ymd)] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][weekday(ymd)];
 }
 
+// "2026年10月14日（水） 目的地での最低滞在30分・乗り換え1回まで": the conditions behind a verdict.
+function conditions() {
+  return `${t.dateLine(state.ymd, weekdayName(state.ymd))} ${t.settings(state.stay, state.transfer)}`;
+}
+
 function gapLine(i) {
   const gaps = gapView();
   if (!gaps || i === state.to) return '';
@@ -445,34 +473,48 @@ function drawStops() {
   });
 }
 
-// The legend: departures per day, or the service-gap counts with a weekly comparison and a CSV download.
+// The legend: departures per day, or the service-gap counts with a weekly comparison, copy, print and CSV.
 function drawLegend() {
   const gapMode = state.mode === 'gap';
   $('#legend-count').hidden = gapMode;
   const box = $('#legend-gap');
   box.hidden = !gapMode;
   if (!gapMode) return;
+  const about = `<details class="noprint"><summary>${esc(t.aboutHead)}</summary><p class="small">${t.aboutBody}</p></details>`;
   const gaps = gapView();
-  if (!gaps) { box.innerHTML = `<p class="muted small">${t.gapNeedTo}</p>`; return; }
+  if (!gaps) { box.innerHTML = `<p class="muted small">${t.gapNeedTo}</p>` + about; return; }
   const n = {};
   for (const g of gaps) n[g.status] = (n[g.status] || 0) + 1;
-  let html = `<b>${esc(t.gapHead(placeName(state.model.places[state.to])))}</b><ul>`;
+  const head = t.gapHead(placeName(state.model.places[state.to]));
+  const lines = [`${t.gapTitle} ${head}`, conditions()];
+  if (state.meta) lines.push(`${t.source}: ${state.meta.org}「${state.meta.feed}」`);
+  if (state.flex) lines.push(`${t.flexSource}: ${state.flexMeta ? state.flexMeta.name : state.flex.agencies.join('、')}`);
+  let html = `<b>${esc(head)}</b><p class="small">${esc(conditions())}</p><ul>`;
   for (const k of GAP_ORDER) {
     if (k === 'okx' && !state.transfer) continue;
     if (k === 'flex' && !state.flex) continue;
     html += `<li><i style="background:${GAP_COLOURS[k]}"></i>${esc(t.gap[k])}: <b>${t.gapCount(n[k] || 0)}</b></li>`;
+    lines.push(`- ${t.gap[k]}: ${t.gapCount(n[k] || 0)}`);
   }
   html += '</ul>';
   const week = weekCounts();
-  html += `<p class="small week">${esc(t.week)}: ` + week.map(w => {
+  const days = week.map(w => {
     const label = t.weekDay(weekdayName(w.ymd), `${+w.ymd.slice(4, 6)}/${+w.ymd.slice(6, 8)}`);
-    const count = w.n === null ? t.weekOut : t.gapCount(w.n);
+    return { w, label, count: w.n === null ? t.weekOut : t.gapCount(w.n) };
+  });
+  const sep = lang === 'ja' ? '・' : ', ';
+  html += `<p class="small week">${esc(t.week)}: ` + days.map(({ w, label, count }) => {
     const cls = w.ymd === state.ymd ? ' class="now"' : '';
     return `<a href="#" data-day="${w.ymd}"${cls}>${esc(label)}</a> <b>${esc(count)}</b>`;
-  }).join(lang === 'ja' ? '・' : ', ') + '</p>';
+  }).join(sep) + '</p>';
+  lines.push(`${t.week}: ` + days.map(d => `${d.label} ${d.count}`).join(sep), location.href);
+  html += toolsHtml(t.gapCopy, t.gapPrint);
   html += `<p class="muted small">${t.gapNote}</p>`;
   if (state.flex) html += `<p class="muted small">${t.flexNote}</p>`;
+  html += about;
   box.innerHTML = html;
+  const text = lines.join('\n');
+  wireTools(box, text, 'map');
   for (const a of box.querySelectorAll('a[data-day]')) {
     a.onclick = e => { e.preventDefault(); setDate(a.dataset.day); render(); };
   }
@@ -481,7 +523,7 @@ function drawLegend() {
   a.textContent = t.csv;
   a.onclick = e => { e.preventDefault(); downloadCsv(gaps); };
   const p = document.createElement('p');
-  p.className = 'small';
+  p.className = 'small noprint';
   p.appendChild(a);
   box.appendChild(p);
 }
@@ -517,6 +559,42 @@ function downloadCsv(gaps) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---- copy and print ----
+
+function toolsHtml(copyLabel, printLabel) {
+  return `<p class="tools noprint"><button type="button" class="copy">${esc(copyLabel)}</button><button type="button" class="print">${esc(printLabel)}</button><span class="small muted note"></span></p>`;
+}
+
+// Hooks up the copy and print buttons inside box; kind picks the print layout (body.print-card / body.print-map).
+function wireTools(box, text, kind) {
+  const p = box.querySelector('.tools');
+  p.querySelector('.copy').onclick = () => copyText(text, p);
+  p.querySelector('.print').onclick = () => printAs(kind);
+}
+
+// Copies text to the clipboard; where the browser refuses, shows it selected for copying by hand.
+async function copyText(text, p) {
+  const note = p.querySelector('.note');
+  try {
+    await navigator.clipboard.writeText(text);
+    note.textContent = t.copied;
+  } catch (e) {
+    note.textContent = t.copyFail;
+    const area = document.createElement('textarea');
+    area.className = 'copybox noprint';
+    area.rows = Math.min(16, text.split('\n').length + 1);
+    area.value = text;
+    p.after(area);
+    area.select();
+  }
+}
+
+function printAs(kind) {
+  document.body.classList.add('print-' + kind);
+  window.addEventListener('afterprint', () => document.body.classList.remove('print-' + kind), { once: true });
+  window.print();
 }
 
 // ---- one-click destinations ----
@@ -777,6 +855,18 @@ function journeyCell(j) {
   return `${routeChip(a.trip)}<div class="via">↓ ${t.via} <b>${esc(via)}</b> ${fmtTime(a.arr, lang)}${t.arr} → ${fmtTime(b.dep, lang)}${t.dep}</div>${routeChip(b.trip)}`;
 }
 
+// One journey as plain text for the trip card: "8:00 発 → 8:30 着 (乗換 ○○)".
+function journeyText(j) {
+  const via = j.via !== null && j.via !== undefined ? ` (${t.via} ${placeName(state.model.places[j.via])})` : '';
+  return `${fmtTime(j.dep, lang)} ${t.dep} → ${fmtTime(j.arr, lang)} ${t.arr}${via}`;
+}
+
+function journeyList(list) {
+  const shown = list.slice(0, CARD_TRIPS).map(journeyText);
+  if (list.length > CARD_TRIPS) shown.push(t.more(list.length - CARD_TRIPS));
+  return shown.join(lang === 'ja' ? '、' : '; ');
+}
+
 function table(rows, withBack) {
   if (!rows.length) return '<p class="muted">—</p>';
   let html = '<table><tbody>';
@@ -789,23 +879,24 @@ function table(rows, withBack) {
   return html + '</tbody></table>';
 }
 
-// When the buses can't do the round trip: can the demand-responsive service?
-function flexPairNote() {
+// When the buses can't do the round trip: can the demand-responsive service? Plain text, or ''.
+function flexPairText() {
   const links = linksTo(state.to);
   if (!links) return '';
   const l = links[state.from];
   if (!flexOk(l, state.stay * 60)) return '';
   const trip = l.there.trip;
-  return `<div class="verdict fx">◯ ${esc(t.flexPair(flexName(trip), windowText(l.there.start, l.back.end), bookingText(trip)))}</div>`;
+  return t.flexPair(flexName(trip), windowText(l.there.start, l.back.end), bookingText(trip));
 }
 
 function render() {
   const box = $('#result');
   const { model } = state;
+  // The URL first: the legend's copied summary and the trip card both quote it.
+  if (model) updateUrl();
   drawLegend();
   if (!model) { box.innerHTML = ''; return; }
   drawStops();
-  updateUrl();
   const r = state.range;
   const rangeText = r && r.start ? `${dashed(r.start)} – ${dashed(r.end)}` : '?';
   const notes = [];
@@ -820,29 +911,51 @@ function render() {
     return;
   }
   if (state.from === state.to) { box.innerHTML = html + `<p class="warn">${t.same}</p>`; return; }
+  // The trip card: the same answer as plain text, for copying into a message or printing.
+  const fromLine = `${t.cardFrom}: ${placeName(model.places[state.from])}`;
+  const toLine = `${t.cardTo}: ${placeName(model.places[state.to])}`;
+  const card = [t.cardTitle, conditions(), fromLine, toLine, ...notes];
+  html = `<div class="printonly"><b>${esc(t.cardTitle)}</b><br>${esc(conditions())}<br>${esc(fromLine)}<br>${esc(toLine)}</div>` + html;
   const transfers = state.transfer ? 1 : 0;
   const outs = journeys(state.view, state.from, state.to, transfers, MIN_CONNECTION);
   const backs = journeys(state.view, state.to, state.from, transfers, MIN_CONNECTION);
   const rt = roundTrip(outs, backs, state.stay * 60);
-  if (rt.status === 'none') html += `<div class="verdict no">✕ ${state.transfer ? t.none : t.noneDirect}</div>`;
-  else if (rt.status === 'oneway') html += `<div class="verdict no">✕ ${t.oneway}</div>`;
-  else if (rt.status === 'noreturn') html += `<div class="verdict no">✕ ${esc(t.noreturn(fmtTime(rt.firstArr, lang), fmtTime(rt.lastBack, lang)))}</div>`;
-  else {
+  let verdict = '';
+  if (rt.status === 'none') verdict = state.transfer ? t.none : t.noneDirect;
+  else if (rt.status === 'oneway') verdict = t.oneway;
+  else if (rt.status === 'noreturn') verdict = t.noreturn(fmtTime(rt.firstArr, lang), fmtTime(rt.lastBack, lang));
+  if (verdict) {
+    html += `<div class="verdict no">✕ ${esc(verdict)}</div>`;
+    card.push('✕ ' + verdict);
+  } else {
     const lo = rt.latestOut;
-    const loVia = lo.via !== null ? ` (${t.via} ${esc(placeName(model.places[lo.via]))})` : '';
-    html += `<div class="verdict ok">◯ ${t.ok}</div><dl class="facts">
-      <dt>${t.arrive}</dt><dd>${fmtTime(rt.firstArr, lang)}</dd>
-      <dt>${t.lastBack}</dt><dd>${fmtTime(rt.lastBack, lang)}</dd>
-      <dt>${t.maxStay}</dt><dd>${fmtSpan(rt.maxStay, lang)}</dd>
-      <dt>${t.latest}</dt><dd>${fmtTime(lo.dep, lang)} ${t.dep}${loVia}</dd></dl>`;
+    const loVia = lo.via !== null ? ` (${t.via} ${placeName(model.places[lo.via])})` : '';
+    const facts = [
+      [t.arrive, fmtTime(rt.firstArr, lang)],
+      [t.lastBack, fmtTime(rt.lastBack, lang)],
+      [t.maxStay, fmtSpan(rt.maxStay, lang)],
+      [t.latest, `${fmtTime(lo.dep, lang)} ${t.dep}${loVia}`],
+    ];
+    html += `<div class="verdict ok">◯ ${t.ok}</div><dl class="facts">` + facts.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('') + '</dl>';
+    card.push('◯ ' + t.ok, ...facts.map(([k, v]) => `${k}: ${v}`));
   }
-  if (rt.status !== 'ok') html += flexPairNote();
+  const fx = rt.status !== 'ok' ? flexPairText() : '';
+  if (fx) {
+    html += `<div class="verdict fx">◯ ${esc(fx)}</div>`;
+    card.push('◯ ' + fx);
+  }
+  if (outs.length) card.push(`${t.plansLine}: ${journeyList(outs)}`);
+  if (backs.length) card.push(`${t.backsLine}: ${journeyList(backs)}`);
+  card.push(t.note, location.href);
+  html += toolsHtml(t.copy, t.print);
   if (outs.length || backs.length) {
     html += `<h3>${t.goTable} <small>${t.trips(outs.length)}</small></h3>${table(rt.plans, true)}`;
     html += `<h3>${t.backTable} <small>${t.trips(backs.length)}</small></h3>${table(backs, false)}`;
   }
-  html += `<p class="muted small">${t.note}</p><p class="small"><a href="${esc(location.href)}">${t.share}</a></p>`;
+  html += `<p class="muted small">${t.note}</p><p class="small noprint"><a href="${esc(location.href)}">${t.share}</a></p><p class="printonly small">${esc(location.href)}</p>`;
   box.innerHTML = html;
+  const text = card.join('\n');
+  wireTools(box, text, 'card');
 }
 
 // ---- wiring ----

@@ -57,6 +57,20 @@ def test_flex_feeds():
             assert bus in keys, "feeds.txt has no " + bus
 
 
+def test_print_layouts_exist_for_every_print_button():
+    app, html = read("app.js"), read("index.html")
+    assert "@media print" in html
+    assert 'class="controls"' in html, "the controls wrapper (hidden when printing) is missing"
+    kinds = re.findall(r"wireTools\(box, \w+, '(\w+)'\);", app)
+    assert sorted(kinds) == ["card", "map"], kinds
+    for kind in kinds:
+        assert "body.print-" + kind in html, "index.html has no print layout for " + kind
+    # Classes the print and copy code looks up must be the ones toolsHtml() writes.
+    tools = app[app.index("function toolsHtml"):app.index("function wireTools")]
+    for cls in ("tools", "copy", "print", "note"):
+        assert re.search(r'class="[^"]*\b' + cls + r'\b', tools), "toolsHtml() writes no ." + cls
+
+
 def test_version_constant():
     assert re.search(r"const VERSION = '\d+\.\d+'", read("app.js"))
 

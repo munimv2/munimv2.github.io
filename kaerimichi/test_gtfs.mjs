@@ -121,4 +121,8 @@ assert.equal(flexLinks(flex, '20261018', cover, at('H'), model.places.length)[at
 // A plain GTFS feed has no flexible trips.
 assert.equal(buildFlex(files({ 'stops.txt': stops, 'trips.txt': trips, 'stop_times.txt': times })).trips.length, 0);
 
+// A BOM at the start of locations.geojson is tolerated.
+const bom = buildFlex(files({ ...Object.fromEntries([['locations.geojson', '﻿' + JSON.stringify(geo)]]), 'trips.txt': 'route_id,service_id,trip_id\nDR,WK,FZ\n', 'stop_times.txt': 'trip_id,location_id,stop_sequence,start_pickup_drop_off_window,end_pickup_drop_off_window\nFZ,Z,1,8:00:00,17:00:00\nFZ,Z,2,8:00:00,17:00:00\n' }));
+assert.ok(bom.locations.get('z:Z').geometry, 'locations.geojson with a BOM did not parse');
+
 console.log('gtfs.js ok');

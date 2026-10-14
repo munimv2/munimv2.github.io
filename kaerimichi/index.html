@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>かえりみち Kaerimichi — バスで行って、帰ってこられる？</title>
-<meta name="description" content="地域のバスで目的地へ行き、その日のうちに帰ってこられるかを調べるウェブアプリ。全国約600のGTFSデータに対応、乗り換え1回まで。行き先への往復可否で全停留所を色分けする交通空白マップとCSV出力、デマンド交通（GTFS-Flex）の重ね合わせつき。 / Can you get there by bus and back the same day? A round-trip checker and service-gap map for Japan's community buses, with demand-responsive transit (GTFS-Flex), built on open data.">
+<meta name="description" content="地域のバスで目的地へ行き、その日のうちに帰ってこられるかを調べるウェブアプリ。全国約600のGTFSデータに対応、乗り換え1回まで。行き先への往復可否で全停留所を色分けする交通空白マップとCSV出力、デマンド交通（GTFS-Flex）の重ね合わせ、印刷・コピーできる往復メモつき。 / Can you get there by bus and back the same day? A round-trip checker and service-gap map for Japan's community buses, with demand-responsive transit (GTFS-Flex) and a printable trip card, built on open data.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   * { box-sizing: border-box; }
@@ -48,11 +48,17 @@
   .via { font-size: .85rem; color: #555; margin: 2px 0; }
   .warn { background: #fff8e1; padding: 8px; border-radius: 6px; }
   .muted { color: #666; } .small { font-size: .85rem; }
+  .tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0; }
+  .tools button { padding: 6px 12px; font-size: .95rem; }
+  .copybox { width: 100%; font-size: .85rem; margin: 4px 0; }
+  .printonly { display: none; }
   .legend { display: flex; flex-wrap: wrap; gap: 6px; font-size: .8rem; margin-top: 12px; align-items: center; }
   .legend i, .gaplegend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #424242; vertical-align: middle; margin-right: 4px; }
   .gaplegend { margin-top: 12px; font-size: .9rem; }
   .gaplegend ul { list-style: none; padding: 0; margin: 6px 0; }
   .gaplegend li { margin: 3px 0; }
+  .gaplegend details { margin: 8px 0; padding: 6px 8px; background: #f5f5f5; border-radius: 6px; }
+  .gaplegend summary { cursor: pointer; font-weight: 600; }
   .week a.now { font-weight: 700; text-decoration: none; color: #212121; }
   .pop button { margin: 6px 6px 0 0; padding: 6px 10px; font-size: .95rem; }
   .pop .fx { color: #0d47a1; }
@@ -60,6 +66,22 @@
   @media (max-width: 760px) {
     main { grid-template-columns: 1fr; grid-template-rows: auto 60vh; height: auto; }
     #panel { border-right: 0; }
+    .tools button { flex: 1 1 auto; padding: 10px 12px; }
+  }
+  /* Printing: the trip card (result only) or the service-gap map (legend and map). */
+  @media print {
+    body { background: #fff; }
+    header { background: none; color: #000; padding: 0 0 6px; border-bottom: 2px solid #000; }
+    header a, .controls, .noprint, .leaflet-control-container { display: none !important; }
+    main { display: block; height: auto; }
+    #panel { overflow: visible; border: 0; padding: 8px 0; }
+    .printonly { display: block; }
+    .verdict { border: 2px solid currentColor; }
+    table { font-size: 11pt; }
+    a { color: #000; text-decoration: none; }
+    body.print-card #map, body.print-card #legend-count, body.print-card #legend-gap { display: none !important; }
+    body.print-map #result, body.print-map #legend-count { display: none !important; }
+    body.print-map #map { height: 160mm; width: 100%; break-inside: avoid; }
   }
 </style>
 </head>
@@ -71,6 +93,7 @@
 </header>
 <main>
   <section id="panel">
+    <div class="controls">
     <span class="step" data-t="feed">1. 路線データ</span>
     <select id="feed"><option value="">都道府県・事業者を選ぶ…</option></select>
     <div class="file"><span data-t="orFile">またはGTFS zipファイルを開く</span>: <input type="file" id="file" accept=".zip"></div>
@@ -108,6 +131,7 @@
       <label class="inline"><input type="radio" name="mode" value="count" checked><span data-t="modeCount">この日の発車本数</span></label>
       <label class="inline"><input type="radio" name="mode" value="gap"><span data-t="modeGap">行き先へ日帰りで往復できるか（交通空白マップ）</span></label>
     </div>
+    </div>
 
     <div id="result"></div>
 
@@ -126,7 +150,7 @@
       <p>かえりみち / Kaerimichi <span id="version"></span> — MV2 of Munim, Inc.
         ・<a href="https://github.com/munimv2/kaerimichi">source (MIT)</a>
         ・お問い合わせ / contact: <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a></p>
-      <p>本アプリについてのお問い合わせは上記へお願いします（データ提供事業者へのお問い合わせはご遠慮ください）。データはブラウザ内で処理され、どこにも送信されません。
+      <p class="noprint">本アプリについてのお問い合わせは上記へお願いします（データ提供事業者へのお問い合わせはご遠慮ください）。データはブラウザ内で処理され、どこにも送信されません。
         データ: <a href="https://gtfs-data.jp/" target="_blank" rel="noopener">GTFSデータリポジトリ</a>、<a href="https://ckan.odpt.org/" target="_blank" rel="noopener">公共交通オープンデータセンター</a>（デマンド交通）、地理院タイル。
         このアプリはMV2の名のもと、AIエージェントが作成しました。<br>
         Questions about this app go to the address above, not to the transit operators. Your data stays in your browser.
