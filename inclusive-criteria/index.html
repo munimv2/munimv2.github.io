@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inclusive eligibility check: flag criteria that exclude disabled people</title>
-<meta name="description" content="Paste a clinical study's eligibility criteria and see which exclusion items touch disability, with an inclusive alternative to consider for each. Runs in your browser; nothing is sent anywhere.">
+<meta name="description" content="Paste a clinical study's eligibility criteria and see which exclusion items touch disability, and which inclusion items require an ability such as walking, hearing or reading, with an inclusive alternative to consider for each. Runs in your browser; nothing is sent anywhere.">
 <style>
 body { font: 1.0625rem/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 46rem; margin: 0 auto; padding: 1rem 1.25rem 3rem; color: #1b1b1b; background: #fff; }
 h1 { font-size: 1.6rem; line-height: 1.25; }
 h2 { font-size: 1.25rem; margin-top: 2rem; }
+h3 { font-size: 1.1rem; margin-top: 1.5rem; }
 a { color: #0b4fb3; }
 label { display: block; font-weight: 600; margin-top: 1.25rem; }
 .hint { margin: .2rem 0 .4rem; color: #444; font-size: .95rem; }
@@ -29,12 +30,12 @@ footer { margin-top: 2.5rem; font-size: .95rem; color: #444; }
 <body>
 <main>
 <h1>Inclusive eligibility check</h1>
-<p>Paste a clinical study's eligibility criteria. This page lists each exclusion item that touches disability (cognitive, consent capacity, vision, hearing, communication, mobility, and related items such as investigator discretion), and gives an inclusive alternative to consider for each.</p>
+<p>Paste a clinical study's eligibility criteria. This page lists each exclusion item that touches disability (cognitive, consent capacity, vision, hearing, communication, mobility, and related items such as investigator discretion). It also lists each inclusion item that requires an ability, such as "able to walk 100 m unaided" or "normal hearing", because those shut people out too. For each item it gives an inclusive alternative to consider.</p>
 <p><strong>Your text stays on your computer.</strong> The check runs in this page, and nothing you paste is sent or saved anywhere.</p>
 
 <form id="form">
 <label for="criteria">Eligibility criteria</label>
-<p class="hint" id="criteria-hint">Include the line that starts "Exclusion Criteria", as on ClinicalTrials.gov.</p>
+<p class="hint" id="criteria-hint">Include the lines that start "Inclusion Criteria" and "Exclusion Criteria", as on ClinicalTrials.gov.</p>
 <textarea id="criteria" name="criteria" aria-describedby="criteria-hint" spellcheck="false"></textarea>
 
 <label for="subject">The study's condition or title (optional)</label>
@@ -49,8 +50,8 @@ footer { margin-top: 2.5rem; font-size: .95rem; color: #444; }
 <div id="results"></div>
 
 <h2>What a flag means</h2>
-<p>A flag means a criterion uses words linked to disability. It does not mean the exclusion is wrong. Some exclusions are needed for safety or because the outcome depends on that function. For each flagged item, ask three questions. Would taking part be unsafe even with an accommodation? Does the outcome itself need this function? Or is the barrier only how the study is run, which an accommodation can fix? The <a href="https://github.com/munimtechnologies/trial-exclusion-census/blob/main/toolkit/inclusive-eligibility-guide.md">inclusive eligibility guide</a> works through each category.</p>
-<p>The check uses word rules, not a reader. It misses exclusions worded in ways it does not know, and it can flag a word used in passing. The same open rules are used by <a href="https://github.com/munimtechnologies/trial-exclusion-census">trial-exclusion-census</a> to count disability-related exclusions across every interventional study on ClinicalTrials.gov. This is information, not medical, legal or IRB advice.</p>
+<p>A flag means a criterion uses words linked to disability. It does not mean the criterion is wrong. Some exclusions and requirements are needed for safety or because the outcome depends on that function. For each flagged item, ask three questions. Would taking part be unsafe even with an accommodation? Does the outcome itself need this function? Or is the barrier only how the study is run, which an accommodation can fix? The <a href="https://github.com/munimtechnologies/trial-exclusion-census/blob/main/toolkit/inclusive-eligibility-guide.md">inclusive eligibility guide</a> works through each category.</p>
+<p>The check uses word rules, not a reader. It misses criteria worded in ways it does not know, and it can flag a word used in passing. The same open rules are used by <a href="https://github.com/munimtechnologies/trial-exclusion-census">trial-exclusion-census</a> to count disability-related criteria across every interventional study on ClinicalTrials.gov. This is information, not medical, legal or IRB advice.</p>
 </main>
 <footer>
 <p>Made by MV2 of Munim, Inc. with AI agents. Code Apache-2.0, text CC BY 4.0. Corrections are welcome as <a href="https://github.com/munimtechnologies/trial-exclusion-census/issues">issues</a>.</p>
@@ -144,6 +145,31 @@ suggest communication Allow AAC devices, a communication partner or extra time, 
 suggest mobility Unless the outcome needs walking or standing, consider accessible sites, home or remote visits and transport support.
 suggest investigator_discretion Broad discretion can hide disability exclusions; list the specific safety reasons instead.
 suggest english_only Consider translated materials and interpreters.
+require cognitive \bcognitively\s+(?:intact|normal|unimpaired|healthy)\b
+require cognitive \b(?:normal|intact|preserved)\s+cognit
+require cognitive \b(?:mmse|mini[- ]mental|moca|montreal cognitive)\b[^.;\n]{0,40}(?:≥|>=|>|\bat least\b|\bor (?:higher|greater|more|above)\b|\bgreater than\b|\babove\b)
+require consent_capacity ^(?!.*\b(?:representatives?|LAR|surrogates?|guardians?|prox(?:y|ies)|parents?)\b).*?\b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?(?:provid|giv|sign)\w*\s+(?:\w+\s+){0,2}?(?:informed\s+)?consent\b
+require consent_capacity ^(?!.*\b(?:representatives?|LAR|surrogates?|guardians?|prox(?:y|ies)|parents?)\b).*?\bcapacity to (?:give |provide )?(?:informed )?consent\b
+require consent_capacity \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?(?:understand|comprehend)\w*\b(?![^.;\n]{0,40}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
+require visual \b(?:normal|adequate|sufficient|intact|good)\s+(?:or\s+corrected[- ](?:to[- ]normal\s+)?)?(?:vision|eyesight|visual acuity)\b
+require visual \bcorrected[- ]to[- ]normal\s+(?:vision|visual acuity|eyesight)\b
+require visual \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?see\b
+require visual \bvisual acuity\b[^.;\n]{0,40}\bor better\b
+require hearing \b(?:normal|adequate|sufficient|intact|good)\s+hearing\b
+require hearing \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?hear\b
+require communication \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?(?:speak|communicat|read|writ|verbali[sz])\w*\b(?![^.;\n]{0,40}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
+require communication \b(?:functionally\s+)?literate\b(?![^.;\n]{0,40}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
+require communication \b(?:fluent|intelligible)\s+speech\b
+require mobility \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?(?:walk(?:s|ing)?|ambulat(?:e|ing)|stand(?:ing)?)\b
+require mobility \b(?:independently|fully|freely)\s+ambulat
+require mobility \bambulat(?:ory|e|ing)\s+(?:without|with or without|independently|unaided|unassisted)\b
+require mobility \bwalk(?:s|ing)?\s+(?:independently|unaided|unassisted|without (?:assistance|help|an? (?:assistive|walking) (?:device|aid)))
+reqsuggest cognitive If the outcome needs this level of cognition, name the measure and the reason; otherwise allow a supporter and easy-read materials.
+reqsuggest consent_capacity Allow consent by a legally authorized representative with the participant's own assent, unless the study cannot be done that way.
+reqsuggest visual Unless a task needs sight, accept blind and low-vision participants and adapt the materials (large print, screen reader, read aloud).
+reqsuggest hearing Unless a task needs hearing, accept deaf and hard-of-hearing participants and provide interpreters, captions and written instructions.
+reqsuggest communication Accept answers by AAC, writing, typing or pointing, and read documents aloud for people who do not read print.
+reqsuggest mobility Unless walking or standing is the outcome or a safety need, accept wheelchair users and people who use walking aids.
 header - ^[^\w\n]*(?:(?:key|main|major|general|specific|additional|principal|other)\s+)?(inclusion|exclusion|eligibility)(?:\s+criteri\w*)?[\s*_]*(?::|$)
 inline - \bexclusion\s+criteri\w*\s*:?
 bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
@@ -159,7 +185,8 @@ bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
     investigator_discretion: "investigator discretion", english_only: "English only",
     disability_general: "disability (general)"
   };
-  var RULES = {}, ORDER = [], RELATED = {}, SUGGEST = {}, ACCOM, HEADER, INLINE, BULLET;
+  var RULES = {}, ORDER = [], REQUIRE = {}, REQ_ORDER = [], RELATED = {}, SUGGEST = {}, REQ_SUGGEST = {};
+  var ACCOM, HEADER, INLINE, BULLET;
   document.getElementById("rules").textContent.split(/\r?\n/).forEach(function (line) {
     if (!line.trim()) return;
     var a = line.indexOf(" "), b = line.indexOf(" ", a + 1);
@@ -167,29 +194,42 @@ bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
     if (kind === "rule") {
       if (!RULES[key]) { RULES[key] = []; ORDER.push(key); }
       RULES[key].push(new RegExp(val, "i"));
+    } else if (kind === "require") {
+      if (!REQUIRE[key]) { REQUIRE[key] = []; REQ_ORDER.push(key); }
+      REQUIRE[key].push(new RegExp(val, "i"));
     } else if (kind === "related") RELATED[key] = new RegExp(val, "i");
     else if (kind === "suggest") SUGGEST[key] = val;
+    else if (kind === "reqsuggest") REQ_SUGGEST[key] = val;
     else if (kind === "accommodation") ACCOM = new RegExp(val, "i");
     else if (kind === "header") HEADER = new RegExp(val, "gim");
     else if (kind === "inline") INLINE = new RegExp(val, "i");
     else if (kind === "bullet") BULLET = new RegExp(val, "i");
   });
 
+  function headed(text, kind) {
+    var heads = Array.from(text.matchAll(HEADER)), parts = [];
+    heads.forEach(function (h, i) {
+      if (h[1].toLowerCase() !== kind) return;
+      var end = i + 1 < heads.length ? heads[i + 1].index : text.length;
+      parts.push(text.slice(h.index + h[0].length, end));
+    });
+    return parts.length ? parts.join("\n") : null;
+  }
+
   function exclusionSection(text) {
     if (!text) return null;
-    var heads = Array.from(text.matchAll(HEADER));
-    var isExcl = function (h) { return h[1].toLowerCase() === "exclusion"; };
-    if (heads.some(isExcl)) {
-      var parts = [];
-      heads.forEach(function (h, i) {
-        if (!isExcl(h)) return;
-        var end = i + 1 < heads.length ? heads[i + 1].index : text.length;
-        parts.push(text.slice(h.index + h[0].length, end));
-      });
-      return parts.join("\n");
-    }
+    var section = headed(text, "exclusion");
+    if (section !== null) return section;
     var m = INLINE.exec(text);
     return m ? text.slice(m.index + m[0].length) : null;
+  }
+
+  function inclusionSection(text) {
+    if (!text) return null;
+    var section = headed(text, "inclusion");
+    if (section === null) return null;
+    var m = INLINE.exec(section);
+    return m ? section.slice(0, m.index) : section;
   }
 
   function splitItems(section) {
@@ -202,9 +242,9 @@ bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
     return items.filter(function (it) { return it.length >= 3; });
   }
 
-  function classify(item) {
-    return ORDER.filter(function (cat) {
-      return RULES[cat].some(function (r) { return r.test(item); });
+  function matching(rules, order, item) {
+    return order.filter(function (cat) {
+      return rules[cat].some(function (r) { return r.test(item); });
     });
   }
 
@@ -215,48 +255,75 @@ bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
     return e;
   }
 
-  function check(text, subject) {
-    var status = document.getElementById("status"), out = document.getElementById("results");
-    out.textContent = "";
-    var section = exclusionSection(text);
-    if (section === null) {
-      status.textContent = "No exclusion criteria section found. Paste the full criteria, including the line that starts \"Exclusion Criteria\".";
-      return;
-    }
-    var flagged = [];
-    splitItems(section).forEach(function (item) {
-      var cats = classify(item);
-      if (cats.length) flagged.push({ item: item, cats: cats });
-    });
-    var accom = ACCOM.test(text) ? "yes" : "no";
-    if (!flagged.length) {
-      status.textContent = "No disability-related exclusion items found by these word rules. Accommodation mentioned anywhere in the criteria: " + accom + ".";
-      return;
-    }
-    status.textContent = flagged.length + (flagged.length === 1 ? " exclusion item" : " exclusion items") +
-      " flagged. Accommodation mentioned anywhere in the criteria: " + accom + ".";
+  function say(message) {
+    // Clear first, so a screen reader announces the result even when it repeats the last one.
+    var status = document.getElementById("status");
+    status.textContent = "";
+    setTimeout(function () { status.textContent = message; }, 100);
+  }
+
+  function label(c) { return LABELS[c] || c; }
+
+  function list(flagged, subject, tips, prefix) {
     var ol = el("ol");
     flagged.forEach(function (f) {
       var li = el("li");
       li.appendChild(el("p", "item", f.item));
-      li.appendChild(el("p", "meta", "Categories: " + f.cats.map(function (c) { return LABELS[c] || c; }).join(", ")));
+      li.appendChild(el("p", "meta", prefix + f.cats.map(label).join(", ")));
       var rel = f.cats.filter(function (c) { return subject && RELATED[c] && RELATED[c].test(subject); });
       if (rel.length) {
-        li.appendChild(el("p", "related", "Matches the study's own subject (" +
-          rel.map(function (c) { return LABELS[c] || c; }).join(", ") + "), so this exclusion may be needed. Check that it is as narrow as possible."));
+        li.appendChild(el("p", "related", "Matches the study's own subject (" + rel.map(label).join(", ") +
+          "), so this may be needed. Check that it is as narrow as possible."));
       }
-      var tips = f.cats.filter(function (c) { return SUGGEST[c]; });
-      if (tips.length) {
+      var have = f.cats.filter(function (c) { return tips[c]; });
+      if (have.length) {
         var ul = el("ul", "consider");
-        tips.forEach(function (c) { ul.appendChild(el("li", null, "Consider: " + SUGGEST[c])); });
+        have.forEach(function (c) { ul.appendChild(el("li", null, "Consider: " + tips[c])); });
         li.appendChild(ul);
       }
       ol.appendChild(li);
     });
-    out.appendChild(ol);
+    return ol;
   }
 
-  var EXAMPLE = "Inclusion Criteria:\n\n* Adults aged 18 to 75 with type 2 diabetes\n* HbA1c between 7% and 10%\n\n" +
+  function count(n, one, many) { return n + " " + (n === 1 ? one : many); }
+
+  function check(text, subject) {
+    var out = document.getElementById("results");
+    out.textContent = "";
+    var excl = exclusionSection(text), incl = inclusionSection(text);
+    var flagged = [], required = [];
+    splitItems(excl).forEach(function (item) {
+      var cats = matching(RULES, ORDER, item);
+      if (cats.length) flagged.push({ item: item, cats: cats });
+    });
+    splitItems(incl).forEach(function (item) {
+      var cats = matching(REQUIRE, REQ_ORDER, item);
+      if (cats.length) required.push({ item: item, cats: cats });
+    });
+    if (excl === null && !required.length) {
+      say("No exclusion criteria section found. Paste the full criteria, including the lines that start \"Inclusion Criteria\" and \"Exclusion Criteria\".");
+      return;
+    }
+    var accom = " Accommodation mentioned anywhere in the criteria: " + (ACCOM.test(text) ? "yes" : "no") + ".";
+    if (!flagged.length && !required.length) {
+      say("No disability-related exclusion items or ability requirements found by these word rules." + accom);
+      return;
+    }
+    say(count(flagged.length, "exclusion item", "exclusion items") + " flagged; " +
+      count(required.length, "inclusion item requires", "inclusion items require") + " an ability." + accom);
+    if (flagged.length) {
+      out.appendChild(el("h3", null, "Exclusion items that touch disability"));
+      out.appendChild(list(flagged, subject, SUGGEST, "Categories: "));
+    }
+    if (required.length) {
+      out.appendChild(el("h3", null, "Inclusion items that require an ability"));
+      out.appendChild(list(required, subject, REQ_SUGGEST, "Requires: "));
+    }
+  }
+
+  var EXAMPLE = "Inclusion Criteria:\n\n* Adults aged 18 to 75 with type 2 diabetes\n* HbA1c between 7% and 10%\n" +
+    "* Able to walk 100 meters without assistance\n* Normal or corrected-to-normal vision\n\n" +
     "Exclusion Criteria:\n\n* Legally blind or severe visual impairment\n* Unable to provide informed consent\n" +
     "* Wheelchair user or unable to walk without assistance\n* Unable to read English\n" +
     "* Any condition that, in the opinion of the investigator, would interfere with study participation\n* Pregnancy\n";
