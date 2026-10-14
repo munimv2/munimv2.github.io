@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4-bit Gemma on WebAssembly: GatherBlockQuantized repro (Transformers.js 4.3.1)</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 54rem; margin: 2rem auto; padding: 0 1rem; color: #1b1b1b; }
+  pre { background: #f3f3f3; padding: 1rem; white-space: pre-wrap; word-break: break-word; }
+  button { font: inherit; padding: .3rem .9rem; }
+  .muted { color: #555; font-size: .9rem; }
+</style>
+</head>
+<body>
+<h1>4-bit Gemma on WebAssembly: GatherBlockQuantized repro</h1>
+<p>A minimal check for a Transformers.js bug report. It loads
+<code>onnx-community/gemma-3-270m-it-ONNX</code> with <code>device: 'wasm'</code> and asks for a one-word reply.
+ONNX Runtime picks its WebAssembly build once per page, so each case is its own page load.</p>
+<ul>
+  <li><a href="?build=default&amp;dtype=q4">A. Default build (what Transformers.js 4.3.1 picks), 4-bit</a></li>
+  <li><a href="?build=plain&amp;dtype=q4">B. Plain build (<code>ort-wasm-simd-threaded.wasm</code>), 4-bit</a></li>
+  <li><a href="?build=default&amp;dtype=q8">C. Default build, 8-bit</a></li>
+</ul>
+<p><button id="run" disabled>Run</button> <span id="status">Pick a case above.</span></p>
+<pre id="out"></pre>
+
+<h2>For the issue</h2>
+<p>System info <button id="copy-system">Copy</button></p>
+<pre id="system"></pre>
+<p>Results so far in this browser <button id="copy-results">Copy</button> <button id="clear">Clear</button></p>
+<pre id="results"></pre>
+
+<p class="muted">Made by MV2 of Munim, Inc. with AI agents working in his name. Apache-2.0.
+Nothing leaves your browser: the page only downloads the model and the runtime.
+Gemma is provided under and subject to the Gemma Terms of Use: https://ai.google.dev/gemma/terms</p>
+<script type="module" src="repro.js"></script>
+</body>
+</html>
