@@ -2,10 +2,10 @@
 // placeholders, and put them back later. Pure functions, no DOM, no network.
 // The NER model output is passed in, so this file runs the same in Node tests.
 
-export const VERSION = '0.2.1';
+export const VERSION = '0.3.0';
 
 // Lower number wins when two findings overlap.
-const PRIORITY = { TERM: 0, EMAIL: 1, URL: 1, CARD: 1, IBAN: 1, ID: 1, IP: 1, PHONE: 2, PERSON: 3, ORG: 3, PLACE: 3, MISC: 4 };
+const PRIORITY = { TERM: 0, EMAIL: 1, URL: 1, CARD: 1, IBAN: 1, ID: 1, IP: 1, PHONE: 2, PERSON: 3, ORG: 3, PLACE: 3, NAME: 3, MISC: 4 };
 
 export const TYPES = Object.keys(PRIORITY);
 
@@ -121,6 +121,78 @@ export function ruleSpans(text) {
   return spans;
 }
 
+// The optional second look: a small open model (Gemma 3 270M) is asked, on
+// the device, to list the names it sees. One worked example shows it the
+// answer format, including a name written in lower case.
+const LOOK_ASK = 'List every name of a person, organization or place in the text below, one per line, '
+  + 'starting each line with person:, organization: or place:. Copy each name exactly as it is written. '
+  + 'If there are none, write none.\n\nText:\n';
+const LOOK_EXAMPLE = 'please tell ravi that Litware paid. Ana Silva from the Porto office will call.';
+const LOOK_EXAMPLE_REPLY = 'person: ravi\norganization: Litware\nperson: Ana Silva\nplace: Porto';
+
+export function secondLookMessages(text) {
+  return [
+    { role: 'user', content: LOOK_ASK + LOOK_EXAMPLE },
+    { role: 'assistant', content: LOOK_EXAMPLE_REPLY },
+    { role: 'user', content: LOOK_ASK + text },
+  ];
+}
+
+const LOOK_TYPES = [
+  [/^(?:person|people|name)s?$/i, 'PERSON'],
+  [/^(?:organi[sz]ation|org|company|business)s?$/i, 'ORG'],
+  [/^(?:place|location|city|country)s?$/i, 'PLACE'],
+];
+// Words a small model lists as names that are not private.
+const NOT_LOOK_NAMES = new Set(['none', 'n/a', 'text', 'name', 'names', 'person', 'people', 'organization', 'place',
+  'i', 'you', 'we', 'he', 'she', 'they', 'today', 'tomorrow', 'yesterday',
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+  'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']);
+const LEADING_TITLE = new RegExp(String.raw`^${TITLES}\.?[ \t]+`, 'u');
+const ONLY_TITLE = new RegExp(String.raw`^${TITLES}\.?$`, 'u');
+
+// Read the second look's reply: keep only names that really are in the text
+// (a model may invent or reword them), each as it is written there.
+export function parseNameList(text, reply) {
+  const names = [];
+  const seen = new Set();
+  for (const line of String(reply || '').split(/\r?\n/)) {
+    let body = line.replace(/\*\*/g, '').replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '');
+    let type = 'NAME';
+    const label = /^([\p{L} ]+?)\s*:\s*(.*)$/u.exec(body);
+    const kind = label && LOOK_TYPES.find(([re]) => re.test(label[1].trim()));
+    if (kind) {
+      type = kind[1];
+      body = label[2];
+    }
+    for (let name of body.split(/[,;]/)) {
+      name = name.trim().replace(/^["'“‘([]+|["'”’)\].]+$/gu, '').replace(LEADING_TITLE, '').trim();
+      if (name.length < 2 || name.length > 60 || /[[\]_]/.test(name) || !/\p{L}/u.test(name)) continue;
+      if (NOT_LOOK_NAMES.has(name.toLowerCase()) || ONLY_TITLE.test(name)) continue;
+      const found = findAll(text, name, type, 'llm', false)[0] || findAll(text, name, type, 'llm', true)[0];
+      if (!found) continue;
+      const surface = text.slice(found.start, found.end);
+      if (seen.has(surface)) continue;
+      seen.add(surface);
+      names.push({ name: surface, type });
+    }
+  }
+  return names;
+}
+
+const LOOK_NER = { PERSON: 'PER', ORG: 'ORG', PLACE: 'LOC' };
+
+// Every mention of each name the second look listed, for the kinds of name
+// being masked. A name of no stated kind counts while any kind is on.
+export function llmSpans(text, names, nerTypes = ['PER', 'ORG', 'LOC']) {
+  const spans = [];
+  for (const { name, type } of names) {
+    const wanted = type === 'NAME' ? ['PER', 'ORG', 'LOC'].some((t) => nerTypes.includes(t)) : nerTypes.includes(LOOK_NER[type]);
+    if (wanted) spans.push(...findAll(text, name, type, 'llm', false));
+  }
+  return spans;
+}
+
 function luhn(digits) {
   let sum = 0;
   for (let i = 0; i < digits.length; i++) {
@@ -182,12 +254,12 @@ export function termSpans(text, terms) {
   return spans;
 }
 
-// Once the model or a name rule has found a name, mask every other mention
-// of it too, including a person's first or last name used on its own later.
+// Once the model, a name rule or the second look has found a name, mask every
+// other mention of it too, including a person's first or last name used on its own later.
 export function propagate(text, spans) {
   const seen = new Map();
   for (const s of spans) {
-    if (s.source !== 'ner' && s.source !== 'rule') continue;
+    if (s.source !== 'ner' && s.source !== 'rule' && s.source !== 'llm') continue;
     const surface = text.slice(s.start, s.end);
     if (surface.length >= 2 && !seen.has(surface)) seen.set(surface, s.type);
     if (s.type !== 'PERSON') continue;
@@ -288,15 +360,17 @@ export function restoreText(text, key) {
   return { restored, count, leftover: [...new Set(leftover)] };
 }
 
-// Everything except the model call, in one step. The name rules only add
-// people, so they are off when people are not being masked.
-export function findSpans(text, { nerTokens = [], contact = true, numbers = true, terms = [], keep = [], minScore = 0.6, nerTypes = ['PER', 'ORG', 'LOC'], rules = true } = {}) {
+// Everything except the model calls, in one step. The name rules only add
+// people, so they are off when people are not being masked. llmNames are the
+// second look's names from parseNameList.
+export function findSpans(text, { nerTokens = [], contact = true, numbers = true, terms = [], keep = [], minScore = 0.6, nerTypes = ['PER', 'ORG', 'LOC'], rules = true, llmNames = [] } = {}) {
   let spans = [];
   for (const chunk of nerTokens) {
     const aligned = alignTokens(chunk.text, chunk.tokens, chunk.offset);
     spans.push(...entitySpans(text, aligned, { minScore, nerTypes }));
   }
   if (rules && nerTypes.includes('PER')) spans.push(...ruleSpans(text));
+  spans.push(...llmSpans(text, llmNames, nerTypes));
   spans = propagate(text, spans);
   spans.push(...patternSpans(text, { contact, numbers }));
   spans.push(...termSpans(text, terms));

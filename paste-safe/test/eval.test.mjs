@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { findSpans } from '../core.js';
-import { occurrences, scoreCase, summarize, resultLine, shortList, reportMarkdown } from '../evalcore.js';
+import { occurrences, scoreCase, summarize, changes, resultLine, shortList, reportMarkdown } from '../evalcore.js';
 import { CASES } from '../eval-data.js';
 
 test('a name only counts as hidden when every mention is fully masked', () => {
@@ -66,8 +66,10 @@ test('long lists are cut short and empty ones say nothing', () => {
   assert.equal(shortList(['a', 'b', 'c'], 2), 'a, b and 1 more (all listed on the test page)');
 });
 
+// A summed run with the given names hidden, misses and over-masked words.
+const sum = (namesHidden, missed, extra) => ({ cases: 2, names: 5, namesHidden, details: 1, detailsHidden: 1, missed, extra });
+
 test('the write-up section reports every setting from the run', () => {
-  const sum = (namesHidden, missed, extra) => ({ cases: 2, names: 5, namesHidden, details: 1, detailsHidden: 1, missed, extra });
   const md = reportMarkdown({
     version: '9.9.9',
     date: '2026-10-14',
@@ -85,4 +87,22 @@ test('the write-up section reports every setting from the run', () => {
   assert.ok(md.includes('**Masked by mistake at the default setting:** nothing.'));
   assert.ok(md.includes('How one of the misses looked after masking:\n\n> #7: tell james that it is done'));
   assert.ok(md.endsWith('*Measured in a desktop browser on 2026-10-14. The test page runs in your browser, so anyone can re-run it.*'));
+  assert.ok(!md.includes('changed:**'));
+});
+
+test('a compared setting gets a paragraph on what it newly hid and newly over-masked', () => {
+  const base = sum(4, ['james (#7)', 'Rose (#18)'], ['Q3 (#5)']);
+  const look = sum(5, ['Rose (#18)'], ['Q3 (#5)', 'met (#1)']);
+  assert.deepEqual(changes(base, look), { hidden: ['james (#7)'], extra: ['met (#1)'] });
+  assert.deepEqual(changes(base, base), { hidden: [], extra: [] });
+  const md = reportMarkdown({
+    version: '9.9.9',
+    date: '2026-10-14',
+    url: 'https://example.test/eval.html',
+    rows: [{ label: 'Default', sum: base }, { label: 'Default + second look', sum: look }],
+    compare: { name: 'the second look', sum: look },
+  });
+  assert.ok(md.includes('\n| Default + second look | 5/5 | 1/1 | 2 |\n'));
+  assert.ok(md.includes('**Masked by mistake at the default setting:** Q3 (#5).\n\n**What the second look changed:** newly hidden: james (#7). '
+    + 'Newly masked by mistake: met (#1). Its prompt was written after the test set'));
 });

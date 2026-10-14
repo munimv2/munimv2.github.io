@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   chunkText, alignTokens, entitySpans, patternSpans, termSpans, resolveSpans, ruleSpans,
-  findSpans, maskText, restoreText, newKey,
+  findSpans, maskText, restoreText, newKey, secondLookMessages, parseNameList, llmSpans,
 } from '../core.js';
 
 // Tokens shaped like Transformers.js token-classification output.
@@ -178,4 +178,48 @@ test('the key is shared across texts and never confuses 1 with 10', () => {
   assert.equal(maskText('Client3', [{ start: 0, end: 7, type: 'TERM' }], key).masked, '[TERM_3]');
   assert.equal(restoreText('[TERM_10] and [TERM_1] and TERM_1.', key).restored, 'Client10 and Client1 and Client1.');
   assert.equal(restoreText('Pay $1 to [TERM_2]', key).restored, 'Pay $1 to Client2');
+});
+
+test('the second look asks with one worked example and ends with the text', () => {
+  const messages = secondLookMessages('Call Rose.');
+  assert.deepEqual(messages.map((m) => m.role), ['user', 'assistant', 'user']);
+  assert.ok(messages[2].content.endsWith('\n\nText:\nCall Rose.'));
+  assert.ok(messages[1].content.startsWith('person: ravi\n'));
+});
+
+test('a second-look reply keeps only names really in the text, as written there', () => {
+  const text = 'please tell james that the Harbourview contract is signed. Dr. Ahmed will call from Leeds on Monday.';
+  const reply = [
+    '1. person: James',
+    '- organization: **Harbourview**',
+    'person: Dr. Ahmed',
+    'place: Leeds, Rotterdam',
+    'person: Monday',
+    'Northwind',
+    'none',
+    'person: [PERSON_1]',
+    'person: Dr',
+  ].join('\n');
+  assert.deepEqual(parseNameList(text, reply), [
+    { name: 'james', type: 'PERSON' },
+    { name: 'Harbourview', type: 'ORG' },
+    { name: 'Ahmed', type: 'PERSON' },
+    { name: 'Leeds', type: 'PLACE' },
+  ]);
+  assert.deepEqual(parseNameList(text, ''), []);
+  assert.deepEqual(parseNameList('Quill & Ink Ltd. will pay.', '"Quill & Ink Ltd."'), [{ name: 'Quill & Ink Ltd', type: 'NAME' }]);
+});
+
+test('second-look names are masked everywhere, only for the kinds of name switched on', () => {
+  const text = 'please tell james that the Harbourview contract is signed. james will sign.';
+  const llmNames = [{ name: 'james', type: 'PERSON' }, { name: 'Harbourview', type: 'ORG' }];
+  assert.equal(maskText(text, findSpans(text, { llmNames })).masked,
+    'please tell [PERSON_1] that the [ORG_1] contract is signed. [PERSON_1] will sign.');
+  assert.deepEqual(surfaces(text, findSpans(text, { llmNames, nerTypes: ['ORG', 'LOC'] })), ['Harbourview']);
+  assert.deepEqual(llmSpans(text, llmNames, []), []);
+
+  const { masked, key } = maskText('Ask Quill.', findSpans('Ask Quill.', { llmNames: [{ name: 'Quill', type: 'NAME' }] }));
+  assert.equal(masked, 'Ask [NAME_1].');
+  assert.equal(restoreText('[NAME_1] agreed.', key).restored, 'Quill agreed.');
+  assert.deepEqual(findSpans('Ask Quill.', { llmNames: [{ name: 'Quill', type: 'NAME' }], nerTypes: ['MISC'] }), []);
 });

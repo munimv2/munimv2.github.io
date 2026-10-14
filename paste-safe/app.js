@@ -2,6 +2,7 @@
 // Transformers.js; the text you paste is never sent anywhere.
 import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1';
 import { VERSION, chunkText, findSpans, maskText, restoreText, newKey } from './core.js';
+import { loadGemma, secondLook } from './gemma.js';
 
 env.allowLocalModels = false;
 
@@ -52,6 +53,22 @@ async function loadModel() {
   return ner;
 }
 
+// The optional second look. If Gemma cannot run, the first model's result stands.
+async function gemmaNames(chunks) {
+  const names = [];
+  try {
+    status('Loading Gemma for a second look (about 323 MB, once; your browser keeps it)...');
+    await loadGemma((pct, mb) => status(`Loading Gemma for a second look: ${pct}% of ${mb} MB`));
+    for (let i = 0; i < chunks.length; i++) {
+      status(`Gemma is reading part ${i + 1} of ${chunks.length}...`);
+      names.push(...(await secondLook(chunks[i].text)));
+    }
+  } catch (err) {
+    return { names: [], note: ` Gemma could not run (${err.message}), so there was no second look.` };
+  }
+  return { names, note: ` Gemma's second look listed ${names.length} name${names.length === 1 ? '' : 's'}.` };
+}
+
 function nerTypes() {
   return ['PER', 'ORG', 'LOC', 'MISC'].filter((t) => $(`ner-${t}`).checked);
 }
@@ -69,15 +86,16 @@ async function runMask() {
   $('mask').disabled = true;
   try {
     const types = nerTypes();
+    const chunks = chunkText(text);
     const nerTokens = [];
     if (types.length && (await loadModel())) {
-      const chunks = chunkText(text);
       for (let i = 0; i < chunks.length; i++) {
         status(`Reading part ${i + 1} of ${chunks.length}...`);
         const tokens = await ner(chunks[i].text, { ignore_labels: [] });
         nerTokens.push({ ...chunks[i], tokens });
       }
     }
+    const look = types.length && $('opt-gemma').checked ? await gemmaNames(chunks) : { names: [], note: '' };
     const spans = findSpans(text, {
       nerTokens,
       nerTypes: types,
@@ -87,11 +105,12 @@ async function runMask() {
       terms: lines('always'),
       keep: lines('never'),
       minScore: Number($('min-score').value),
+      llmNames: look.names,
     });
     const { masked } = maskText(text, spans, key);
     $('masked').value = masked;
     renderKey();
-    status(`Masked ${spans.length} item${spans.length === 1 ? '' : 's'}. Read the result before you paste it anywhere: automatic detection can miss things.`);
+    status(`Masked ${spans.length} item${spans.length === 1 ? '' : 's'}.${look.note} Read the result before you paste it anywhere: automatic detection can miss things.`);
   } catch (err) {
     status(`Something went wrong: ${err.message}`);
   } finally {

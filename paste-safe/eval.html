@@ -12,10 +12,11 @@
   <h1>Paste-Safe test set</h1>
   <p class="lede">How many names does it really hide?</p>
   <p class="small">This page runs the same masking as <a href="./">Paste-Safe</a> <span id="version"></span> over <span id="count"></span> made-up requests of the kind people paste into a chat AI. Every person, company, place, email, phone number and account number in them is labelled. Some are meant to be hard: names in lower case, names that are also ordinary words, and names from outside the model's English news training. Everything runs in this tab; nothing is uploaded. The messages and labels are in <a href="https://github.com/munimv2/paste-safe/blob/main/eval-data.js">eval-data.js</a>.</p>
-  <p class="small">A name counts as hidden only if every letter of every mention is masked: "[PERSON_1] Okafor" counts as a miss for "Daniel Okafor". The always-mask list is left empty here, so this measures the model, the patterns and the name rules alone. It is scored three ways: the default, the model with the name rules off, and a lower model confidence. The table shows the default.</p>
+  <p class="small">A name counts as hidden only if every letter of every mention is masked: "[PERSON_1] Okafor" counts as a miss for "Daniel Okafor". The always-mask list is left empty here, so this measures the models, the patterns and the name rules alone. It is scored three ways: the default, the model with the name rules off, and a lower model confidence. With the box below ticked there is a fourth: the default plus a second look by <a href="https://huggingface.co/onnx-community/gemma-3-270m-it-ONNX">Gemma 3 270M</a> (Gemma Terms of Use), which also runs in this tab. The table shows the default.</p>
 </header>
 
 <main>
+  <label><input type="checkbox" id="use-gemma" checked> Also score the Gemma second look (downloads about 323 MB once and takes longer)</label>
   <button id="run" type="button" class="primary">Run the test</button>
   <p id="status" role="status" aria-live="polite"></p>
   <pre id="result"></pre>

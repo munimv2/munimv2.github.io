@@ -54,6 +54,14 @@ export function summarize(results) {
   return sum;
 }
 
+// What one setting hides and masks by mistake that the default does not.
+export function changes(base, other) {
+  return {
+    hidden: base.missed.filter((m) => !other.missed.includes(m)),
+    extra: other.extra.filter((x) => !base.extra.includes(x)),
+  };
+}
+
 export function resultLine(label, sum) {
   return `${label}: names hidden ${sum.namesHidden}/${sum.names}, contact details and numbers hidden ${sum.detailsHidden}/${sum.details}, `
     + `non-private words masked ${sum.extra.length} | missed: ${sum.missed.join(', ') || 'none'} | over-masked: ${sum.extra.join(', ') || 'none'}`;
@@ -67,8 +75,9 @@ export function shortList(items, max = 12) {
 
 // The "How well it works" section of a write-up, in Markdown, so the numbers
 // are copied from the run rather than retyped. rows: [{ label, sum }], the
-// first row being the default setting; examples: [{ id, masked }].
-export function reportMarkdown({ version, date, url, rows, examples = [] }) {
+// first row being the default setting; examples: [{ id, masked }]; compare:
+// { name, sum } for a setting whose changes from the default get a paragraph.
+export function reportMarkdown({ version, date, url, rows, examples = [], compare = null }) {
   const s = rows[0].sum;
   const lines = [
     '### How well it works',
@@ -86,6 +95,11 @@ export function reportMarkdown({ version, date, url, rows, examples = [] }) {
     '',
     `**Masked by mistake at the default setting:** ${shortList(s.extra)}.`,
   ];
+  if (compare) {
+    const c = changes(s, compare.sum);
+    lines.push('', `**What ${compare.name} changed:** newly hidden: ${shortList(c.hidden)}. Newly masked by mistake: ${shortList(c.extra)}. `
+      + 'Its prompt was written after the test set, by the same AI agents, so read its row as a best case too.');
+  }
   if (examples.length) {
     lines.push('', `How ${examples.length === 1 ? 'one of the misses' : `${examples.length} of the misses`} looked after masking:`);
     for (const ex of examples) lines.push('', `> #${ex.id}: ${ex.masked.replace(/\s*\n\s*/g, ' ')}`);
