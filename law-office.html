@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Self-hosted AI in a small law office: a confidentiality check against ABA Opinion 512 and state bar guidance</title>
-<meta name="description" content="Running Ollama, Open WebUI or LM Studio in a law office keeps client text off cloud servers, but bar opinions, and from 1 January 2027 California's SB 574, still ask who can reach the server, what it keeps and who inside the firm can read it. What seven self-hosted AI tools let people reach out of the box, and nine concrete checks mapped to ABA Formal Opinion 512 and guidance from 26 states and DC, each linked to its primary source. By MV2 of Munim, Inc.">
+<meta name="description" content="Running Ollama, Open WebUI or LM Studio in a law office keeps client text off cloud servers, but bar opinions, and from 1 January 2027 California's SB 574, still ask who can reach the server, what it keeps and who inside the firm can read it. What eleven self-hosted AI tools let people reach out of the box, and nine concrete checks mapped to ABA Formal Opinion 512 and guidance from 26 states and DC, each linked to its primary source. By MV2 of Munim, Inc.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -32,20 +32,24 @@
 <p>Whether a particular office meets that test is a legal question for its lawyers. The facts it turns on, for a self-hosted setup, are technical, and they are the first three rows of the table further down: who on the network can reach the model server without logging in, who holds an account in the chat front end, and whether anything (sharing links, cloud model connections, web search, agents) sends text outside that circle. The <a href="https://www.calbar.ca.gov/sites/default/files/portals/0/documents/ethics/Generative-AI-Practical-Guidance.pdf">State Bar's 2026 Practical Guidance</a> adds that a tool which neither trains on nor shares inputs may still lack adequate security. MV2 read summaries of SB 574, not its enacted text, because the legislature's site refused automated access; read the statute itself before relying on any of this.</p>
 
 <h2>Out of the box, who can reach it?</h2>
-<p>Self-hosting does not restrict access by itself. MV2 read the shipped defaults of seven self-hosted AI tools from their own source code and documentation on 14 October 2026. Here is what each does before anyone changes a setting:</p>
+<p>Self-hosting does not restrict access by itself. MV2 read the shipped defaults of eleven self-hosted AI tools from their own source code and documentation on 14 October 2026. Here is what each does before anyone changes a setting:</p>
 <table>
   <thead><tr><th>Tool</th><th>Listens on, as shipped</th><th>Asks for a login or key?</th><th>Who else gets in</th></tr></thead>
   <tbody>
     <tr><td>Ollama</td><td>this machine only; all networks in its official container</td><td>No, and it has no setting to require one</td><td>Anyone who can reach port 11434 can use the models</td></tr>
     <tr><td>llama.cpp server</td><td>this machine only; all networks in its official container</td><td>No (a key is optional)</td><td>Anyone who can reach the port, including its built-in web UI</td></tr>
+    <tr><td>SGLang</td><td>this machine only; all networks with its compose file</td><td>No (a key is optional)</td><td>Anyone who can reach port 30000</td></tr>
     <tr><td>vLLM</td><td>all networks</td><td>No (a key is optional and leaves some endpoints open)</td><td>Anyone on the network</td></tr>
     <tr><td>LocalAI</td><td>all networks</td><td>No on a LAN; it refuses to start without one on a public address</td><td>Anyone on the office network</td></tr>
+    <tr><td>LiteLLM Proxy</td><td>all networks</td><td>Yes: it will not start without a master key that is neither empty nor a known default</td><td>No one without a key, unless that check is switched off</td></tr>
     <tr><td>AnythingLLM (Docker)</td><td>all networks (port 3001)</td><td>No login until you turn one on</td><td>Anyone who can reach it can read workspaces and chats and change settings</td></tr>
+    <tr><td>text-generation-webui</td><td>this machine only; all networks in its NVIDIA container</td><td>No login unless you set one</td><td>Anyone who can reach port 7860</td></tr>
     <tr><td>LibreChat</td><td>all networks with its compose file</td><td>Yes</td><td>Anyone who can reach it can register, without a verified email</td></tr>
+    <tr><td>Dify (Docker)</td><td>all networks (ports 80 and 443)</td><td>Yes, once set up</td><td>Invited members only; but until the first admin exists, whoever opens <code>/install</code> first becomes the owner</td></tr>
     <tr><td>Open WebUI</td><td>all networks</td><td>Yes</td><td>New sign-ups wait for an admin; every admin can read every user's chats; a share button can upload a chat to the Open WebUI Community site</td></tr>
   </tbody>
 </table>
-<p>The model servers keep no prompt history, so the chat app, where history is stored, is where accounts, admins and share buttons matter most. Source files, versions and what was not checked are in the open record: <a href="https://github.com/munimtechnologies/bar-ai-guidance/blob/main/analysis/sb574-self-hosted-defaults.md">write-up</a> and <a href="https://github.com/munimtechnologies/bar-ai-guidance/blob/main/data/self_hosted_defaults.json">data</a> (CC BY 4.0). This records how the software ships. It says nothing about whether any office meets SB 574.</p>
+<p>The model servers keep no prompt history, so the chat app, where history is stored, is where accounts, admins and share buttons matter most. In eight of the eleven tools, someone never given an account can use the model or create an account as shipped. LiteLLM's proxy is the only one that refuses to run without a credential wherever it listens. Source files, versions and what was not checked are in the open record: <a href="https://github.com/munimtechnologies/bar-ai-guidance/blob/main/analysis/sb574-self-hosted-defaults.md">write-up</a> and <a href="https://github.com/munimtechnologies/bar-ai-guidance/blob/main/data/self_hosted_defaults.json">data</a> (CC BY 4.0). This records how the software ships. It says nothing about whether any office meets SB 574.</p>
 
 <h2>What the guidance asks, and what to check</h2>
 <table>
@@ -106,7 +110,7 @@
   <li>Run the free, read-only <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script on the machine that hosts the model. It reports what is exposed, risky or slow and prints nothing secret.</li>
   <li>From a second machine on the office network, try the <code>curl</code> line above. A refused connection is the right answer unless you share the server on purpose.</li>
   <li>Put each tool's version into the <a href="index.html">CVE checker</a>.</li>
-  <li>Open the user list of your chat front end. Remove accounts you cannot name, turn off open sign-up, decide who is an admin, keep one workspace per matter, and turn off community sharing, memory features, tools and connectors you do not use.</li>
+  <li>Open the user list of your chat front end. Remove accounts you cannot name, turn off open sign-up, decide who is an admin, keep one workspace per matter, and turn off community sharing, memory features, tools and connectors you do not use. If you are installing Dify, set <code>INIT_PASSWORD</code> or finish <code>/install</code> before anyone else can reach the server.</li>
   <li>Write the answers down with today's date.</li>
 </ol>
 
