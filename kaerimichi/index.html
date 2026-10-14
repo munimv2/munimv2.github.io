@@ -68,6 +68,9 @@
     #panel { border-right: 0; }
     .tools button { flex: 1 1 auto; padding: 10px 12px; }
   }
+  /* While the service-gap map is being printed it has its printed size on screen too, so Leaflet
+     draws it at that size before the print dialog opens (printAs in app.js). */
+  body.print-map #map { width: 180mm; height: 150mm; }
   /* Printing: the trip card (result only) or the service-gap map (legend and map). */
   @media print {
     body { background: #fff; }
@@ -81,7 +84,7 @@
     a { color: #000; text-decoration: none; }
     body.print-card #map, body.print-card #legend-count, body.print-card #legend-gap { display: none !important; }
     body.print-map #result, body.print-map #legend-count { display: none !important; }
-    body.print-map #map { height: 160mm; width: 100%; break-inside: avoid; }
+    body.print-map #map { width: 180mm; height: 150mm; break-inside: avoid; }
   }
 </style>
 </head>

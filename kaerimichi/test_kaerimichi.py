@@ -71,6 +71,28 @@ def test_print_layouts_exist_for_every_print_button():
         assert re.search(r'class="[^"]*\b' + cls + r'\b', tools), "toolsHtml() writes no ." + cls
 
 
+def test_printed_map_is_sized_before_the_dialog():
+    # v0.6: the printed map came out cut off, because Leaflet had drawn it for its on-screen size.
+    app, html = read("app.js"), read("index.html")
+    screen = html[:html.index("@media print")]
+    printed = html[html.index("@media print"):]
+    size = re.search(r"body\.print-map #map \{ width: (\w+); height: (\w+);", screen)
+    assert size, "the map's print size must also apply on screen (outside @media print)"
+    assert "width: %s; height: %s;" % size.groups() in printed, "screen and print sizes of the map differ"
+    body = app[app.index("function printAs"):app.index("// ---- one-click destinations")]
+    assert body.index("map.invalidateSize()") < body.index("window.print()"), "printAs must resize the map before printing"
+    assert "afterprint" in body
+
+
+def test_stay_is_kept_in_the_url():
+    # v0.6: a shared link (and the language switch) used to drop the minimum stay.
+    app, html = read("app.js"), read("index.html")
+    assert "q.set('stay'" in app
+    assert "params.get('stay')" in app
+    default = re.search(r"const DEFAULT_STAY = (\d+);", app).group(1)
+    assert '<option value="%s" selected>' % default in html, "DEFAULT_STAY must match the selected stay option"
+
+
 def test_version_constant():
     assert re.search(r"const VERSION = '\d+\.\d+'", read("app.js"))
 

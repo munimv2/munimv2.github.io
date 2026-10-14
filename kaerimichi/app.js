@@ -5,12 +5,13 @@
 // MV2 of Munim, Inc. - Apache-2.0 license.
 import { loadFeed, loadFlex, dayView, journeys, roundTrip, serviceGaps, serviceRange, weekday, addDays, fmtTime, fmtSpan, parseFeedList, flexDay, flexCover, flexLinks, flexOk } from './gtfs.js';
 
-const VERSION = '0.5';
+const VERSION = '0.6';
 const API = 'https://api.gtfs-data.jp/v2';
 // The repository's feed list has no CORS header, so a snapshot ships with the app (feeds.txt).
 // The zip files themselves are served with CORS and are fetched live.
 const FEED_LIST_SOURCES = ['./feeds.txt', API + '/feeds'];
 const MIN_CONNECTION = 5 * 60;
+const DEFAULT_STAY = 30;
 const PREFS = ['北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県', '茨城県', '栃木県', '群馬県',
   '埼玉県', '千葉県', '東京都', '神奈川県', '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県',
   '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
@@ -195,7 +196,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const state = {
-  model: null, view: null, from: null, to: null, ymd: null, stay: 30, transfer: true, mode: 'count', meta: null, feedKey: null, feeds: [],
+  model: null, view: null, from: null, to: null, ymd: null, stay: DEFAULT_STAY, transfer: true, mode: 'count', meta: null, feedKey: null, feeds: [],
   gaps: null, gapKey: null, week: null, weekKey: null, presetAt: {},
   flex: null, flexMeta: null, flexId: null, cover: null, coverFor: null,
 };
@@ -203,7 +204,7 @@ const state = {
 // ---- map ----
 
 const map = L.map('map', { preferCanvas: true }).setView([36.5, 138], 5);
-L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+const tiles = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
   maxZoom: 18,
   attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
 }).addTo(map);
@@ -217,6 +218,13 @@ function colour(n) {
   if (n < 40) return '#fee08b';
   if (n < 100) return '#91cf60';
   return '#1a9850';
+}
+
+// Fits the map to every stop of the loaded feed.
+function fitStops(animate = true) {
+  if (!state.model) return;
+  const pts = state.model.places.filter(p => p.lat !== undefined).map(p => [p.lat, p.lon]);
+  if (pts.length) map.fitBounds(pts, { padding: [20, 20], animate });
 }
 
 function placeName(p) {
@@ -591,10 +599,27 @@ async function copyText(text, p) {
   }
 }
 
+// The trip card prints with CSS alone. For the map, body.print-map gives the map its printed size
+// on screen too (index.html), so Leaflet redraws the whole town at that size and the tiles load
+// before the print dialog opens; afterwards the map gets its size and view back.
 function printAs(kind) {
-  document.body.classList.add('print-' + kind);
-  window.addEventListener('afterprint', () => document.body.classList.remove('print-' + kind), { once: true });
-  window.print();
+  const body = document.body;
+  body.classList.add('print-' + kind);
+  const before = kind === 'map' ? { center: map.getCenter(), zoom: map.getZoom() } : null;
+  window.addEventListener('afterprint', () => {
+    body.classList.remove('print-' + kind);
+    if (before) {
+      map.invalidateSize();
+      map.setView(before.center, before.zoom, { animate: false });
+    }
+  }, { once: true });
+  if (!before) { window.print(); return; }
+  map.invalidateSize();
+  fitStops(false);
+  let opened = false;
+  const open = () => { if (!opened) { opened = true; window.print(); } };
+  tiles.once('load', () => setTimeout(open, 300));
+  setTimeout(open, 2500);
 }
 
 // ---- one-click destinations ----
@@ -738,8 +763,7 @@ async function useZip(buf, meta, key) {
   }
   setDate(day);
   fillSearch();
-  const pts = state.model.places.filter(p => p.lat !== undefined).map(p => [p.lat, p.lon]);
-  if (pts.length) map.fitBounds(pts, { padding: [20, 20] });
+  fitStops();
   status(t.loaded(state.model.places.length));
   const fromKey = params.get('from'), toKey = params.get('to');
   $('#from').value = $('#to').value = '';
@@ -827,6 +851,7 @@ function updateUrl() {
   if (state.ymd) q.set('date', dashed(state.ymd));
   if (state.from !== null) q.set('from', state.model.places[state.from].key);
   if (state.to !== null) q.set('to', state.model.places[state.to].key);
+  if (state.stay !== DEFAULT_STAY) q.set('stay', String(state.stay));
   if (!state.transfer) q.set('transfer', '0');
   if (state.mode === 'gap') q.set('map', 'gap');
   if (state.flexId && FLEX_FEEDS.some(f => f.id === state.flexId)) q.set('flex', state.flexId);
@@ -1004,6 +1029,8 @@ $('#transfer').addEventListener('change', e => { state.transfer = e.target.check
 for (const which of ['from', 'to']) {
   $('#' + which).addEventListener('change', e => {
     if (!state.model) return;
+    // An emptied box clears that stop (and its part of the URL).
+    if (!e.target.value.trim()) { state[which] = null; render(); return; }
     const i = state.labels.get(e.target.value);
     if (i !== undefined) choose(which, i);
   });
@@ -1022,6 +1049,12 @@ document.addEventListener('drop', async e => {
   if (f && f.name.toLowerCase().endsWith('.zip')) await useZip(await f.arrayBuffer(), null, null);
 });
 
+// Settings from a shared link: the stay only if it is one of the menu's choices.
+const stayParam = params.get('stay');
+if (stayParam !== null && [...$('#stay').options].some(o => o.value === stayParam)) {
+  state.stay = +stayParam;
+  $('#stay').value = stayParam;
+}
 if (params.get('transfer') === '0') { state.transfer = false; $('#transfer').checked = false; }
 if (params.get('map') === 'gap') state.mode = 'gap';
 for (const r of document.querySelectorAll('input[name=mode]')) {
