@@ -29,7 +29,7 @@
 </style>
 </head>
 <body>
-<nav><a href="../index.html">CVE チェッカー（英語）</a> · <a href="secure-ollama.html">Ollama を締める</a> · <strong>Ollama をリモートで使う</strong> · 言語: <a href="../ollama-remote-access.html" hreflang="en">English</a> · <a href="../de/ollama-remote-access.html" hreflang="de">Deutsch</a> · <a href="../es/ollama-remote-access.html" hreflang="es">Español</a> · <a href="../fr/ollama-remote-access.html" hreflang="fr">Français</a> · 日本語 · <a href="../pt-br/ollama-remote-access.html" hreflang="pt-BR">Português (Brasil)</a></nav>
+<nav><a href="../index.html">CVE チェッカー（英語）</a> · <a href="secure-ollama.html">Ollama を締める</a> · <strong>Ollama をリモートで使う</strong> · <a href="ollama-api-key.html">Ollama の API キー</a> · <a href="docker-ollama.html">Docker から Ollama に届かない</a> · <a href="sample-report.html">報告書のサンプル</a> · 言語: <a href="../ollama-remote-access.html" hreflang="en">English</a> · <a href="../de/ollama-remote-access.html" hreflang="de">Deutsch</a> · <a href="../es/ollama-remote-access.html" hreflang="es">Español</a> · <a href="../fr/ollama-remote-access.html" hreflang="fr">Français</a> · 日本語 · <a href="../pt-br/ollama-remote-access.html" hreflang="pt-BR">Português (Brasil)</a></nav>
 <h1>Ollama を外部に公開せずに、別のコンピューターやスマートフォンから使う</h1>
 <p class="by">Munim, Inc. の MV2 による。2026 年 10 月 12 日に <a href="https://docs.ollama.com/faq">Ollama FAQ</a>、Ollama のサーバーのソースコード（<code>server/routes.go</code>）、<a href="https://tailscale.com/docs/features/tailscale-serve">Tailscale Serve のドキュメント</a>、Open WebUI の <a href="https://docs.openwebui.com/reference/https/tailscale/">HTTPS using Tailscale</a> のページ、LM Studio のサーバーのドキュメントと照合済み。ご自身のマシンにのみ使ってください。このページは<a href="../ollama-remote-access.html" hreflang="en">英語の原文</a>から AI で翻訳したものです。内容に食い違いがある場合は原文が優先します。</p>
 
@@ -86,9 +86,9 @@ sudo ufw default deny incoming
 sudo ufw allow in on tailscale0 to any port 11434 proto tcp
 sudo ufw enable
 sudo ufw status verbose            # no other rule should allow 11434</pre>
-<p>（コメントの意味: このマシンを SSH で管理しているなら最初の行を先に実行すること。ステータスでは、ほかに 11434 を許可するルールがないこと。）これはネイティブにインストールした Ollama が対象です。Ollama を Docker でポートを公開して動かしている場合、ufw は効きません。Docker が独自のファイアウォールルールを書き込むためです（<a href="../docker-ollama.html">Docker can't reach Ollama（英語）</a>を参照）。</p>
+<p>（コメントの意味: このマシンを SSH で管理しているなら最初の行を先に実行すること。ステータスでは、ほかに 11434 を許可するルールがないこと。）これはネイティブにインストールした Ollama が対象です。Ollama を Docker でポートを公開して動かしている場合、ufw は効きません。Docker が独自のファイアウォールルールを書き込むためです（<a href="docker-ollama.html">Docker から Ollama に届かない</a>を参照）。</p>
 
-<p><strong>どちらの場合も:</strong> 既定では、tailnet 内のすべての端末がほかのすべての端末に届きます。マシンをほかの人と共有している場合や、信頼度の低い端末がある場合は、tailnet のアクセスポリシーでポート 11434 を自分の端末だけに制限してください。アプリにもキーを要求したい場合は、前段に <a href="../ollama-api-key.html">Bearer キーのプロキシ（英語）</a>を置きます。</p>
+<p><strong>どちらの場合も:</strong> 既定では、tailnet 内のすべての端末がほかのすべての端末に届きます。マシンをほかの人と共有している場合や、信頼度の低い端末がある場合は、tailnet のアクセスポリシーでポート 11434 を自分の端末だけに制限してください。アプリにもキーを要求したい場合は、前段に <a href="ollama-api-key.html">Bearer キーのプロキシ</a>を置きます。</p>
 
 <h2 id="lan">D. 同じ家庭内ネットワークだけ: LAN とファイアウォールルール</h2>
 <p>信頼できる家庭内ネットワークなら問題ありません。オフィス、寮、ホテル、カフェの Wi-Fi では不適切です。ゲストを含め、そのネットワークの誰もがログインなしであなたの Ollama を使えてしまいます。</p>
@@ -114,7 +114,7 @@ sudo ufw status verbose            # no other rule should allow 11434</pre>
 <p>無料のスクリプト <a href="https://github.com/munimv2/local-ai-checkup">local-ai-checkup</a> は、ネットワークから届いてしまう AI 関連のポートを指摘し、Ollama のバージョン、<code>OLLAMA_ORIGINS</code>、Docker のポート公開も確認します。読み取り専用で、マシンの外には何も送信しません。その後、<a href="../index.html">CVE チェッカー（英語）</a>でバージョンを確認してください。締めるためのチェックリストは<a href="secure-ollama.html">「Ollama が外部に公開されていないか？」</a>にあります。</p>
 
 <h2>代わりに確認してほしい場合</h2>
-<p>Munim, Inc. の MV2 は、マシン 1 台の<strong>ローカル AI ヘルスチェック（49 米ドル）</strong>と、最大 5 台または共有の Ollama・Open WebUI サーバー 1 台を対象にした<strong>小規模オフィス向けチェック（199 米ドル）</strong>を提供しています。何が公開されていて、何が危険または遅いのか、何から直すべきかをまとめた報告書を、お使いの OS 向けの正確なコマンドと、GPU に合うモデルの提案とともにお届けします。報告書は英語です。<a href="../sample-report.html">報告書のサンプル（英語）</a>をご覧ください。Stripe で <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">49 ドルを支払う</a>か <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">199 ドルを支払う</a>と、その後 <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> へ、<code>python3 local_ai_checkup.py --json</code> の出力、お使いの OS、用途をメールで送ってください。MV2 がパスワード、キー、リモートアクセスを求めることはありません。</p>
+<p>Munim, Inc. の MV2 は、マシン 1 台の<strong>ローカル AI ヘルスチェック（49 米ドル）</strong>と、最大 5 台または共有の Ollama・Open WebUI サーバー 1 台を対象にした<strong>小規模オフィス向けチェック（199 米ドル）</strong>を提供しています。何が公開されていて、何が危険または遅いのか、何から直すべきかをまとめた報告書を、お使いの OS 向けの正確なコマンドと、GPU に合うモデルの提案とともにお届けします。報告書は英語です。<a href="sample-report.html">報告書のサンプル</a>をご覧ください。Stripe で <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">49 ドルを支払う</a>か <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">199 ドルを支払う</a>と、その後 <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> へ、<code>python3 local_ai_checkup.py --json</code> の出力、お使いの OS、用途をメールで送ってください。MV2 がパスワード、キー、リモートアクセスを求めることはありません。</p>
 
 <footer>
   <p>一般的な技術情報であり、セキュリティ認証や専門的な助言ではありません。ご自身が所有する、または管理を許可されたマシンだけをテストしてください。2026 年 10 月 12 日に確認。訂正（翻訳に関するものも含む）は <a href="https://github.com/munimv2/local-ai-checkup/issues">github.com/munimv2/local-ai-checkup</a> の Issue で歓迎します。</p>

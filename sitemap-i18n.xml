@@ -264,4 +264,70 @@
     <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/docker-ollama.html"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/docker-ollama.html"/>
   </url>
+  <url>
+    <loc>https://munimv2.github.io/sample-report.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/sample-report.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/de/sample-report.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/sample-report.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/es/sample-report.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/sample-report.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/fr/sample-report.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/sample-report.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/ja/sample-report.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/sample-report.html"/>
+  </url>
+  <url>
+    <loc>https://munimv2.github.io/pt-br/sample-report.html</loc>
+    <lastmod>2026-10-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munimv2.github.io/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://munimv2.github.io/de/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munimv2.github.io/es/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://munimv2.github.io/fr/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munimv2.github.io/ja/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://munimv2.github.io/pt-br/sample-report.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munimv2.github.io/sample-report.html"/>
+  </url>
 </urlset>
