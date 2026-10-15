@@ -51,7 +51,7 @@ footer { margin-top: 2.5rem; font-size: .95rem; color: #444; }
 
 <h2>What a flag means</h2>
 <p>A flag means a criterion uses words linked to disability. It does not mean the criterion is wrong. Some exclusions and requirements are needed for safety or because the outcome depends on that function. For each flagged item, ask three questions. Would taking part be unsafe even with an accommodation? Does the outcome itself need this function? Or is the barrier only how the study is run, which an accommodation can fix? The <a href="https://github.com/munimtechnologies/trial-exclusion-census/blob/main/toolkit/inclusive-eligibility-guide.md">inclusive eligibility guide</a> works through each category.</p>
-<p>The check uses word rules, not a reader. It misses criteria worded in ways it does not know, and it can flag a word used in passing. The same open rules are used by <a href="https://github.com/munimtechnologies/trial-exclusion-census">trial-exclusion-census</a> to count disability-related criteria across every interventional study on ClinicalTrials.gov. This is information, not medical, legal or IRB advice.</p>
+<p>The check uses word rules, not a reader. It misses criteria worded in ways it does not know, and it can flag a word used in passing. It skips exception clauses ("except for hearing loss"), eye findings that only matter to an eye exam, and planned amputations. The same open rules are used by <a href="https://github.com/munimtechnologies/trial-exclusion-census">trial-exclusion-census</a> to count disability-related criteria across every interventional study on ClinicalTrials.gov. This is information, not medical, legal or IRB advice.</p>
 </main>
 <footer>
 <p>Made by MV2 of Munim, Inc. with AI agents. Code Apache-2.0, text CC BY 4.0. Corrections are welcome as <a href="https://github.com/munimtechnologies/trial-exclusion-census/issues">issues</a>.</p>
@@ -98,7 +98,7 @@ rule mobility \bbed[- ]?(?:ridden|bound)\b
 rule mobility \bparapleg
 rule mobility \btetrapleg
 rule mobility \bquadripleg
-rule mobility \bhemipleg
+rule mobility \bhemipleg(?!ic migraine)
 rule mobility \bparaly(?:sis|ses|zed|sed)\b
 rule mobility \bamputat
 rule mobility \b(?:mobility|physical)\s+(?:impair|disab|limitation|handicap)
@@ -127,7 +127,7 @@ rule english_only \bnot (?:fluent|proficient) in english\b
 rule english_only \blimited english\b
 rule english_only \b(?:speak|read|write|understand|communicat|fluen|proficien|literate)\w*\b[^.;\n]{0,40}\benglish\b
 rule disability_general \bhandicap
-rule disability_general (?<!expanded )\bdisabilit(?:y|ies)\b(?!\s+status)
+rule disability_general (?<!expanded )\bdisabilit(?:y|ies)\b(?!\s+(?:status|pension|insurance|benefits?|claims?|compensation|payments?|leave))
 accommodation - \baccommodat(?:e|ed|es|ion|ions)\b|\bassistive (?:device|technolog)|\blegally (?:authori[sz]ed|acceptable) representative|\bLAR\b|\bsign language\b|\binterpreter|\bbraille\b|\blarge[- ]print|\bscreen[- ]reader|\bread (?:aloud|to (?:them|the participant))|\bsurrogate\b|\bproxy (?:consent|respondent|informant)|\bguardian\b|\bwith (?:the )?(?:help|assistance|support) of\b|\bcaregiver (?:may|can|will) (?:assist|help)
 related cognitive dementia|alzheimer|cognit|intellectual|down syndrome|autis|developmental|memory|delirium
 related consent_capacity dementia|alzheimer|cognit|intellectual|delirium|\bcoma\b|critical(?:ly)? ill|critical care|intensive care|\bicu\b|sepsis|cardiac arrest|brain injur|psychos|schizo
@@ -173,6 +173,11 @@ reqsuggest mobility Unless walking or standing is the outcome or a safety need, 
 header - ^[^\w\n]*(?:(?:key|main|major|general|specific|additional|principal|other)\s+)?(inclusion|exclusion|eligibility)(?:\s+criteri\w*)?[\s*_]*(?::|$)
 inline - \bexclusion\s+criteri\w*\s*:?
 bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
+except - \b(?:except(?:ion)?s?(?:\s+(?:for|of|are|is|being))?|other than|apart from|with the exception of|may be (?:included|enrolled|eligible)|(?:will|shall|should) not be (?:considered|excluded|counted))\b(?![^.;\n]{0,20}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)(?:\be\.g\.|\bi\.e\.|[^.;\n)]){0,60}
+veto visual \b(?:study eye|ocular|intraocular|retina\w*|macula\w*|cornea\w*|cataract|media opacit\w*|fovea\w*|optic nerve|ophthalm\w*|worsening|risk of (?:visual|vision))\b
+keep visual (?<!double-)(?<!double )(?<!single-)(?<!single )(?<!triple-)(?<!triple )\bblind(?:ness)?\b(?!-)|\blow vision\b|\bvisual(?:ly)?\s+(?:impair|disab|handicap)|\bvision\s+(?:impairment|problem)|\bunable to see\b|\bpoor vision\b
+veto mobility \b(?:planned|scheduled|requir\w*|need\w*|candidates?\s+for|undergo\w*|indicat\w*\s+for)\s+(?:an?\s+)?(?:[\w-]+\s+){0,3}amputation
+keep mobility \bwheel[- ]?chair|\bnon[- ]?ambulatory\b|\bbed[- ]?(?:ridden|bound)\b|pleg|\bparaly|\b(?:prior|previous|history of)\b[^.;\n]{0,30}\bamputat
 </script>
 <script>
 (function () {
@@ -186,7 +191,8 @@ bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
     disability_general: "disability (general)"
   };
   var RULES = {}, ORDER = [], REQUIRE = {}, REQ_ORDER = [], RELATED = {}, SUGGEST = {}, REQ_SUGGEST = {};
-  var ACCOM, HEADER, INLINE, BULLET;
+  var VETO = {};
+  var ACCOM, HEADER, INLINE, BULLET, EXCEPT;
   document.getElementById("rules").textContent.split(/\r?\n/).forEach(function (line) {
     if (!line.trim()) return;
     var a = line.indexOf(" "), b = line.indexOf(" ", a + 1);
@@ -197,6 +203,9 @@ bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
     } else if (kind === "require") {
       if (!REQUIRE[key]) { REQUIRE[key] = []; REQ_ORDER.push(key); }
       REQUIRE[key].push(new RegExp(val, "i"));
+    } else if (kind === "veto" || kind === "keep") {
+      VETO[key] = VETO[key] || {};
+      VETO[key][kind] = new RegExp(val, "i");
     } else if (kind === "related") RELATED[key] = new RegExp(val, "i");
     else if (kind === "suggest") SUGGEST[key] = val;
     else if (kind === "reqsuggest") REQ_SUGGEST[key] = val;
@@ -204,6 +213,7 @@ bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
     else if (kind === "header") HEADER = new RegExp(val, "gim");
     else if (kind === "inline") INLINE = new RegExp(val, "i");
     else if (kind === "bullet") BULLET = new RegExp(val, "i");
+    else if (kind === "except") EXCEPT = new RegExp(val, "gi");
   });
 
   function headed(text, kind) {
@@ -245,6 +255,15 @@ bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
   function matching(rules, order, item) {
     return order.filter(function (cat) {
       return rules[cat].some(function (r) { return r.test(item); });
+    });
+  }
+
+  // Exception clauses read out first, then the vetoes, as in classify() in exclusion_census.py.
+  function classify(item) {
+    var text = item.replace(EXCEPT, " ");
+    return matching(RULES, ORDER, text).filter(function (c) {
+      var v = VETO[c];
+      return !(v && v.veto.test(text) && !v.keep.test(text));
     });
   }
 
@@ -294,7 +313,7 @@ bullet - ^\s*(?:[*\-•●▪·]+|\(?\d{1,2}[.)]|\(?[a-z][.)])\s+
     var excl = exclusionSection(text), incl = inclusionSection(text);
     var flagged = [], required = [];
     splitItems(excl).forEach(function (item) {
-      var cats = matching(RULES, ORDER, item);
+      var cats = classify(item);
       if (cats.length) flagged.push({ item: item, cats: cats });
     });
     splitItems(incl).forEach(function (item) {
