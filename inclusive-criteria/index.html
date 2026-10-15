@@ -51,49 +51,61 @@ footer { margin-top: 2.5rem; font-size: .95rem; color: #444; }
 
 <h2>What a flag means</h2>
 <p>A flag means a criterion uses words linked to disability. It does not mean the criterion is wrong. Some exclusions and requirements are needed for safety or because the outcome depends on that function. For each flagged item, ask three questions. Would taking part be unsafe even with an accommodation? Does the outcome itself need this function? Or is the barrier only how the study is run, which an accommodation can fix? The <a href="https://github.com/munimtechnologies/trial-exclusion-census/blob/main/toolkit/inclusive-eligibility-guide.md">inclusive eligibility guide</a> works through each category.</p>
-<p>The check uses word rules, not a reader. It misses criteria worded in ways it does not know, and it can flag a word used in passing. It skips exception clauses ("except for hearing loss"), eye findings that only matter to an eye exam, and planned amputations. The same open rules are used by <a href="https://github.com/munimtechnologies/trial-exclusion-census">trial-exclusion-census</a> to count disability-related criteria across every interventional study on ClinicalTrials.gov. This is information, not medical, legal or IRB advice.</p>
+<p>The check uses word rules, not a reader. It misses criteria worded in ways it does not know, and it can flag a word used in passing. It reads lists such as "cognitive, visual or motor impairment" and "unable to hear, read or understand". It skips exception clauses ("except for hearing loss"), eye findings that only matter to an eye exam, and planned amputations. The same open rules are used by <a href="https://github.com/munimtechnologies/trial-exclusion-census">trial-exclusion-census</a> to count disability-related criteria across every interventional study on ClinicalTrials.gov. This is information, not medical, legal or IRB advice.</p>
 </main>
 <footer>
 <p>Made by MV2 of Munim, Inc. with AI agents. Code Apache-2.0, text CC BY 4.0. Corrections are welcome as <a href="https://github.com/munimtechnologies/trial-exclusion-census/issues">issues</a>.</p>
 </footer>
 
 <script type="text/plain" id="rules">
-rule cognitive \bdementia
+rule cognitive \bdement(?:ia|ing)
 rule cognitive \balzheimer
 rule cognitive \bmild cognitive impairment\b
-rule cognitive \bcognitive(?:ly)?\s+(?:impair|deficit|dysfunction|decline|disorder|disabilit|problem)
+rule cognitive \bcognitive(?:ly)?\s+(?:impair|deficit|dysfunction|decline|disorder|disabilit|problem|deficien|limitation|difficult)
+rule cognitive \b(?:limited|low|reduced|insufficient|poor|impaired|diminished)\s+cognitive\s+(?:abilit|function|capacit|skill|level)
+rule cognitive \b(?:cognitive|intellectual)(?:\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*(?:[\w-]+\s+)?[\w-]+){1,4}?\s+(?:impair|deficit|disab|handicap|dysfunction|loss)
 rule cognitive \bintellectual(?:ly)?\s+(?:disab|impair|deficien)
-rule cognitive \bmental(?:ly)?\s+retard
+rule cognitive \bmental(?:ly)?\s+(?:retard|disab|handicap|deficien)
 rule cognitive \bdevelopmental\s+(?:delay|disab)
-rule cognitive \blearning\s+disab
+rule cognitive \blearning\s+(?:disab|difficult)
 rule cognitive \b(?:mmse|mini[- ]mental|moca|montreal cognitive)\b
 rule consent_capacity \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapacity)\b[^.;\n]{0,60}\b(?:consent|assent)\b
 rule consent_capacity \b(?:lack|lacks|lacking|impaired|diminished|without)\s+(?:the\s+)?(?:decision(?:al)?[- ]making\s+)?capacity\b
 rule consent_capacity \bdecision(?:al)?[- ]making capacity\b
 rule consent_capacity \blegally incompetent\b
-rule consent_capacity \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapacity)\s+(?:to\s+)?(?:understand|comprehend)\b(?![^.;\n]{0,40}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
+rule consent_capacity \bdecisional(?:ly)?\s+(?:impair|incapac)
+rule consent_capacity \bmentally\s+(?:incapacitated|incompetent|incapable)
+rule consent_capacity \b(?:limit|impair|affect|compromis|preclud|prevent|interfer)\w*\s+(?:with\s+)?(?:the\s+|their\s+|his\s+|her\s+)?(?:abilit(?:y|ies)|capacity)\s+to\s+(?:\w+\s+){0,2}?(?:consent|assent)\b
+rule consent_capacity \b(?:guardianship|curatorship|tutorship|tutelage|safeguard of justice|sauvegarde de justice)\b
+rule consent_capacity \bunder\s+(?:a\s+)?(?:legal|judicial|court)\s+protection\b
+rule consent_capacity \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapacity)\s+(?:to\s+)?(?:[\w-]+\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*){0,4}(?:understand|comprehend)\b(?![^.;\n]{0,40}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
 rule visual (?<!double-)(?<!double )(?<!single-)(?<!single )(?<!triple-)(?<!triple )\bblind(?:ness)?\b(?!-)
 rule visual \bvisual(?:ly)?\s+(?:impair|disab|handicap|loss|deficit)
 rule visual \blow vision\b
 rule visual \bvision\s+(?:loss|impairment|problem)
-rule visual \bunable to see\b
+rule visual \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapacity)\s+(?:to\s+)?(?:[\w-]+\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*){0,4}(?:see|visuali[sz]e)\b
 rule visual \b(?:inadequate|insufficient|poor|impaired|reduced)\s+(?:vision|eyesight)\b
+rule visual \b(?:visual|vision)(?:\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*(?:[\w-]+\s+)?[\w-]+){1,4}?\s+(?:impair|deficit|disab|handicap|dysfunction|loss)
 rule visual \bvisual acuity\b
 rule hearing \bdeaf(?:ness)?\b
 rule hearing \bhearing\s+(?:impair|loss|disab|deficit|problem|difficult)
 rule hearing \bhard of hearing\b
-rule hearing \bunable to hear\b
+rule hearing \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapacity)\s+(?:to\s+)?(?:[\w-]+\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*){0,4}hear\b
 rule hearing \b(?:impaired|inadequate|insufficient|poor|reduced)\s+hearing\b
 rule hearing \bhearing aids?\b
+rule hearing \bauditory\s+(?:impair|deficit|disab|loss|handicap|problem)
+rule hearing \b(?:hearing|auditory)(?:\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*(?:[\w-]+\s+)?[\w-]+){1,4}?\s+(?:impair|deficit|disab|handicap|dysfunction|loss)
+rule hearing \bcochlear implant
 rule communication \baphasi
 rule communication \bdysarthri
 rule communication \billiter
 rule communication \bnon[- ]?verbal\b
-rule communication \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapacity)\s+(?:to\s+)?(?:speak|communicate|read|write|verbali[sz]e)\b(?![^.;\n]{0,40}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
+rule communication \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapacity)\s+(?:to\s+)?(?:[\w-]+\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*){0,4}(?:speak|communicate|read|write|verbali[sz]e)\b(?![^.;\n]{0,40}\b(?<!not )(?<!non-)(?<!non )(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
 rule communication \b(?:speech|communication|language)\s+(?:impair|disorder|deficit|difficult|disab)
+rule communication \b(?:speech|communication)(?:\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*(?:[\w-]+\s+)?[\w-]+){1,4}?\s+(?:impair|deficit|disab|handicap|dysfunction|loss)
 rule mobility \bwheel[- ]?chair
 rule mobility \bnon[- ]?ambulatory\b
-rule mobility \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapacity)\s+(?:to\s+)?(?:walk|ambulate|stand)\b
+rule mobility \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapacity)\s+(?:to\s+)?(?:[\w-]+\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*){0,4}(?:walk|ambulate|stand)\b
 rule mobility \bbed[- ]?(?:ridden|bound)\b
 rule mobility \bparapleg
 rule mobility \btetrapleg
@@ -103,6 +115,10 @@ rule mobility \bparaly(?:sis|ses|zed|sed)\b
 rule mobility \bamputat
 rule mobility \b(?:mobility|physical)\s+(?:impair|disab|limitation|handicap)
 rule mobility \b(?:requir\w*|dependent on|use of|uses?)\s+(?:an?\s+)?(?:walking aid|walker|cane|crutch|assistive device)
+rule mobility \bmotor\s+(?:impair|deficit|disab|handicap|limitation)
+rule mobility \bspasticity\b
+rule mobility \b(?:affect|limit|impair|prevent|preclud|interfer|restrict)\w*\s+(?:with\s+)?(?:the\s+|their\s+|his\s+|her\s+)?(?:ambulation|walking|mobility|gait|ability to walk)\b
+rule mobility \b(?:motor|physical|mobility|locomotor)(?:\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*(?:[\w-]+\s+)?[\w-]+){1,4}?\s+(?:impair|deficit|disab|handicap|dysfunction|loss)
 rule psychiatric \bschizo
 rule psychiatric \bbipolar\b
 rule psychiatric \bpsychos[ie]s\b
@@ -145,8 +161,8 @@ suggest communication Allow AAC devices, a communication partner or extra time, 
 suggest mobility Unless the outcome needs walking or standing, consider accessible sites, home or remote visits and transport support.
 suggest investigator_discretion Broad discretion can hide disability exclusions; list the specific safety reasons instead.
 suggest english_only Consider translated materials and interpreters.
-require cognitive \bcognitively\s+(?:intact|normal|unimpaired|healthy)\b
-require cognitive \b(?:normal|intact|preserved)\s+cognit
+require cognitive \bcognitively\s+(?:intact|normal|unimpaired|healthy|able|capable)\b
+require cognitive \b(?:normal|intact|preserved|sufficient|adequate)\s+cognit
 require cognitive \b(?:mmse|mini[- ]mental|moca|montreal cognitive)\b[^.;\n]{0,40}(?:≥|>=|>|\bat least\b|\bor (?:higher|greater|more|above)\b|\bgreater than\b|\babove\b)
 require consent_capacity ^(?!.*\b(?:representatives?|LAR|surrogates?|guardians?|prox(?:y|ies)|parents?)\b).*?\b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?(?:provid|giv|sign)\w*\s+(?:\w+\s+){0,2}?(?:informed\s+)?consent\b
 require consent_capacity ^(?!.*\b(?:representatives?|LAR|surrogates?|guardians?|prox(?:y|ies)|parents?)\b).*?\bcapacity to (?:give |provide )?(?:informed )?consent\b
@@ -154,16 +170,23 @@ require consent_capacity \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)
 require visual \b(?:normal|adequate|sufficient|intact|good)\s+(?:or\s+corrected[- ](?:to[- ]normal\s+)?)?(?:vision|eyesight|visual acuity)\b
 require visual \bcorrected[- ]to[- ]normal\s+(?:vision|visual acuity|eyesight)\b
 require visual \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?see\b
-require visual \bvisual acuity\b[^.;\n]{0,40}\bor better\b
+require visual \b(?:bcva|best[- ]corrected visual acuity|visual acuity)\b[^.;\n]{0,40}\bor better\b
+require visual \b20/\d{2,3}\s+(?:vision|or better)\b
+require visual \b(?:no|without)\s+(?:[\w-]+\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*){0,3}(?:visual|vision)\b(?:\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*[\w-]+){0,3}\s+(?:impair|deficit|problem|disab|loss)
 require hearing \b(?:normal|adequate|sufficient|intact|good)\s+hearing\b
 require hearing \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?hear\b
-require communication \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?(?:speak|communicat|read|writ|verbali[sz])\w*\b(?![^.;\n]{0,40}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
+require hearing \b(?:no|without)\s+(?:[\w-]+\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*){0,3}(?:hearing|auditory)\b(?:\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*[\w-]+){0,3}\s+(?:impair|deficit|problem|disab|loss)
+require communication \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?(?:speak|communicat|read|writ|verbali[sz]|convers)\w*\b(?![^.;\n]{0,40}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
 require communication \b(?:functionally\s+)?literate\b(?![^.;\n]{0,40}\b(?:english|spanish|french|german|italian|dutch|chinese|mandarin|cantonese|japanese|korean|portuguese|hebrew|arabic|danish|swedish|norwegian|finnish|polish|russian|turkish|greek|thai|hindi|vietnamese|local language|national language|study language|official language)\b)
 require communication \b(?:fluent|intelligible)\s+speech\b
+require communication \b(?:able|ability|capable)\s+to\s+(?:verbally|orally)\b
+require communication \b(?:no|without)\s+(?:\w+\s+)?(?:communication|speech|language)\s+(?:problem|difficult|impair|disorder|deficit)
 require mobility \b(?:able|ability|capable|capacity)(?:\s+and\s+willing)?\s+(?:to|of)\s+(?:\w+ly\s+)?(?:walk(?:s|ing)?|ambulat(?:e|ing)|stand(?:ing)?)\b
 require mobility \b(?:independently|fully|freely)\s+ambulat
 require mobility \bambulat(?:ory|e|ing)\s+(?:without|with or without|independently|unaided|unassisted)\b
 require mobility \bwalk(?:s|ing)?\s+(?:independently|unaided|unassisted|without (?:assistance|help|an? (?:assistive|walking) (?:device|aid)))
+require mobility \b(?:able|ability)\s+to\s+(?:perform|complete|do|undergo)\s+(?:a\s+|the\s+)?(?:6MWT|6-?minute walk|six[- ]minute walk|timed up and go)\b
+require mobility \b(?:gmfcs|gross motor function classification system)\b[^.;\n]{0,30}\b(?:I|1)\s*(?:-|–|to|through)\s*(?:I{1,3}|IV|[1-4])\b
 reqsuggest cognitive If the outcome needs this level of cognition, name the measure and the reason; otherwise allow a supporter and easy-read materials.
 reqsuggest consent_capacity Allow consent by a legally authorized representative with the participant's own assent, unless the study cannot be done that way.
 reqsuggest visual Unless a task needs sight, accept blind and low-vision participants and adapt the materials (large print, screen reader, read aloud).
