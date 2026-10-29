@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inclusive eligibility check: flag criteria that exclude disabled people</title>
 <meta name="description" content="Paste a clinical study's eligibility criteria and see which exclusion items touch disability, and which inclusion items require an ability such as walking, hearing or reading, with an inclusive alternative to consider for each. Runs in your browser; nothing is sent anywhere.">
@@ -21,6 +22,7 @@ button.secondary { background: #fff; color: #0b4fb3; }
 #status { font-weight: 600; }
 #results li { margin-bottom: 1.25rem; }
 .item { margin: 0; padding: .4rem .6rem; border-left: 4px solid #555; background: #f3f3f3; }
+.offered { margin: 0; padding: .4rem .6rem; border-left: 4px solid #1a6b2f; background: #eef6ef; }
 .meta { margin: .3rem 0 0; }
 .related { margin: .3rem 0 0; color: #5a3d00; }
 .consider { margin: .3rem 0 0 1.2rem; padding: 0; }
@@ -30,8 +32,8 @@ footer { margin-top: 2.5rem; font-size: .95rem; color: #444; }
 <body>
 <main>
 <h1>Inclusive eligibility check</h1>
-<p>Paste a clinical study's eligibility criteria. This page lists each exclusion item that touches disability (cognitive, consent capacity, vision, hearing, communication, mobility, and related items such as investigator discretion). It also lists each inclusion item that requires an ability, such as "able to walk 100 m unaided" or "normal hearing", because those shut people out too. For each item it gives an inclusive alternative to consider.</p>
-<p><strong>Your text stays on your computer.</strong> The check runs in this page, and nothing you paste is sent or saved anywhere.</p>
+<p>Paste a clinical study's eligibility criteria. This page lists each exclusion item that touches disability (cognitive, consent capacity, vision, hearing, communication, mobility, and related items such as investigator discretion). It also lists each inclusion item that requires an ability, such as "able to walk 100 m unaided" or "normal hearing", because those shut people out too. For each item it gives an inclusive alternative to consider. It also lists the items that already offer an accommodation, such as consent by a legally authorized representative or "with or without an assistive device".</p>
+<p><strong>Your text stays on your computer.</strong> The check runs in this page, and nothing you paste is sent or saved anywhere. The page's security policy also tells your browser to block any connection it tries to open and any form submission.</p>
 
 <form id="form">
 <label for="criteria">Eligibility criteria</label>
@@ -44,6 +46,7 @@ footer { margin-top: 2.5rem; font-size: .95rem; color: #444; }
 
 <button type="submit">Check criteria</button><button type="button" class="secondary" id="example">Load an example</button>
 </form>
+<noscript><p>The check needs JavaScript, which is off in this browser. Nothing you paste is sent.</p></noscript>
 
 <h2 id="results-heading">Results</h2>
 <p id="status" role="status">No criteria checked yet.</p>
@@ -51,12 +54,30 @@ footer { margin-top: 2.5rem; font-size: .95rem; color: #444; }
 
 <h2>What a flag means</h2>
 <p>A flag means a criterion uses words linked to disability. It does not mean the criterion is wrong. Some exclusions and requirements are needed for safety or because the outcome depends on that function. For each flagged item, ask three questions. Would taking part be unsafe even with an accommodation? Does the outcome itself need this function? Or is the barrier only how the study is run, which an accommodation can fix? The <a href="https://github.com/munimtechnologies/trial-exclusion-census/blob/main/toolkit/inclusive-eligibility-guide.md">inclusive eligibility guide</a> works through each category.</p>
-<p>The check uses word rules, not a reader. It misses criteria worded in ways it does not know, and it can flag a word used in passing. It reads lists such as "cognitive, visual or motor impairment" and "unable to hear, read or understand". It skips exception clauses ("except for hearing loss"), eye findings that only matter to an eye exam, and planned amputations. The same open rules are used by <a href="https://github.com/munimtechnologies/trial-exclusion-census">trial-exclusion-census</a> to count disability-related criteria across every interventional study on ClinicalTrials.gov. This is information, not medical, legal or IRB advice.</p>
+<p>The check uses word rules, not a reader. It misses criteria worded in ways it does not know, and it can flag a word used in passing. It reads lists such as "cognitive, visual or motor impairment" and "unable to hear, read or understand". It skips exception clauses ("except for hearing loss"), eye findings that only matter to an eye exam, and planned amputations. An accommodation counts only where an item offers one: "requires a sign language interpreter" in the exclusion criteria, "without an interpreter", and a parent's consent for a child do not count. The same open rules are used by <a href="https://github.com/munimtechnologies/trial-exclusion-census">trial-exclusion-census</a> to count disability-related criteria across every interventional study on ClinicalTrials.gov. This is information, not medical, legal or IRB advice.</p>
 </main>
 <footer>
 <p>Made by MV2 of Munim, Inc. with AI agents. Code Apache-2.0, text CC BY 4.0. Corrections are welcome as <a href="https://github.com/munimtechnologies/trial-exclusion-census/issues">issues</a>.</p>
 </footer>
 
+<script>
+// Runs before the checker below: even if this browser cannot run it, the form sends nothing.
+document.getElementById("form").addEventListener("submit", function (e) {
+  e.preventDefault();
+  if (!window.checkReady) {
+    // Clear first, as the checker's say() does, so a screen reader announces the message again on a repeated press.
+    document.getElementById("status").textContent = "";
+    setTimeout(function () { document.getElementById("status").textContent = "This browser could not run the check, and nothing was sent. Please try a recent version of Chrome, Edge, Firefox or Safari."; }, 100);
+  }
+});
+// The example needs the checker too, so say why nothing happens without it.
+document.getElementById("example").addEventListener("click", function () {
+  if (!window.checkReady) {
+    document.getElementById("status").textContent = "";
+    setTimeout(function () { document.getElementById("status").textContent = "This browser could not run the check, so the example cannot be shown. Please try a recent version of Chrome, Edge, Firefox or Safari."; }, 100);
+  }
+});
+</script>
 <script type="text/plain" id="rules">
 rule cognitive \bdement(?:ia|ing)
 rule cognitive \balzheimer
@@ -87,6 +108,7 @@ rule visual \b(?:unable|inability|not able|cannot|can ?not|incapable of|incapaci
 rule visual \b(?:inadequate|insufficient|poor|impaired|reduced)\s+(?:vision|eyesight)\b
 rule visual \b(?:visual|vision)(?:\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*(?:[\w-]+\s+)?[\w-]+){1,4}?\s+(?:impair|deficit|disab|handicap|dysfunction|loss)
 rule visual \bvisual acuity\b
+rule visual \b(?:large[- ]print|braille)\b
 rule hearing \bdeaf(?:ness)?\b
 rule hearing \bhearing\s+(?:impair|loss|disab|deficit|problem|difficult)
 rule hearing \bhard of hearing\b
@@ -96,6 +118,7 @@ rule hearing \bhearing aids?\b
 rule hearing \bauditory\s+(?:impair|deficit|disab|loss|handicap|problem)
 rule hearing \b(?:hearing|auditory)(?:\s*(?:,\s*(?:\b(?:and/or|or|and)\b)?|/|\band/or\b|\bor\b|\band\b)\s*(?:[\w-]+\s+)?[\w-]+){1,4}?\s+(?:impair|deficit|disab|handicap|dysfunction|loss)
 rule hearing \bcochlear implant
+rule hearing \b(?:requir\w*|needs?|needing|uses?|using|use of|primar\w*|knowledge of|fluen\w*|proficien\w*)\b[^.;\n]{0,40}\bsign language\b
 rule communication \baphasi
 rule communication \bdysarthri
 rule communication \billiter
@@ -144,7 +167,9 @@ rule english_only \blimited english\b
 rule english_only \b(?:speak|read|write|understand|communicat|fluen|proficien|literate)\w*\b[^.;\n]{0,40}\benglish\b
 rule disability_general \bhandicap
 rule disability_general (?<!expanded )\bdisabilit(?:y|ies)\b(?!\s+(?:status|pension|insurance|benefits?|claims?|compensation|payments?|leave))
-accommodation - \baccommodat(?:e|ed|es|ion|ions)\b|\bassistive (?:device|technolog)|\blegally (?:authori[sz]ed|acceptable) representative|\bLAR\b|\bsign language\b|\binterpreter|\bbraille\b|\blarge[- ]print|\bscreen[- ]reader|\bread (?:aloud|to (?:them|the participant))|\bsurrogate\b|\bproxy (?:consent|respondent|informant)|\bguardian\b|\bwith (?:the )?(?:help|assistance|support) of\b|\bcaregiver (?:may|can|will) (?:assist|help)
+accommodation - \b(?:reasonable|appropriate|necessary|disability|special|testing)\s+accommodations?\b|\baccommodations?\s+(?:will|can|may|could|are|is|shall)\s+(?:be\s+)?(?:made|provided|offered|available|arranged)\b|\bassistive (?:device|technolog)|\bwith or without (?:an? )?(?:assistance|help|aid)\b|\blegally (?:authori[sz]ed|acceptable) representative|\bLAR\b|\blegal(?:ly)?\s+(?:representative|proxy)|\b(?:subject|participant|patient)s?\s+or\s+(?:(?:his/her|his|her|their)\s+)?(?:legal(?:ly)?\s+)?(?:authori[sz]ed\s+)?guardian|\b(?:family members?|relatives?|next of kin|caregivers?)\s+or\s+(?:legal\s+)?guardian|\b(?:consent|assent)\b[^.;\n]{0,60}\b(?:family members?|relatives?|next of kin)\b|\bsign language\b|\binterpreter|\bbraille\b|\blarge[- ]print|\bscreen[- ]reader|\bread (?:aloud|to (?:them|the participant))|\bsurrogate\b|\bproxy (?:consent|respondent|informant)|\bwith (?:the )?(?:help|assistance|support) of\b|\b(?:has|have) assistance\b|\bavailable to (?:assist|help|read)\b|\bcaregiver (?:may|can|will) (?:assist|help)
+noaccom - (?<!or )\bwithout\s+(?:an?\s+|the\s+|any\s+)?(?:[\w-]+\s+)?(?:interpreter|assistive|assistance|help|aid|surrogate|proxy|representative|LAR)\b|\b(?:unable|inability|cannot|can ?not|not able)\b[^.;\n]{0,60}\b(?:large[- ]print|braille|sign language|screen[- ]reader)|\bparent(?:s|al)?\b|\bminors?\b|\bchild(?:ren)?\b|\binfants?\b|\bpa?ediatric|\b(?:under|younger than|less than)\s+(?:the\s+age\s+of\s+)?1[2-8]\b|<\s*1[2-8]\b
+exclnoaccom - \b(?:requir\w*|needs?|needing|needed|dependent on|depends on|rel(?:y|ies|ying) on|primar(?:y|ily)|uses?|using|use of|through)\b
 related cognitive dementia|alzheimer|cognit|intellectual|down syndrome|autis|developmental|memory|delirium
 related consent_capacity dementia|alzheimer|cognit|intellectual|delirium|\bcoma\b|critical(?:ly)? ill|critical care|intensive care|\bicu\b|sepsis|cardiac arrest|brain injur|psychos|schizo
 related visual \beye|ocular|retin|macul|glaucoma|cataract|vision|visual|myopi|uveitis|corne|ophthalm|amblyop|keratocon
@@ -215,7 +240,7 @@ keep mobility \bwheel[- ]?chair|\bnon[- ]?ambulatory\b|\bbed[- ]?(?:ridden|bound
   };
   var RULES = {}, ORDER = [], REQUIRE = {}, REQ_ORDER = [], RELATED = {}, SUGGEST = {}, REQ_SUGGEST = {};
   var VETO = {};
-  var ACCOM, HEADER, INLINE, BULLET, EXCEPT;
+  var ACCOM, NOACCOM, EXCL_NOACCOM, HEADER, INLINE, BULLET, EXCEPT;
   document.getElementById("rules").textContent.split(/\r?\n/).forEach(function (line) {
     if (!line.trim()) return;
     var a = line.indexOf(" "), b = line.indexOf(" ", a + 1);
@@ -233,6 +258,8 @@ keep mobility \bwheel[- ]?chair|\bnon[- ]?ambulatory\b|\bbed[- ]?(?:ridden|bound
     else if (kind === "suggest") SUGGEST[key] = val;
     else if (kind === "reqsuggest") REQ_SUGGEST[key] = val;
     else if (kind === "accommodation") ACCOM = new RegExp(val, "i");
+    else if (kind === "noaccom") NOACCOM = new RegExp(val, "i");
+    else if (kind === "exclnoaccom") EXCL_NOACCOM = new RegExp(val, "i");
     else if (kind === "header") HEADER = new RegExp(val, "gim");
     else if (kind === "inline") INLINE = new RegExp(val, "i");
     else if (kind === "bullet") BULLET = new RegExp(val, "i");
@@ -290,6 +317,15 @@ keep mobility \bwheel[- ]?chair|\bnon[- ]?ambulatory\b|\bbed[- ]?(?:ridden|bound
     });
   }
 
+  // Items that offer an accommodation, as accommodations() in exclusion_census.py.
+  function accommodations(text) {
+    var excl = splitItems(exclusionSection(text));
+    return splitItems(text).filter(function (item) {
+      return ACCOM.test(item) && !NOACCOM.test(item) &&
+        !(excl.indexOf(item) >= 0 && EXCL_NOACCOM.test(item));
+    });
+  }
+
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -328,6 +364,18 @@ keep mobility \bwheel[- ]?chair|\bnon[- ]?ambulatory\b|\bbed[- ]?(?:ridden|bound
     return ol;
   }
 
+  function listOffered(out, offered) {
+    if (!offered.length) return;
+    out.appendChild(el("h3", null, "Items that offer an accommodation"));
+    var ul = el("ul");
+    offered.forEach(function (item) {
+      var li = el("li");
+      li.appendChild(el("p", "offered", item));
+      ul.appendChild(li);
+    });
+    out.appendChild(ul);
+  }
+
   function count(n, one, many) { return n + " " + (n === 1 ? one : many); }
 
   function check(text, subject) {
@@ -347,9 +395,11 @@ keep mobility \bwheel[- ]?chair|\bnon[- ]?ambulatory\b|\bbed[- ]?(?:ridden|bound
       say("No exclusion criteria section found. Paste the full criteria, including the lines that start \"Inclusion Criteria\" and \"Exclusion Criteria\".");
       return;
     }
-    var accom = " Accommodation mentioned anywhere in the criteria: " + (ACCOM.test(text) ? "yes" : "no") + ".";
+    var offered = accommodations(text);
+    var accom = " Accommodation offered in the criteria: " + (offered.length ? "yes" : "no") + ".";
     if (!flagged.length && !required.length) {
       say("No disability-related exclusion items or ability requirements found by these word rules." + accom);
+      listOffered(out, offered);
       return;
     }
     say(count(flagged.length, "exclusion item", "exclusion items") + " flagged; " +
@@ -362,12 +412,15 @@ keep mobility \bwheel[- ]?chair|\bnon[- ]?ambulatory\b|\bbed[- ]?(?:ridden|bound
       out.appendChild(el("h3", null, "Inclusion items that require an ability"));
       out.appendChild(list(required, subject, REQ_SUGGEST, "Requires: "));
     }
+    listOffered(out, offered);
   }
 
   var EXAMPLE = "Inclusion Criteria:\n\n* Adults aged 18 to 75 with type 2 diabetes\n* HbA1c between 7% and 10%\n" +
-    "* Able to walk 100 meters without assistance\n* Normal or corrected-to-normal vision\n\n" +
+    "* Able to walk 100 meters without assistance\n* Normal or corrected-to-normal vision\n" +
+    "* Informed consent from the participant or a legally authorized representative\n\n" +
     "Exclusion Criteria:\n\n* Legally blind or severe visual impairment\n* Unable to provide informed consent\n" +
     "* Wheelchair user or unable to walk without assistance\n* Unable to read English\n" +
+    "* Requires use of a sign language interpreter\n" +
     "* Any condition that, in the opinion of the investigator, would interfere with study participation\n* Pregnancy\n";
 
   document.getElementById("form").addEventListener("submit", function (e) {
@@ -379,6 +432,7 @@ keep mobility \bwheel[- ]?chair|\bnon[- ]?ambulatory\b|\bbed[- ]?(?:ridden|bound
     document.getElementById("subject").value = "Type 2 diabetes";
     check(EXAMPLE, "Type 2 diabetes");
   });
+  window.checkReady = true;
 })();
 </script>
 </body>
