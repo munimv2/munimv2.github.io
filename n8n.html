@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>n8n security advisories September 2026: is my n8n version affected? (2.41.4, 2.42.1, 1.123.83)</title>
-<meta name="description" content="Self-hosted n8n before 2.41.4 (stable), 2.42.1 (beta) or 1.123.83 (1.x) is affected by n8n's September 2026 advisories, and 26 of them have no CVE ID and aren't in OSV or the GitHub Advisory Database, so most scanners miss them. Check your n8n version. Free, by MV2 of Munim, Inc., with AI agents.">
+<title>n8n security advisories, September to October 2026: is my n8n version affected? (3.0.1, 2.46.1, 2.45.5)</title>
+<meta name="description" content="n8n published 27 more security advisories on 14 and 28 October 2026, none with a CVE ID. Read per release line, every n8n advisory that names a fix is fixed in 3.0.1, 2.46.1 and 2.45.5. Check your n8n version. Free, by MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -24,6 +24,13 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <strong>n8n</strong> · <a href="n8n-hardening.html">n8n hardening checklist</a> · <a href="langflow.html">Langflow</a> · <a href="flowise.html">Flowise</a> · <a href="litellm.html">LiteLLM</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Self-hosted n8n: am I affected by the September 2026 advisories?</h1>
+<div id="update-2026-10-31" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><strong>Update, 31 October 2026:</strong> n8n has published 27 more security advisories since this page was written: 15 on 14 October 2026 and 12 on 28 October 2026 (7 of them rated high), none of them with a CVE ID. The versions in the September tables below fix only the September batches: by the version ranges n8n published, 2.41.4 is affected by at least 23 of the October advisories, 2.42.1 by at least 23 and 1.123.83 by at least 16.</p>
+<p>n8n names its fixes per release line. Read that way, every n8n advisory published up to 28 October 2026 that names a fixed version is fixed in <strong>3.0.1</strong> on 3.x, <strong>2.46.1</strong> on 2.46.x and <strong>2.45.5</strong> on 2.45.x. The newest 1.x fix is 1.123.89, but 76 advisories have version ranges that take in 1.x while naming no 1.x fix, so 1.x users are not shown a fixed version for them.</p>
+<p>One older advisory names no fixed version for any release, so no version is clear of it: <a href="https://github.com/n8n-io/n8n/security/advisories/GHSA-365g-vjw2-grx8">GHSA-365g-vjw2-grx8</a> (8 October 2025, rated high, no CVE ID), titled "Execute Command Node in n8n Allows Authenticated Users to Run Arbitrary Commands on Host". Instead of a fix, n8n's advisory advises blocking the node with the <code>NODES_EXCLUDE</code> setting wherever it isn't needed. Since n8n 2.0 the node is blocked by default (<a href="https://docs.n8n.io/2-0-breaking-changes/">n8n 2.0 breaking changes</a>), so on 2.x and 3.x check that your <code>NODES_EXCLUDE</code> setting has not turned it back on.</p>
+<p>Source: <a href="https://github.com/n8n-io/n8n/security/advisories">n8n's security advisories on GitHub</a>, read through GitHub's API on 31 October 2026 (checked with AI agents working for MV2 of Munim, Inc.). The <a href="./">free browser checker</a> includes both October batches.</p>
+</div>
+
 <p class="by">By MV2 of Munim, Inc., with AI agents. Checked against n8n's own security advisories, the GitHub Advisory Database and OSV.dev on 11 October 2026, and re-checked for new advisories on 12 October 2026; every row links its source.</p>
 
 <p>n8n published three batches of security advisories in September 2026. Which version fixes them depends on your release line:</p>
