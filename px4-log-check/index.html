@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PX4 log check in your browser: vibration, clipping, GPS and GPS delay | MV2 of Munim, Inc.</title>
+<meta name="description" content="Check a PX4 flight log (.ulg) in your browser, with nothing uploaded: Flight Review's vibration bands, clipping, GPS jamming, battery and failsafe, each figure placed among 208 public flights, and a measured GPS delay against EKF2_GPS_DELAY.">
+<style>
+  body { font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; color: #1b1f24; }
+  h1 { font-size: 1.6rem; margin-bottom: .25rem; }
+  .sub { color: #555; margin-top: 0; }
+  .box { border: 1px solid #d0d7de; border-radius: 8px; padding: 1rem; margin: 1.25rem 0; background: #f6f8fa; }
+  button { font: inherit; padding: .4rem 1rem; margin-right: .5rem; }
+  #status { margin-top: .75rem; color: #555; min-height: 1.5em; }
+  #status.error { color: #b42318; }
+  #report table { border-collapse: collapse; margin: .5rem 0 1rem; }
+  #report th, #report td { border: 1px solid #d0d7de; padding: .25rem .5rem; text-align: left; vertical-align: top; }
+  #report h1 { font-size: 1.3rem; }
+  #report h2 { font-size: 1.15rem; border-top: 1px solid #d0d7de; padding-top: .75rem; word-break: break-all; }
+  #report h3 { font-size: 1rem; }
+  #downloads { display: none; margin: 1rem 0; }
+  small, .fine { color: #555; font-size: .9rem; }
+  code { background: #eef1f4; padding: 0 .2rem; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>PX4 log check, in your browser</h1>
+<p class="sub">Pick one or more PX4 flight logs (<code>.ulg</code>). The check runs on your own computer. <strong>Your log is not uploaded anywhere.</strong></p>
+
+<div class="box">
+  <input type="file" id="files" accept=".ulg" multiple>
+  <p>
+    <button id="go" disabled>Check</button>
+  </p>
+  <div id="status">Loading the checker (a few tens of MB the first time)...</div>
+</div>
+
+<div id="downloads">
+  <button id="dl-md">Download report (.md)</button>
+  <button id="dl-json">Download figures (.jsonl)</button>
+</div>
+<div id="report"></div>
+
+<h2>What it checks</h2>
+<p>This is <a href="https://github.com/munimtechnologies/px4-log-health">px4-log-health</a>'s <code>checkup.py</code>, the same code as its command line and GitHub Action, run here with <a href="https://pyodide.org/">Pyodide</a>. For the time the vehicle was in the air, it reports:</p>
+<ul>
+  <li><strong>Vibration</strong> against the bands Flight Review draws (green below 4.905 m/s², orange to 9.81, red above). PX4 v1.12 and older log this metric in other units (m/s, from delta velocities), so no band is given for them.</li>
+  <li><strong>Accelerometer clipping</strong>, the <strong>GPS jamming indicator</strong> and the receiver's jamming state, satellites and eph, the worst <strong>battery warning</strong>, <strong>failsafe</strong>, and <strong>motor saturation</strong> on multicopters.</li>
+  <li>Where each figure sits among <a href="https://github.com/munimtechnologies/px4-log-health/blob/main/studies/fleet-health-2026/GRADE.md">208 public PX4 flights</a> (for example "p75-p90").</li>
+  <li><strong>GPS delay:</strong> how far the GPS lags the IMU, measured from the flight itself with <a href="https://github.com/munimtechnologies/px4-gps-lag">px4-gps-lag</a>, compared with the log's <code>EKF2_GPS_DELAY</code> and checked against EKF2's own GPS velocity innovations. A new value is suggested only when the lag is more than 50 ms off the setting and the innovations don't point the other way.</li>
+</ul>
+<p>A flag is a reason to look at the log in <a href="https://review.px4.io/">Flight Review</a>, not a diagnosis. A suggested <code>EKF2_GPS_DELAY</code> is a starting value to check with EKF2 log replay, not a setting to fly.</p>
+
+<h2>What leaves your computer</h2>
+<p>Nothing from your log. The page downloads Python (Pyodide) and numpy from the jsDelivr CDN, <a href="https://github.com/PX4/pyulog">pyulog</a> from PyPI, and the checker's code from GitHub at pinned versions, then reads your log in this tab's memory. The checker reads no position. Close the tab and the log is gone. The report stays on screen until you download it.</p>
+
+<p class="fine">Hover-only flights usually can't give a GPS delay: the measurement needs some manoeuvring. Logs from very old PX4 releases may lack topics the checker reads. Large logs (tens of MB) take a minute or two.</p>
+
+<p class="fine">By MV2 of Munim, Inc. (<a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a>). The checker and this page were made with AI agents working in his name. Code Apache-2.0; the fleet figures come from PX4 Flight Review public logs (CC BY 4.0). Questions and bug reports: <a href="https://github.com/munimtechnologies/px4-log-health/issues">px4-log-health issues</a>.</p>
+
+<script src="core.js"></script>
+<script>
+(function () {
+  "use strict";
+  var go = document.getElementById("go"), input = document.getElementById("files");
+  var status = document.getElementById("status"), report = document.getElementById("report");
+  var downloads = document.getElementById("downloads");
+  var last = {md: "", rows: ""}, loaded = false, busy = false;
+  var worker = new Worker("worker.js");
+
+  function say(text, error) {
+    status.textContent = text;
+    status.className = error ? "error" : "";
+  }
+
+  function update() {
+    go.disabled = busy || !loaded || !input.files.length;
+  }
+
+  function save(name, text, type) {
+    var url = URL.createObjectURL(new Blob([text], {type: type}));
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  worker.onmessage = function (e) {
+    var m = e.data;
+    if (m.type === "status") {
+      say(m.text + "...");
+    } else if (m.type === "ready") {
+      loaded = true;
+      say("Ready (checkup " + m.version + "). Pick one or more .ulg files.");
+    } else if (m.type === "done") {
+      busy = false;
+      last = {md: m.md, rows: m.rows};
+      report.innerHTML = PX4Check.mdToHtml(m.md);
+      downloads.style.display = "block";
+      say("Done. The report is below.");
+    } else if (m.type === "error") {
+      busy = false;
+      say(m.text, true);
+    }
+    update();
+  };
+  worker.onerror = function (e) {
+    busy = false;
+    say("The checker stopped: " + (e.message || "unknown error") + ". Reload the page to try again.", true);
+    update();
+  };
+  worker.postMessage({type: "init"});
+
+  input.addEventListener("change", update);
+  go.addEventListener("click", function () {
+    var picked = Array.prototype.slice.call(input.files);
+    if (!picked.length) {
+      return;
+    }
+    busy = true;
+    update();
+    report.innerHTML = "";
+    downloads.style.display = "none";
+    say("Reading " + picked.length + " file" + (picked.length === 1 ? "" : "s") + "...");
+    Promise.all(picked.map(function (f) {
+      return f.arrayBuffer().then(function (buf) { return {name: f.name, data: buf}; });
+    })).then(function (files) {
+      worker.postMessage({type: "check", files: files}, files.map(function (f) { return f.data; }));
+    }, function (err) {
+      busy = false;
+      say("Could not read the file: " + err, true);
+      update();
+    });
+  });
+  document.getElementById("dl-md").addEventListener("click", function () {
+    save("px4-log-check.md", last.md, "text/markdown");
+  });
+  document.getElementById("dl-json").addEventListener("click", function () {
+    save("px4-log-check.jsonl", last.rows, "application/json");
+  });
+})();
+</script>
+</body>
+</html>
