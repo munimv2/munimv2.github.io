@@ -78,7 +78,7 @@ docker compose up -d</pre>
 <h2>4. The settings worth checking after any of these</h2>
 <pre>services:
   open-webui:
-    image: ghcr.io/open-webui/open-webui:v0.12.0   # pin a tested release; 0.11.4+ fixes 15+ advisories
+    image: ghcr.io/open-webui/open-webui:v0.12.5   # pin a tested release; 0.12.2+ fixes every published advisory (1 November 2026)
     ports:
       - "127.0.0.1:3000:8080"                       # put your HTTPS proxy in front
     environment:

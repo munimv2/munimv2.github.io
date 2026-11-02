@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open WebUI security advisories 2026: is my version affected? (0.11.4 fixes 15+ with no CVE ID; update to 0.12.0)</title>
-<meta name="description" content="Open WebUI before 0.11.4 is affected by 15+ September 2026 advisories that have no CVE ID and aren't in OSV, including session-token theft from any website a signed-in user visits (GHSA-vpq8-f445-hcq7). 0.12.0 (10 October 2026) adds more security fixes, some not yet published. Check your Open WebUI version free. By MV2 of Munim, Inc., with AI agents.">
+<title>Open WebUI security advisories 2026: is my version affected? (update to 0.12.5; GHSA-3vvh-g22g-jq6r is fixed in 0.12.2)</title>
+<meta name="description" content="Open WebUI 0.12.5 (29 October 2026) is the newest release and its notes say it has security fixes. 0.12.2 is the oldest release clear of every published advisory, including GHSA-3vvh-g22g-jq6r (18 October 2026); 0.11.4 is clear of all 26 from September. Free version check by MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -24,9 +24,22 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama</a> · <strong>Open WebUI</strong> · <a href="openwebui-reverse-proxy.html">Open WebUI behind a proxy</a> · <a href="vllm.html">vLLM</a> · <a href="n8n.html">n8n</a> · <a href="anythingllm.html">AnythingLLM</a> · <a href="litellm.html">LiteLLM</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Open WebUI security advisories: is my version affected?</h1>
+<div id="update-2026-11-01" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><strong>Update, 1 November 2026:</strong> the short answer is now <strong>update to 0.12.5</strong>, Open WebUI's newest release (29 October 2026). Its release notes say it contains security fixes and strongly recommend updating every deployment as soon as possible. Open WebUI says it will publish the advisories for those fixes after CVE IDs are assigned; none had been published when this was checked, so this page cannot list them yet.</p>
+<p>Since this page was checked on 12 October 2026, Open WebUI has published one more advisory:</p>
+<ul>
+<li><a href="https://github.com/open-webui/open-webui/security/advisories/GHSA-3vvh-g22g-jq6r">GHSA-3vvh-g22g-jq6r</a> (18 October 2026, medium, CVSS 4.3, no CVE ID): "Channel members can post messages shown as a webhook via client-supplied message metadata". Affected: <code>&gt;= 0.7.0, &lt; 0.12.2</code>; fixed in 0.12.2.</li>
+</ul>
+<p>GHSA-3vvh-g22g-jq6r only matters if channels are turned on (<code>ENABLE_CHANNELS</code>) and a channel has a webhook: a member who can post in that channel can make a message look as if the webhook sent it.</p>
+<p>Read per version, 0.12.5 is clear of all 166 advisories Open WebUI has published (the newest on 18 October 2026), and 0.12.2 is the oldest release that is. 0.12.0, which this page recommended on 12 October, is affected by GHSA-3vvh-g22g-jq6r.</p>
+<p>This page said on 12 October that Open WebUI's September advisories had no CVE IDs. When checked on 1 November 2026, 26 of the 26 advisories Open WebUI published in September 2026 had a CVE ID (for example, <a href="https://github.com/open-webui/open-webui/security/advisories/GHSA-2h26-836q-4jh2">GHSA-2h26-836q-4jh2</a> is CVE-2026-109293).</p>
+<p>On 1 November 2026, GHSA-3vvh-g22g-jq6r had no record in OSV.dev or in GitHub's reviewed Advisory Database, and PyPI did not list it for open-webui 0.12.0, so pip-audit and Dependabot do not flag it yet.</p>
+<p>Source: <a href="https://github.com/open-webui/open-webui/security/advisories">Open WebUI's security advisories on GitHub</a> and its release notes, read through GitHub's API on 1 November 2026, with release dates from PyPI (checked with AI agents working for MV2 of Munim, Inc.). The steps below were written for 0.12.0.</p>
+</div>
+
 <p class="by">By MV2 of Munim, Inc., with AI agents. Checked against Open WebUI's own security advisories and release notes, the GitHub Advisory Database and OSV.dev on 12 October 2026; every row links its source.</p>
 
-<p><strong>Short answer:</strong> update to <strong>0.12.0</strong> (10 October 2026), the latest release. Its notes say it "includes security and access-control fixes" and that some of them "may be withheld for a short time". In other words, more advisories for versions before 0.12.0 will probably be published soon. The minimum to be past every advisory published so far is <strong>0.11.4</strong>.</p>
+<p><strong>Short answer:</strong> update to <strong>0.12.5</strong> (29 October 2026), the newest release when this page was updated on 1 November 2026. Its notes say it contains security fixes whose advisories Open WebUI will publish after CVE IDs are assigned. The minimum to be past every advisory published so far is <strong>0.12.2</strong>; 0.11.4 is clear of the 26 published in September 2026.</p>
 <p>Open WebUI's September 2026 advisories, at least 15 of them all fixed in 0.11.4, <strong>have no CVE IDs</strong>. As of 12 October 2026 they aren't in the GitHub Advisory Database or OSV.dev, so <code>pip-audit</code>, Dependabot and other scanners that read those databases can report 0.11.3 as clean. Most people run Open WebUI from the <code>ghcr.io/open-webui/open-webui</code> Docker image, which those scanners don't check at all.</p>
 
 <form action="index.html" method="get">
@@ -48,7 +61,7 @@
 
 <h2>What to do</h2>
 <ol>
-  <li><strong>Update to 0.12.0.</strong> With Docker, pull the image again (<code>docker pull ghcr.io/open-webui/open-webui:main</code>, or a pinned <code>:v0.12.0</code>) and recreate the container, keeping your data volume. Back up the volume first. 0.12.0 runs a database migration, and a few behaviours changed: a <code>?q=</code> link now only fills the message box instead of sending it, and Redis room channels are on by default.</li>
+  <li><strong>Update to 0.12.5.</strong> With Docker, pull the image again (<code>docker pull ghcr.io/open-webui/open-webui:main</code>, or a pinned <code>:v0.12.5</code>) and recreate the container, keeping your data volume. Back up the volume first. 0.12.0 runs a database migration, and a few behaviours changed: a <code>?q=</code> link now only fills the message box instead of sending it, and Redis room channels are on by default.</li>
   <li><strong>Turn on two-factor sign-in.</strong> 0.12.0 adds it (<code>ENABLE_MFA</code>). It's most useful for admin accounts on servers other people can reach.</li>
   <li><strong>Check who can reach it.</strong> <code>ss -tlnp | grep 3000</code> on Linux (or <code>8080</code> for a pip install). If you publish it with Docker, <code>-p 127.0.0.1:3000:8080</code> keeps it local. For other machines, put a reverse proxy with TLS in front: <a href="openwebui-reverse-proxy.html">Open WebUI behind nginx or Caddy</a> has configs that also fix the usual WebSocket and streaming errors. On Linux, ports Docker publishes skip ufw and firewalld.</li>
   <li><strong>Behind a proxy?</strong> Set <code>FORWARDED_ALLOW_IPS</code> to your proxy's address unless nothing but the proxy can reach Open WebUI. If you start it with <code>open-webui serve</code> (pip installs), versions before 0.12.0 ignored this setting and trusted forwarded headers from every connection.</li>
@@ -72,7 +85,7 @@
     <tr><td>before 0.9.0</td><td>0.9.0</td><td><a href="https://www.cve.org/CVERecord?id=CVE-2026-44721">CVE-2026-44721</a>, CVE-2026-45349: stored XSS through models; a user with an API key can continue another user's chat</td></tr>
   </tbody>
 </table>
-<p>This page will add the 0.12.0 advisories once Open WebUI publishes them. Until then, treat anything before 0.12.0 as needing the update.</p>
+<p>This page will add the advisories for 0.12.5's security fixes once Open WebUI publishes them. Until then, treat anything before 0.12.5 as needing the update.</p>
 
 <h2>Want a second pair of eyes?</h2>
 <p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Open WebUI or Ollama server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a> the output of the free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script (<code>python3 local_ai_checkup.py --json</code>), your OS, and how your team uses Open WebUI. MV2 never asks for passwords, keys or remote access.</p>
