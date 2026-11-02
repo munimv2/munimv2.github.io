@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LiteLLM proxy advisories: am I affected? (GHSA-7hp6-4w63-5g45, GHSA-g5ff-637f-6q2m, CVE-2026-49468)</title>
-<meta name="description" content="LiteLLM 1.91.0 up to 1.100.4: any internal user can become proxy admin and run host commands (GHSA-7hp6-4w63-5g45, CVSS 9.9, no CVE ID). Before 1.95.0: viewer-role file read. Before 1.84.0: Host header auth bypass. Check your LiteLLM version. Free, by MV2 of Munim, Inc., with AI agents.">
+<title>LiteLLM proxy advisories, October 2026: am I affected? (GHSA-w4c7-34wj-hqm8, GHSA-7hp6-4w63-5g45, GHSA-g5ff-637f-6q2m)</title>
+<meta name="description" content="LiteLLM&#x27;s critical advisory of 27 October 2026, GHSA-w4c7-34wj-hqm8 (CVSS 10.0, proxies with an Enterprise licence), is fixed in 1.106.5, 1.105.6, 1.104.8 and 1.103.10. Check your LiteLLM version. Free, by MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -23,6 +23,13 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <a href="n8n.html">n8n</a> · <a href="dify.html">Dify</a> · <a href="langflow.html">Langflow</a> · <a href="flowise.html">Flowise</a> · <strong>LiteLLM</strong> · <a href="litellm-hardening.html">LiteLLM hardening</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>LiteLLM proxy: am I affected?</h1>
+<div id="update-2026-11-01" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><strong>Update, 1 November 2026:</strong> on 27 October 2026 LiteLLM published a critical advisory, <a href="https://github.com/BerriAI/litellm/security/advisories/GHSA-w4c7-34wj-hqm8">GHSA-w4c7-34wj-hqm8</a> (CVSS 10.0, no CVE ID), titled "Unauthenticated file read leaks master key on Enterprise proxy". By the advisory, an unauthenticated request to a LiteLLM proxy running with an Enterprise licence can make it read a local file such as <code>/proc/self/environ</code> and send it out, which gives away <code>LITELLM_MASTER_KEY</code> and provider API keys. The advisory says proxies without an Enterprise licence are not affected.</p>
+<p>It is fixed per release line in <strong>1.106.5</strong>, 1.105.6, 1.104.8 and 1.103.10, all on PyPI. That makes this page's 12 October advice (1.104.0 or newer, with 1.105.0 best) out of date: 1.104.0 to 1.104.7, 1.105.0 to 1.105.5 and every release before 1.103.10 are affected. Read per release line, every LiteLLM advisory published up to 27 October 2026 that names a fixed version is fixed in those four releases. The newest LiteLLM release on PyPI when this was checked, 1.106.6, is clear of them too. If your proxy ran with an Enterprise licence and could be reached, update, then rotate the master key and the provider API keys.</p>
+<p>On 1 November 2026 this advisory had no record in OSV.dev or in GitHub's reviewed Advisory Database, and PyPI did not list it as a vulnerability of litellm 1.104.0 or 1.105.0, so pip-audit and Dependabot do not flag it yet. Check your version against the advisory itself.</p>
+<p>Source: <a href="https://github.com/BerriAI/litellm/security/advisories">LiteLLM's security advisories on GitHub</a>, read through GitHub's API on 1 November 2026, with release lists from PyPI (checked with AI agents working for MV2 of Munim, Inc.). The <a href="./">free browser checker</a> includes this advisory.</p>
+</div>
+
 <p class="by">By MV2 of Munim, Inc., with AI agents. Checked against LiteLLM's own security advisories and the GitHub Advisory Database on 12 October 2026; the CVE-2026-84377 row was corrected on 13 October 2026 to OSV's per-release-line ranges. Every row links its source.</p>
 
 <p>A LiteLLM proxy usually holds the keys to every model provider you use, so its bugs are worth checking. The newest two have no CVE ID, and OSV.dev had no record of them on 11 October 2026, so dependency scanners that read OSV won't report them:</p>
@@ -43,7 +50,7 @@
 
 <h2>What to do</h2>
 <ol>
-  <li><strong>Update to 1.104.0 or newer</strong> (the latest release, 1.105.0, is best). If you must stay on a release line, the privilege escalation is fixed in 1.100.4, 1.101.3, 1.102.2 and 1.103.1, and the file read needs at least 1.95.0.</li>
+  <li><strong>Update to 1.106.5 or newer</strong> (1.106.6 was the newest release on PyPI on 1 November 2026). If you must stay on a release line, use at least 1.105.6 (1.105.x), 1.104.8 (1.104.x) or 1.103.10 (1.103.x): each has every fix named so far, including GHSA-w4c7-34wj-hqm8. Releases before 1.103.10 are affected by GHSA-w4c7-34wj-hqm8 if the proxy runs with an Enterprise licence; see the update above.</li>
   <li><strong>If you can't update today,</strong> set <code>EXPERIMENTAL_UI_LOGIN=false</code>. It closes the privilege escalation path, but it also breaks CLI SSO and Claude Code gateway login. Nothing short of updating closes the viewer-role file read, so remove viewer accounts you don't need.</li>
   <li><strong>If internal or viewer users you don't fully trust could reach an affected version,</strong> rotate the master key and every provider key the proxy holds, and check the admin list and the MCP server settings for entries you didn't make.</li>
   <li><strong>Check your install history for 1.82.7 and 1.82.8.</strong> Look in <code>pip</code> logs, lock files, CI logs and image build logs from March 2026. If either shows up, rotate every provider key, the master key and any cloud credentials on that machine or in that CI job.</li>
