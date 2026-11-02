@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Langflow has no login? Turn off LANGFLOW_AUTO_LOGIN: a self-hosted Langflow security checklist</title>
-<meta name="description" content="A pip-installed Langflow signs everyone in as superuser (LANGFLOW_AUTO_LOGIN defaults to True) and allows any website's origin with credentials. Checklist: check with /api/v1/auto_login, set LANGFLOW_AUTO_LOGIN=False with a superuser password, keep LANGFLOW_SECRET_KEY (don't swap it on an existing install), turn off sign-up and the superuser CLI, set LANGFLOW_CORS_ORIGINS, secure cookies, API keys, code execution and SSRF settings, port 7860 on 127.0.0.1, and tests. By MV2 of Munim, Inc., with AI agents.">
+<title>Langflow security checklist: auto-login is off from 1.13.0 (LANGFLOW_SUPERUSER_PASSWORD), LANGFLOW_SSRF_ALLOWED_HOSTS, CORS, port 7860</title>
+<meta name="description" content="Langflow 1.13.0 (22 October 2026) turned LANGFLOW_AUTO_LOGIN off by default; before it, a pip-installed Langflow signed everyone in as superuser. How to set LANGFLOW_SUPERUSER_PASSWORD without losing your flows, LANGFLOW_SSRF_ALLOWED_HOSTS, CORS, secret key, code execution, port 7860. Checked against 1.13.0. By MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -19,21 +19,28 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <a href="langflow.html">Langflow advisories</a> · <strong>Langflow hardening</strong> · <a href="litellm-hardening.html">LiteLLM hardening</a> · <a href="n8n-hardening.html">n8n hardening</a> · <a href="ollama-remote-access.html">Remote access without exposing it</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Langflow has no login? Turn off auto-login, and the other defaults to change</h1>
+<div id="update-2026-11-02" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><strong>Update, 2 November 2026:</strong> Langflow <strong>1.13.0</strong> (22 October 2026) turns automatic login <strong>off by default</strong>. In Langflow's settings code, <code>AUTO_LOGIN</code> defaults to <code>True</code> in <a href="https://github.com/langflow-ai/langflow/blob/v1.12.8/src/lfx/src/lfx/services/settings/auth.py">1.12.8</a> and to <code>False</code> in <a href="https://github.com/langflow-ai/langflow/blob/v1.13.0/src/lfx/src/lfx/services/settings/auth.py">1.13.0</a> (<a href="https://github.com/langflow-ai/langflow/pull/14993">pull request #14993</a>). With it off, Langflow stops at startup until <code>LANGFLOW_SUPERUSER_PASSWORD</code> is set, and it refuses the old default password. This page was written for 1.12.x. Steps 2 and 3 still apply to older releases and to anyone who sets <code>LANGFLOW_AUTO_LOGIN=true</code>.</p>
+<p><strong>Upgrading an install that used auto-login? Keep the same account.</strong> Your flows belong to the account auto-login signed you in as (<code>langflow</code>, unless you set <code>LANGFLOW_SUPERUSER</code>). Langflow's <a href="https://docs.langflow.org/api-keys-and-authentication#upgrade-from-auto-login">upgrade guide</a> warns that creating a different superuser, like the <code>administrator</code> example in step 3, does not move those flows to it. Set a password on the existing account before you upgrade, or see <a href="langflow-superuser-password.html">Langflow won't start: "Username and password must be set"</a> if you already upgraded.</p>
+<p>The newest release when checked on 2 November 2026 is <strong>1.13.0</strong> (22 October 2026). It is clear of all 35 advisories Langflow has published for the <code>langflow</code> package (the newest on 28 September 2026), so the steps below now name 1.13.0 instead of 1.12.5. Step 8's SSRF advice still holds in 1.13.0: <a href="https://github.com/langflow-ai/langflow/blob/v1.13.0/src/lfx/src/lfx/services/settings/groups/security.py">SSRF protection</a> is on, <code>LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK</code> still defaults to <code>True</code> and <code>LANGFLOW_SSRF_ALLOWED_HOSTS</code> is still empty by default.</p>
+<p>Read from Langflow's source, pull requests, documentation and <a href="https://github.com/langflow-ai/langflow/security/advisories">security advisories</a> on 2 November 2026, with AI agents working for MV2 of Munim, Inc.</p>
+</div>
+
 <p class="by">By MV2 of Munim, Inc., with AI agents. Checked against Langflow's <a href="https://docs.langflow.org/api-keys-and-authentication">API keys and authentication</a> and <a href="https://docs.langflow.org/environment-variables">environment variables</a> docs (version 1.12.x), Langflow's source (<code>api/v1/login.py</code>) and its <a href="https://github.com/langflow-ai/langflow/security/advisories">security advisories</a> on 12 October 2026, with 1.12.5 the latest release. For your own servers only.</p>
 
 <p>If you installed Langflow with <code>pip</code> or <code>uv</code> and ran <code>langflow run</code>, it never asked you for a password. That's auto-login: Langflow's docs say it "automatically signs in all users as the configured superuser". That's fine on a laptop that nobody else can reach. On a server, a shared machine or a forwarded port, it means anyone who can open the page is the admin, and in Langflow the admin can run Python on the host. This page goes through the settings to change, in order. To check your version against known flaws, use the <a href="langflow.html">Langflow advisories page</a>.</p>
 
 <h2>The short answer</h2>
 <ul>
-  <li><strong>Update first.</strong> Before 1.10.3 a signed-in user, and with auto-login anyone, can run OS commands through MCP server settings (<a href="https://github.com/langflow-ai/langflow/security/advisories/GHSA-w794-rj3p-xv45">GHSA-w794-rj3p-xv45</a>, critical). Go to 1.12.5.</li>
-  <li><strong><code>LANGFLOW_AUTO_LOGIN</code> defaults to <code>True</code></strong> for pip installs. Langflow's docs add that "official Langflow Docker images set <code>false</code>", so a Docker install usually already has a login. Set it to <code>False</code> with your own superuser name and password.</li>
+  <li><strong>Update first.</strong> Before 1.10.3 a signed-in user, and with auto-login anyone, can run OS commands through MCP server settings (<a href="https://github.com/langflow-ai/langflow/security/advisories/GHSA-w794-rj3p-xv45">GHSA-w794-rj3p-xv45</a>, critical). Go to 1.13.0.</li>
+  <li><strong><code>LANGFLOW_AUTO_LOGIN</code> defaults to <code>True</code></strong> for pip installs before 1.13.0. From 1.13.0 it defaults to <code>False</code>, and Langflow will not start until <code>LANGFLOW_SUPERUSER_PASSWORD</code> is set (<a href="langflow-superuser-password.html">what to do</a>). Langflow's docs add that "official Langflow Docker images set <code>false</code>", so a Docker install usually already has a login. Set it to <code>False</code> with your own superuser name and password.</li>
   <li><strong>CORS is open by default:</strong> origins <code>*</code> with credentials allowed. Langflow's docs warn that this means "any website can make requests to your Langflow API". Set <code>LANGFLOW_CORS_ORIGINS</code> to the address you use.</li>
   <li><strong>Don't swap <code>LANGFLOW_SECRET_KEY</code> on an install that already stores credentials.</strong> Langflow encrypts stored API keys with it. Changing it needs the migration script from Langflow's SECURITY.md.</li>
   <li><strong>Keep port 7860 on <code>127.0.0.1</code></strong> and reach it over a VPN or an HTTPS proxy. Langflow's docs: "Never expose Langflow ports directly to the internet without proper security measures."</li>
 </ul>
 
 <h2>1. Update</h2>
-<p>Find your version at <code>http://127.0.0.1:7860/api/v1/version</code> or with <code>pip show langflow</code>, and type it into the <a href="index.html?product=langflow">CVE checker</a>. The critical 2026 advisories are fixed by 1.10.3; 1.12.0 also removes an <code>eval()</code> in tool-mode inputs (<a href="https://github.com/langflow-ai/langflow/security/advisories/GHSA-33p4-w7j3-33mw">GHSA-33p4-w7j3-33mw</a>). In Docker, pin a release tag you've tested, such as <code>langflowai/langflow:1.12.5</code>, rather than <code>latest</code>.</p>
+<p>Find your version at <code>http://127.0.0.1:7860/api/v1/version</code> or with <code>pip show langflow</code>, and type it into the <a href="index.html?product=langflow">CVE checker</a>. The critical 2026 advisories are fixed by 1.10.3; 1.12.0 also removes an <code>eval()</code> in tool-mode inputs (<a href="https://github.com/langflow-ai/langflow/security/advisories/GHSA-33p4-w7j3-33mw">GHSA-33p4-w7j3-33mw</a>). In Docker, pin a release tag you've tested, such as <code>langflowai/langflow:1.13.0</code>, rather than <code>latest</code>.</p>
 
 <h2>2. Is auto-login on? One request tells you</h2>
 <p>The Langflow editor calls <code>/api/v1/auto_login</code> when it loads. In Langflow's source, that endpoint returns a superuser access token when auto-login is on, and <code>403</code> with "Auto login is disabled." when it's off. On the Langflow machine:</p>
@@ -64,7 +71,7 @@ LANGFLOW_REFRESH_SECURE=True</pre>
 <p><strong>Docker:</strong> the official images already set auto-login off, so the image needs a superuser password at start. A Compose file that keeps the port on this machine:</p>
 <pre>services:
   langflow:
-    image: langflowai/langflow:1.12.5
+    image: langflowai/langflow:1.13.0
     env_file: .env
     ports:
       - "127.0.0.1:7860:7860"   # not "7860:7860": on Linux, Docker-published ports skip ufw
