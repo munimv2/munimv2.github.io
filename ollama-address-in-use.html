@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama "Error: listen tcp 127.0.0.1:11434: bind: address already in use": Ollama is already running (safe fix)</title>
+<meta name="description" content="What 'Error: listen tcp 127.0.0.1:11434: bind: address already in use' (Windows: 'Only one usage of each socket address') from ollama serve means, how to see what holds port 11434 on Linux, macOS and Windows, and why OLLAMA_HOST=0.0.0.0 is not the fix. Checked against Ollama's v0.40.14 source. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/ollama-address-in-use.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.6rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  h3 { font-size: 1.05rem; margin-top: 1.4rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; }
+  pre { padding: 0.7rem; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
+  th, td { border: 1px solid #ddd; padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <a href="secure-ollama.html">Lock down Ollama</a> · <strong>Port 11434 already in use</strong> · <a href="ollama-could-not-connect.html">Could not connect to ollama server</a> · <a href="ollama-remote-access.html">Use Ollama remotely</a> · <a href="docker-ollama.html">Docker can't reach Ollama</a> · <a href="ollama-gpu.html">Ollama slow / not using GPU</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<h1>Ollama: "Error: listen tcp 127.0.0.1:11434: bind: address already in use"</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 5 November 2026 against Ollama's source at release <a href="https://github.com/ollama/ollama/tree/v0.40.14">v0.40.14</a> (3 November 2026) and its Linux install script. For your own machines only.</p>
+
+<p>On Windows the same error reads:</p>
+<pre>Error: listen tcp 127.0.0.1:11434: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.</pre>
+
+<p><strong>Short answer:</strong> Ollama is almost always <strong>already running</strong>. <code>ollama serve</code> starts a second server, and only one program can listen on <code>127.0.0.1:11434</code> at a time. The Linux installer sets Ollama up as a systemd service that starts at install and at every boot. On macOS and Windows, the Ollama app runs the server in the background. You usually don't need <code>ollama serve</code> at all: <code>ollama list</code>, <code>ollama pull</code> and <code>ollama run</code> talk to the server that is already there.</p>
+
+<div class="warn">
+<p><strong>Don't "fix" it with <code>OLLAMA_HOST=0.0.0.0</code>.</strong> That doesn't free the port. It changes <em>who can reach</em> your server: every device on every network this machine joins. Ollama's API has no login, so they could use your models and pull or delete them. If you really need Ollama from another device, use one of the narrow options on <a href="ollama-remote-access.html">Use Ollama remotely</a>.</p>
+</div>
+
+<h2>1. See what is holding port 11434</h2>
+<p>First ask the port itself. If this prints <code>Ollama is running</code>, the program on the port is Ollama's server:</p>
+<pre>curl http://127.0.0.1:11434</pre>
+<table>
+  <tr><th>OS</th><th>Which program, and on which address</th></tr>
+  <tr><td>Linux</td><td><code>sudo ss -ltnp 'sport = :11434'</code>, then <code>systemctl status ollama</code></td></tr>
+  <tr><td>macOS</td><td><code>lsof -nP -iTCP:11434 -sTCP:LISTEN</code></td></tr>
+  <tr><td>Windows</td><td><code>netstat -ano | findstr :11434</code>, then <code>tasklist /FI "PID eq 1234"</code> with the PID from the last column</td></tr>
+  <tr><td>Docker</td><td><code>docker ps --filter "publish=11434"</code></td></tr>
+</table>
+<p><strong>Look at the address while you're there.</strong> <code>127.0.0.1:11434</code> means only this machine can connect. <code>0.0.0.0:11434</code>, <code>*:11434</code> or <code>[::]:11434</code> means it's listening on every network interface, with no login. If you didn't mean that, see <a href="secure-ollama.html">Lock down Ollama</a>. A Docker container published with <code>-p 11434:11434</code> listens on every interface too, and on Linux Docker's port rules skip ufw and firewalld (<a href="docker-ollama.html">details and the fix</a>).</p>
+
+<h2>2. Pick the fix that matches what you wanted</h2>
+
+<h3>You just wanted to use Ollama</h3>
+<p>Skip <code>ollama serve</code>. Run <code>ollama list</code> or <code>ollama run &lt;model&gt;</code> and they use the running server.</p>
+
+<h3>You wanted to see the server's logs, or change its settings</h3>
+<ul>
+  <li><strong>Linux (installed with the script):</strong> keep the service and work with it. Logs: <code>journalctl -u ollama -f</code>. Settings: <code>sudo systemctl edit ollama.service</code>, add lines such as <code>Environment="OLLAMA_DEBUG=1"</code> under <code>[Service]</code>, then <code>sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart ollama</code>. Settings exported in your shell don't reach the service.</li>
+  <li><strong>Linux, if you really want it in a terminal:</strong> <code>sudo systemctl stop ollama</code> first (and <code>sudo systemctl disable ollama</code> if it shouldn't come back at boot). Expect your models to seem to vanish: the service runs as the <code>ollama</code> user, whose home is <code>/usr/share/ollama</code>, while <code>ollama serve</code> run as you reads <code>~/.ollama/models</code>. Point it at the service's models with <code>OLLAMA_MODELS=/usr/share/ollama/.ollama/models</code> if your user can read them, or pull again.</li>
+  <li><strong>macOS:</strong> quit Ollama from its menu-bar icon (Quit Ollama), then run <code>ollama serve</code>.</li>
+  <li><strong>Windows:</strong> quit Ollama from its icon in the notification area (Quit Ollama), then run <code>ollama serve</code>. Ending only the server process in Task Manager isn't enough: the app starts it again, as reported in <a href="https://github.com/ollama/ollama/issues/3575">ollama/ollama#3575</a>.</li>
+</ul>
+
+<h3>You wanted a second Ollama on purpose</h3>
+<p>Give it its own port, still on localhost, and point clients at the same address:</p>
+<pre>OLLAMA_HOST=127.0.0.1:11435 ollama serve
+OLLAMA_HOST=127.0.0.1:11435 ollama list</pre>
+<p>In PowerShell: <code>$env:OLLAMA_HOST="127.0.0.1:11435"; ollama serve</code>, and set the same variable in the window you run clients from.</p>
+
+<h3>Something that isn't Ollama is on 11434</h3>
+<p>If <code>curl</code> doesn't print <code>Ollama is running</code>, stop or move that program, or run Ollama on another localhost port as above.</p>
+
+<h2>Why the message looks like this</h2>
+<p>In Ollama v0.40.14, <code>ollama serve</code> runs <code>RunServer</code> in <a href="https://github.com/ollama/ollama/blob/v0.40.14/cmd/cmd.go">cmd/cmd.go</a>. It calls <code>net.Listen("tcp", envconfig.Host().Host)</code> and returns any error unchanged. The address comes from <code>OLLAMA_HOST</code>, which defaults to <code>127.0.0.1:11434</code> (<a href="https://github.com/ollama/ollama/blob/v0.40.14/envconfig/config.go">envconfig/config.go</a>). <a href="https://github.com/ollama/ollama/blob/v0.40.14/main.go">main.go</a> hands the error to Cobra's <code>CheckErr</code>, which prints <code>Error:</code> in front of it. Everything after <code>bind:</code> comes from the operating system, which is why Windows words it differently. The Linux service comes from Ollama's <a href="https://github.com/ollama/ollama/blob/v0.40.14/scripts/install.sh">install script</a>: it writes <code>/etc/systemd/system/ollama.service</code> with <code>ExecStart=$BINDIR/ollama serve</code>, <code>User=ollama</code> and <code>Restart=always</code>, then enables and starts it.</p>
+<p>The opposite problem, a client that finds <em>no</em> server, is <a href="ollama-could-not-connect.html">"could not connect to ollama server, run 'ollama serve' to start it"</a>.</p>
+
+<h2>Check the result</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script flags AI ports that other machines can reach, and checks your Ollama version, <code>OLLAMA_ORIGINS</code> and Docker port bindings. It's read-only and sends nothing off the machine. Then check the version with the <a href="index.html">CVE checker</a>.</p>
+
+<h2>Want it checked for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not a security certification or professional advice. Only change machines you own or are allowed to manage. Checked on 5 November 2026 against Ollama v0.40.14. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
