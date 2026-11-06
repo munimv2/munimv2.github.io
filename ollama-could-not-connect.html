@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ollama "Error: could not connect to ollama server, run 'ollama serve' to start it" on Linux: causes and fixes</title>
-<meta name="description" content="Why ollama list, pull or run print 'could not connect to ollama server, run 'ollama serve' to start it' on Linux and WSL: the systemd service is stopped, there is no systemd, OLLAMA_HOST points elsewhere, or Ollama is in Docker. Checked against Ollama's v0.40.14 source. By MV2 of Munim, Inc., with AI agents.">
+<meta name="description" content="Why ollama list, pull or run print 'could not connect to ollama server, run 'ollama serve' to start it' on Linux and WSL: the systemd service is stopped, there is no systemd, OLLAMA_HOST points elsewhere, or Ollama is in Docker. Checked against Ollama's v0.40.15 source. By MV2 of Munim, Inc., with AI agents.">
 <link rel="canonical" href="https://munimv2.github.io/ollama-could-not-connect.html">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
@@ -20,9 +20,9 @@
 </style>
 </head>
 <body>
-<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <a href="secure-ollama.html">Lock down Ollama</a> · <a href="ollama-address-in-use.html">Port 11434 already in use</a> · <strong>Could not connect to ollama server</strong> · <a href="ollama-remote-access.html">Use Ollama remotely</a> · <a href="docker-ollama.html">Docker can't reach Ollama</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <a href="secure-ollama.html">Lock down Ollama</a> · <a href="ollama-address-in-use.html">Port 11434 already in use</a> · <strong>Could not connect to ollama server</strong> · <a href="ollama-version-warning.html">ollama -v warnings</a> · <a href="ollama-remote-access.html">Use Ollama remotely</a> · <a href="docker-ollama.html">Docker can't reach Ollama</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Ollama: "Error: could not connect to ollama server, run 'ollama serve' to start it"</h1>
-<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 5 November 2026 against Ollama's source at release <a href="https://github.com/ollama/ollama/tree/v0.40.14">v0.40.14</a> (3 November 2026) and its Linux install script. For your own machines only.</p>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 6 November 2026 against Ollama's source at release <a href="https://github.com/ollama/ollama/tree/v0.40.15">v0.40.15</a> (3 November 2026) and its Linux install script. For your own machines only.</p>
 
 <p><strong>Short answer:</strong> <code>ollama list</code>, <code>ollama pull</code> or <code>ollama run</code> tried the server at <code>OLLAMA_HOST</code> (by default <code>127.0.0.1:11434</code>) and the connection was refused: nothing is listening there. On macOS and Windows the command then tries to open the Ollama app. On Linux, and so in WSL, it doesn't start anything. It prints this message instead. Find out why the server isn't running, rather than leaving <code>ollama serve</code> open in a terminal forever.</p>
 <p>Quick test: <code>curl http://127.0.0.1:11434</code> prints <code>Ollama is running</code> when a server is up.</p>
@@ -51,7 +51,7 @@ systemd=true</pre>
 </div>
 
 <h2>Why the message looks like this</h2>
-<p>In Ollama v0.40.14, commands such as <code>list</code>, <code>pull</code> and <code>run</code> first run <code>checkServerHeartbeat</code> in <a href="https://github.com/ollama/ollama/blob/v0.40.14/cmd/cmd.go">cmd/cmd.go</a>. If the heartbeat fails with a refused connection, it calls <code>startApp</code>. On anything other than Windows and macOS, <code>startApp</code> lives in <a href="https://github.com/ollama/ollama/blob/v0.40.14/cmd/start_default.go">cmd/start_default.go</a> and only returns this error. Cobra's <code>CheckErr</code> in <a href="https://github.com/ollama/ollama/blob/v0.40.14/main.go">main.go</a> prints it with <code>Error:</code> in front.</p>
+<p>In Ollama v0.40.15, commands such as <code>list</code>, <code>pull</code> and <code>run</code> first run <code>checkServerHeartbeat</code> in <a href="https://github.com/ollama/ollama/blob/v0.40.15/cmd/cmd.go">cmd/cmd.go</a>. If the heartbeat fails with a refused connection, it calls <code>startApp</code>. On anything other than Windows and macOS, <code>startApp</code> lives in <a href="https://github.com/ollama/ollama/blob/v0.40.15/cmd/start_default.go">cmd/start_default.go</a> and only returns this error. Cobra's <code>CheckErr</code> in <a href="https://github.com/ollama/ollama/blob/v0.40.15/main.go">main.go</a> prints it with <code>Error:</code> in front.</p>
 
 <h2>Check the result</h2>
 <p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows whether Ollama is running, which address it listens on, and whether other machines can reach it. It's read-only and sends nothing off the machine. Then check the version with the <a href="index.html">CVE checker</a>.</p>
@@ -60,7 +60,7 @@ systemd=true</pre>
 <p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
 
 <footer>
-  <p>General technical information, not a security certification or professional advice. Only change machines you own or are allowed to manage. Checked on 5 November 2026 against Ollama v0.40.14. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+  <p>General technical information, not a security certification or professional advice. Only change machines you own or are allowed to manage. Checked on 6 November 2026 against Ollama v0.40.15. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
   <p>Made by MV2 of Munim, Inc., with AI agents.</p>
 </footer>
 </body>
