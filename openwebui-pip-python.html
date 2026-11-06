@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pip install open-webui: "Could not find a version that satisfies the requirement open-webui (from versions: none)": use Python 3.11 or 3.12</title>
+<meta name="description" content="Why pip install open-webui fails with 'Could not find a version that satisfies the requirement open-webui (from versions: none)' and 'No matching distribution found for open-webui': Open WebUI 0.13.0 only installs on Python 3.11 or 3.12. Tested with pip 26.3 on Python 3.10 to 3.14, with fixes for uv, venv and Docker. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/openwebui-pip-python.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.6rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
+  th, td { border: 1px solid #ddd; padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>pip install open-webui error</strong> · <a href="openwebui-env-ignored.html">Settings "cannot be edited here"</a> · <a href="openwebui-reverse-proxy.html">Open WebUI behind a proxy</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<h1>pip install open-webui: "Could not find a version that satisfies the requirement open-webui (from versions: none)"</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 6 November 2026 by running pip 26.3 on Python 3.10, 3.11, 3.12, 3.13 and 3.14 against PyPI, where the newest Open WebUI is 0.13.0 (3 November 2026). For your own machines only.</p>
+
+<p>The full error looks like this. The first line lists every release pip skipped, so it is shortened here:</p>
+<pre>ERROR: Ignored the following versions that require a different python version: 0.1.124 Requires-Python &gt;=3.11,&lt;3.12.0a1; 0.1.125 Requires-Python &gt;=3.11,&lt;3.12.0a1; …
+ERROR: Could not find a version that satisfies the requirement open-webui (from versions: none)
+ERROR: No matching distribution found for open-webui</pre>
+
+<p><strong>Short answer:</strong> the Python that runs your <code>pip</code> is a version Open WebUI doesn't support. Every Open WebUI release tells PyPI which Python versions it works with, and pip quietly skips every release that doesn't fit. Open WebUI 0.13.0 requires <code>&lt;3.13.0a1,&gt;=3.11</code>, which means Python 3.11 or 3.12. On Python 3.13, 3.14, or 3.10 and older, pip skips all 154 releases, so it finds none. Your network, PyPI and your pip are fine, and upgrading pip doesn't help. Run Open WebUI on Python 3.12 instead: <a href="#uv">with uv</a>, <a href="#venv">in a Python 3.12 virtual environment</a> or <a href="#docker">in Docker</a>.</p>
+
+<h2 id="table">What pip finds on each Python</h2>
+<table>
+  <tr><th>Python running pip</th><th><code>pip install open-webui</code> with pip 26.3</th></tr>
+  <tr><td>3.10</td><td>"(from versions: none)", "No matching distribution found"</td></tr>
+  <tr><td>3.11</td><td>finds and would install open-webui 0.13.0</td></tr>
+  <tr><td>3.12</td><td>finds and would install open-webui 0.13.0</td></tr>
+  <tr><td>3.13</td><td>"(from versions: none)", "No matching distribution found"</td></tr>
+  <tr><td>3.14</td><td>"(from versions: none)", "No matching distribution found"</td></tr>
+</table>
+<p>Open WebUI's own <a href="https://docs.openwebui.com/getting-started/quick-start/">Quick Start</a> says the same: "Open WebUI supports Python 3.11 and 3.12", and Python 3.13 is not supported yet. No Open WebUI release on PyPI accepts Python 3.13 or newer. Releases before 0.5.0 (25 December 2024) accepted only Python 3.11.</p>
+
+<h2 id="which">1. See which Python your pip uses</h2>
+<pre>python3 -m pip --version</pre>
+<p>It prints something like <code>pip 26.3 from … (python 3.13)</code>. The number in brackets is the Python that pip installs for. On Windows, run <code>py -m pip --version</code>; <code>py -0</code> lists the Pythons the launcher can find. Prefer <code>python -m pip</code> over a bare <code>pip</code>: then you know which Python you're installing into.</p>
+
+<h2 id="uv">2. Fix: run it with uv (what Open WebUI's docs suggest)</h2>
+<p><a href="https://docs.astral.sh/uv/">uv</a> fetches Python 3.12 for Open WebUI and leaves your own Python alone. These are the commands from Open WebUI's <a href="https://docs.openwebui.com/getting-started/quick-start/">Quick Start</a>. macOS and Linux:</p>
+<pre>DATA_DIR=~/.open-webui uvx --python 3.12 open-webui@latest serve</pre>
+<p>Windows (PowerShell):</p>
+<pre>$env:DATA_DIR="C:\open-webui\data"; uvx --python 3.12 open-webui@latest serve</pre>
+<p>Keep <code>DATA_DIR</code>: the docs warn that without it, <code>uvx</code> might store your data in a temporary folder that gets deleted when the process ends.</p>
+
+<h2 id="venv">3. Fix: a virtual environment on Python 3.12</h2>
+<p>If Python 3.12 is installed (from python.org, your package manager, or <code>uv python install 3.12</code>), give Open WebUI its own environment. macOS and Linux:</p>
+<pre>python3.12 -m venv ~/open-webui-venv
+~/open-webui-venv/bin/python -m pip install open-webui
+~/open-webui-venv/bin/open-webui serve</pre>
+<p>Windows (PowerShell):</p>
+<pre>py -3.12 -m venv "$env:USERPROFILE\open-webui-venv"
+&amp; "$env:USERPROFILE\open-webui-venv\Scripts\python.exe" -m pip install open-webui
+&amp; "$env:USERPROFILE\open-webui-venv\Scripts\open-webui.exe" serve</pre>
+<p>Update later with the same environment's pip: <code>-m pip install -U open-webui</code>.</p>
+
+<h2 id="docker">4. Or use Docker</h2>
+<p>Open WebUI's docs say its Docker image runs Python 3.12 on Debian 13, so the Python on your computer doesn't matter. Follow the Docker steps in the <a href="https://docs.openwebui.com/getting-started/quick-start/">Quick Start</a>.</p>
+
+<div class="warn">
+<p><strong>Don't force it with <code>--ignore-requires-python</code>.</strong> That makes pip try to install Open WebUI on a Python it doesn't support. Open WebUI's docs say Python 3.13 is not supported yet because a handful of its dependencies still need to ship 3.13-compatible releases. Use Python 3.12, then check your version against <a href="openwebui.html">Open WebUI's security advisories</a>.</p>
+</div>
+
+<h2 id="different-python">The other wording: "requires a different Python"</h2>
+<pre>ERROR: Package &#x27;open-webui&#x27; requires a different Python: 3.13.18 not in &#x27;&lt;3.13.0a1,&gt;=3.11&#x27;</pre>
+<p>Same cause, found at a different moment. pip prints this when it only learns a package's Python requirement from the file itself, for example when you install a downloaded wheel, or when a package mirror doesn't list each release's Python requirement. The fix is the same: use Python 3.11 or 3.12.</p>
+
+<h2>Why the message looks like this</h2>
+<p>pip 26.3 skips each release whose Requires-Python range doesn't include your Python, and lists them after "Ignored the following versions that require a different python version". If nothing is left, <code>_report_single_requirement_conflict</code> in <a href="https://github.com/pypa/pip/blob/26.3/src/pip/_internal/resolution/resolvelib/factory.py">factory.py</a> prints "(from versions: none)" and "No matching distribution found for open-webui". The "requires a different Python" wording comes from <code>_report_requires_python_error</code> in the same file. Each release's range is on <a href="https://pypi.org/project/open-webui/">PyPI</a>: for 0.13.0 it is <code>&lt;3.13.0a1,&gt;=3.11</code>.</p>
+
+<h2>Check the result</h2>
+<p>Once it runs, the free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which advisories affect your Open WebUI version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not a security certification or professional advice. Only change machines you own or are allowed to manage. Checked on 6 November 2026 with pip 26.3 and Open WebUI 0.13.0. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
