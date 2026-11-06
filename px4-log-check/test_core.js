@@ -1,28 +1,35 @@
 /* test_core.js: checks the in-browser PX4 log check with Node and Pyodide.
  *
- *   node test_core.js --unit             # no network: Markdown, names, page wiring
+ *   node test_core.js --unit             # no network: Markdown, names, page wiring, pins
  *   node test_core.js --real OUT_DIR     # the real thing, see below
  *
- * --real waits until px4-log-health v0.3.1 is on GitHub, downloads the three
- * public Flight Review logs of v0.3.1's sealed check (6 s apart, stop on
- * 403/444), runs them through core.js exactly as the page's worker does, and
- * compares the report with studies/fleet-health-2026/sample-report.md, which
- * checkup.py wrote on the same logs in that sealed check. Exit 1 on any
- * failure.
+ * --real waits until px4-log-health v0.3.4 is on GitHub, downloads the two
+ * public logs attached to PX4-Autopilot PR #24831 (logs_dynmodel.zip, checked
+ * against the sha256 px4-gps-lag's paired job recorded; no Flight Review
+ * download), unpacks them inside Pyodide, runs them through core.js exactly as
+ * the page's worker does, and compares the report with v0.3.4's
+ * studies/dynmodel/report.md, which checkup.py wrote on the same two logs in
+ * v0.3.4's sealed check. Exit 1 on any failure.
+ *
+ * 0.2.0 (core.js 0.2.0, checkup 0.3.4). 0.1.0 compared three Flight Review
+ * logs with v0.3.1's sample report.
  *
  * By MV2 of Munim, Inc.; written with AI agents. Apache-2.0. */
 "use strict";
 
 const assert = require("assert");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const core = require("./core.js");
 
-const LOGS = ["1702bde1-d47f-45a3-b003-22b4f213c961", "04f407d5-40a5-417f-9a07-9884f784028b",
-              "884a84f2-d491-4729-b3b4-49701c98b93e"];
-const EXPECTED = "https://raw.githubusercontent.com/munimtechnologies/px4-log-health/v0.3.1/" +
-                 "studies/fleet-health-2026/sample-report.md";
+const ZIP = "https://github.com/user-attachments/files/20456409/logs_dynmodel.zip";
+const ZIP_SHA = "aa6997a9754d4a11149bb4aa23f9721e16450eba4dc4808c0644ed2e04343b49";
+const LOGS = ["log_5_2025-5-27-11-50-34.ulg", "log_8_2025-5-27-12-55-02.ulg"];   // sorted, as checkup.py got them
+const EXPECTED = "https://raw.githubusercontent.com/munimtechnologies/px4-log-health/v0.3.4/" +
+                 "studies/dynmodel/report.md";
 const UA = "px4-log-check-test/" + core.VERSION + " (MV2 of Munim, Inc.; mv2@munimtech.com)";
+const NOTE = "**u-blox dynamic model 6.**";
 
 function unit() {
   // Markdown as checkup.py writes it
@@ -31,7 +38,8 @@ function unit() {
               "| Figure | This flight | Among 208 |", "|---|---|---|",
               "| Accelerometer clipping | 0 events (0.00 per min) | p10-p75 (tied) |", "",
               "*(tied)*: many public flights have exactly this value.", "", "### GPS delay", "",
-              "The GPS lags the IMU by **39 ms** (± 4.1); this vehicle's EKF2_GPS_DELAY is 110 ms (-71 ms).", ""].join("\n");
+              "The GPS lags the IMU by **39 ms** (± 4.1); this vehicle's EKF2_GPS_DELAY is 110 ms (-71 ms).", "",
+              NOTE + " This receiver runs GPS_UBX_DYNMODEL = 6 (airborne <1g).", ""].join("\n");
   const html = core.mdToHtml(md);
   assert.ok(html.includes("<h1>PX4 log health</h1>"), html);
   assert.ok(html.includes("<h2>a&lt;b&gt;.ulg</h2>"), "names are escaped");
@@ -44,6 +52,7 @@ function unit() {
   assert.ok(html.includes("<p><em>(tied)</em>: many public flights"));
   assert.ok(html.includes("<h3>GPS delay</h3>"));
   assert.ok(html.includes("<strong>39 ms</strong> (± 4.1)"));
+  assert.ok(html.includes("<p><strong>u-blox dynamic model 6.</strong> This receiver runs GPS_UBX_DYNMODEL = 6 (airborne &lt;1g).</p>"));
   assert.strictEqual((html.match(/<table>/g) || []).length, 1);
 
   // file names in /logs
@@ -51,7 +60,8 @@ function unit() {
   assert.strictEqual(core.safeName("C:\\logs\\flight 1.ulg", taken), "flight_1.ulg");
   assert.strictEqual(core.safeName("flight 1.ulg", taken), "flight_1-2.ulg");
   assert.strictEqual(core.safeName("../../etc/passwd", taken), "passwd");
-  assert.strictEqual(core.safeName(LOGS[0] + ".ulg", taken), LOGS[0] + ".ulg");
+  assert.strictEqual(core.safeName(LOGS[0], taken), LOGS[0]);
+  assert.strictEqual(core.safeName(LOGS[1], taken), LOGS[1]);
 
   // the page and its worker load the files this folder ships
   const page = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
@@ -59,9 +69,24 @@ function unit() {
   assert.ok(page.includes('<script src="core.js"></script>') && page.includes('new Worker("worker.js")'));
   assert.ok(worker.includes('importScripts("core.js")') && worker.includes("PX4Check.PYODIDE_URL"));
   assert.ok(!/\bMIT\b/.test(page + worker + fs.readFileSync(path.join(__dirname, "core.js"), "utf8")));
+  assert.ok(page.includes("v0.3.4"), "the page names the checkup it runs");
   core.SOURCES.forEach(function (s) {
     assert.ok(/^https:\/\/raw\.githubusercontent\.com\/munimtechnologies\/px4-(log-health|gps-lag)\//.test(s.url), s.url);
     assert.ok(s.must, s.name);
+  });
+
+  // the pins
+  assert.strictEqual(core.VERSION, "0.2.0");
+  const byName = {};
+  core.SOURCES.forEach(function (s) { byName[s.name] = s; });
+  assert.deepStrictEqual(Object.keys(byName), ["checkup.py", "health.py", "baseline.json", "gps_lag.py", "innov.py"]);
+  ["checkup.py", "health.py", "baseline.json"].forEach(function (n) {
+    assert.ok(byName[n].url.includes("/px4-log-health/v0.3.4/"), byName[n].url);
+  });
+  assert.strictEqual(byName["checkup.py"].must, '__version__ = "0.3.4"');
+  assert.strictEqual(byName["health.py"].must, '__version__ = "0.2.2"');
+  ["gps_lag.py", "innov.py"].forEach(function (n) {
+    assert.ok(byName[n].url.includes("/px4-gps-lag/967b5ad92d04ca6ac7e29684b411fbf5df243e05/"), byName[n].url);
   });
   console.log("unit: all checks passed");
 }
@@ -81,10 +106,11 @@ async function text(url) {
 }
 
 async function waitForRelease() {
-  for (let attempt = 0; attempt <= 50; attempt++) {
+  for (let attempt = 0; attempt <= 100; attempt++) {
     try {
       const t = await text(core.SOURCES[0].url);
       if (t.includes(core.SOURCES[0].must)) {
+        await text(EXPECTED);              // the report is in the same release
         return attempt * 90;
       }
     } catch (err) {
@@ -92,21 +118,10 @@ async function waitForRelease() {
         throw err;
       }
     }
-    console.log("px4-log-health v0.3.1 not on GitHub yet; waiting 90 s");
+    console.log("px4-log-health v0.3.4 not on GitHub yet; waiting 90 s");
     await sleep(90000);
   }
-  throw new Error("px4-log-health v0.3.1 never appeared");
-}
-
-async function download(id) {
-  const resp = await fetch("https://review.px4.io/download?log=" + id, {headers: {"User-Agent": UA}});
-  if (resp.status === 403 || resp.status === 444) {
-    throw new Error("Flight Review answered " + resp.status + "; stopping");
-  }
-  if (!resp.ok) {
-    throw new Error("download " + id + ": HTTP " + resp.status);
-  }
-  return new Uint8Array(await resp.arrayBuffer());
+  throw new Error("px4-log-health v0.3.4 never appeared");
 }
 
 // Lines that differ only in a last displayed digit (a float rounding at the
@@ -139,31 +154,55 @@ function compare(got, want) {
   return {verdict: real ? "different" : "within rounding", differences: diffs};
 }
 
+// Unpacks the wanted logs inside Pyodide (Python's zipfile; archive paths are
+// never used as output paths) and returns [{name, data}] in LOGS order.
+function unzipInPyodide(pyodide, bytes) {
+  pyodide.FS.writeFile("/tmp/logs.zip", bytes);
+  pyodide.globals.set("_want", pyodide.toPy(LOGS));
+  const found = JSON.parse(pyodide.runPython([
+    "import json, os, zipfile",
+    "_found = []",
+    "with zipfile.ZipFile('/tmp/logs.zip') as _z:",
+    "    for _info in _z.infolist():",
+    "        _base = os.path.basename(_info.filename.replace('\\\\', '/'))",
+    "        if _base in list(_want) and _base not in _found:",
+    "            with open('/tmp/' + _base, 'wb') as _f:",
+    "                _f.write(_z.read(_info))",
+    "            _found.append(_base)",
+    "os.remove('/tmp/logs.zip')",
+    "json.dumps(sorted(_found))"
+  ].join("\n")));
+  assert.deepStrictEqual(found, LOGS.slice().sort(), "the zip holds both logs");
+  return LOGS.map(function (name) {
+    const data = pyodide.FS.readFile("/tmp/" + name);
+    pyodide.FS.unlink("/tmp/" + name);
+    return {name: name, data: data};
+  });
+}
+
 async function real(outDir) {
   fs.mkdirSync(outDir, {recursive: true});
-  const result = {test: core.VERSION, pyodide: core.PYODIDE, pyulog: core.PYULOG,
-                  sources: core.SOURCES.map(function (s) { return s.url; })};
+  const result = {test: "0.2.0", core: core.VERSION, pyodide: core.PYODIDE, pyulog: core.PYULOG,
+                  sources: core.SOURCES.map(function (s) { return s.url; }), zip: ZIP};
   const installed = require("pyodide/package.json").version;
   assert.strictEqual(installed, core.PYODIDE, "npm pyodide " + installed + " is not the page's " + core.PYODIDE);
   result.waited_s = await waitForRelease();
   const want = await text(EXPECTED);
 
-  const files = [];
-  for (let i = 0; i < LOGS.length; i++) {
-    if (i) {
-      await sleep(6000);
-    }
-    const data = await download(LOGS[i]);
-    files.push({name: LOGS[i] + ".ulg", data: data});
-    console.log("downloaded", LOGS[i], data.length, "bytes");
-  }
-  result.log_bytes = files.map(function (f) { return f.data.length; });
+  const resp = await fetch(ZIP, {headers: {"User-Agent": UA}});
+  assert.ok(resp.ok, "zip: HTTP " + resp.status);
+  const bytes = new Uint8Array(await resp.arrayBuffer());
+  result.zip_bytes = bytes.length;
+  result.zip_sha256 = crypto.createHash("sha256").update(bytes).digest("hex");
+  assert.strictEqual(result.zip_sha256, ZIP_SHA, "logs_dynmodel.zip changed");
 
   const {loadPyodide} = require("pyodide");
   let t0 = Date.now();
   const pyodide = await loadPyodide();
   result.checkup = await core.prepare(pyodide, text, function (s) { console.log(s); });
   result.prepare_s = (Date.now() - t0) / 1000;
+  const files = unzipInPyodide(pyodide, bytes);
+  result.log_bytes = files.map(function (f) { return f.data.length; });
   t0 = Date.now();
   const res = await core.run(pyodide, files);
   result.run_s = (Date.now() - t0) / 1000;
@@ -175,15 +214,20 @@ async function real(outDir) {
   fs.writeFileSync(path.join(outDir, "report.html"), core.mdToHtml(res.md));
   const cmp = compare(res.md, want);
   result.compare = cmp;
+  result.dynmodel_notes = res.md.split(NOTE).length - 1;
+  const rows = res.rows.trim().split("\n").map(function (l) { return JSON.parse(l); });
+  result.gps_dynmodel = rows.map(function (r) { return r.gps_dynmodel; });
   fs.writeFileSync(path.join(outDir, "result.json"), JSON.stringify(result, null, 1));
   console.log(JSON.stringify(result, null, 1));
 
-  assert.strictEqual(result.checkup, "0.3.1");
+  assert.strictEqual(result.checkup, "0.3.4");
   assert.strictEqual(res.code, 0);
   assert.deepStrictEqual(result.logs_left, [], "logs are removed after the check");
-  assert.strictEqual(res.rows.trim().split("\n").length, 3);
+  assert.strictEqual(rows.length, 2);
+  assert.strictEqual(result.dynmodel_notes, 1, "the note shows on the model-6 log only");
+  assert.deepStrictEqual(result.gps_dynmodel.map(function (d) { return d && d.value; }), [7, 6]);
   assert.notStrictEqual(cmp.verdict, "different", "the browser report differs from checkup.py's");
-  console.log("real: the browser report is " + cmp.verdict + " to checkup.py's sealed sample report");
+  console.log("real: the browser report is " + cmp.verdict + " to checkup.py's v0.3.4 dynmodel report");
 }
 
 async function main() {

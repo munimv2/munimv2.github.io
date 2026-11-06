@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PX4 log check in your browser: vibration, clipping, GPS and GPS delay | MV2 of Munim, Inc.</title>
-<meta name="description" content="Check a PX4 flight log (.ulg) in your browser, with nothing uploaded: Flight Review's vibration bands, clipping, GPS jamming, battery and failsafe, each figure placed among 208 public flights, and a measured GPS delay against EKF2_GPS_DELAY.">
+<meta name="description" content="Check a PX4 flight log (.ulg) in your browser, with nothing uploaded: Flight Review's vibration bands, clipping, GPS jamming, battery and failsafe, each figure placed among 208 public flights, a measured GPS delay against the delay EKF2 assumed, and a note on u-blox dynamic model 6.">
 <style>
   body { font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; color: #1b1f24; }
   h1 { font-size: 1.6rem; margin-bottom: .25rem; }
@@ -42,14 +42,15 @@
 <div id="report"></div>
 
 <h2>What it checks</h2>
-<p>This is <a href="https://github.com/munimtechnologies/px4-log-health">px4-log-health</a>'s <code>checkup.py</code>, the same code as its command line and GitHub Action, run here with <a href="https://pyodide.org/">Pyodide</a>. For the time the vehicle was in the air, it reports:</p>
+<p>This is <a href="https://github.com/munimtechnologies/px4-log-health">px4-log-health</a>'s <code>checkup.py</code> (v0.3.4), the same code as its command line and GitHub Action, run here with <a href="https://pyodide.org/">Pyodide</a>. For the time the vehicle was in the air, it reports:</p>
 <ul>
   <li><strong>Vibration</strong> against the bands Flight Review draws (green below 4.905 m/s², orange to 9.81, red above). PX4 v1.12 and older log this metric in other units (m/s, from delta velocities), so no band is given for them.</li>
   <li><strong>Accelerometer clipping</strong>, the <strong>GPS jamming indicator</strong> and the receiver's jamming state, satellites and eph, the worst <strong>battery warning</strong>, <strong>failsafe</strong>, and <strong>motor saturation</strong> on multicopters.</li>
   <li>Where each figure sits among <a href="https://github.com/munimtechnologies/px4-log-health/blob/main/studies/fleet-health-2026/GRADE.md">208 public PX4 flights</a> (for example "p75-p90").</li>
-  <li><strong>GPS delay:</strong> how far the GPS lags the IMU, measured from the flight itself with <a href="https://github.com/munimtechnologies/px4-gps-lag">px4-gps-lag</a>, compared with the log's <code>EKF2_GPS_DELAY</code> and checked against EKF2's own GPS velocity innovations. A new value is suggested only when the lag is more than 50 ms off the setting and the innovations don't point the other way.</li>
+  <li><strong>GPS delay:</strong> how far the GPS lags the IMU, measured from the flight itself with <a href="https://github.com/munimtechnologies/px4-gps-lag">px4-gps-lag</a>, compared with the delay EKF2 assumed (<code>EKF2_GPS_DELAY</code> up to PX4 v1.17, the receiver's <code>SENS_GPSn_DELAY</code> from v1.18) and checked against EKF2's own GPS velocity innovations. A new value is suggested only when the lag is more than 50 ms off the setting and the innovations don't point the other way.</li>
+  <li><strong>u-blox dynamic model:</strong> when a serial u-blox receiver runs <code>GPS_UBX_DYNMODEL</code> 6 (airborne &lt;1g, PX4's multicopter default up to v1.16), a note with what <a href="https://github.com/munimtechnologies/px4-gps-lag/blob/main/studies/dynmodel-2026/GRADE-paired.md">px4-gps-lag's studies</a> measured: about 46 ms more GPS lag than model 7 across public logs, and 104 ms more on one vehicle flown with both.</li>
 </ul>
-<p>A flag is a reason to look at the log in <a href="https://review.px4.io/">Flight Review</a>, not a diagnosis. A suggested <code>EKF2_GPS_DELAY</code> is a starting value to check with EKF2 log replay, not a setting to fly.</p>
+<p>A flag is a reason to look at the log in <a href="https://review.px4.io/">Flight Review</a>, not a diagnosis. A suggested GPS delay is a starting value to check with EKF2 log replay, not a setting to fly.</p>
 
 <h2>What leaves your computer</h2>
 <p>Nothing from your log. The page downloads Python (Pyodide) and numpy from the jsDelivr CDN, <a href="https://github.com/PX4/pyulog">pyulog</a> from PyPI, and the checker's code from GitHub at pinned versions, then reads your log in this tab's memory. The checker reads no position. Close the tab and the log is gone. The report stays on screen until you download it.</p>
