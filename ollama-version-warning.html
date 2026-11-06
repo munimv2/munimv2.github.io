@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ollama -v: "Warning: could not connect to a running Ollama instance" and "Warning: client version is": what they mean</title>
+<meta name="description" content="What ollama -v means by 'Warning: could not connect to a running Ollama instance' and 'Warning: client version is', why the 'ollama version is' line (the server) is the version that security advisories are about, and how to find the second copy of Ollama. Checked against Ollama's v0.40.14 source. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/ollama-version-warning.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.6rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  h3 { font-size: 1.05rem; margin-top: 1.4rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; }
+  pre { padding: 0.7rem; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
+  th, td { border: 1px solid #ddd; padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <a href="secure-ollama.html">Lock down Ollama</a> · <a href="ollama-address-in-use.html">Port 11434 already in use</a> · <a href="ollama-could-not-connect.html">Could not connect to ollama server</a> · <strong>ollama -v warnings</strong> · <a href="docker-ollama.html">Docker can't reach Ollama</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<h1>ollama -v: "Warning: could not connect to a running Ollama instance" and "Warning: client version is"</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 5 November 2026 against Ollama's source at release <a href="https://github.com/ollama/ollama/tree/v0.40.14">v0.40.14</a> (3 November 2026). For your own machines only.</p>
+
+<p><strong>Short answer:</strong> <code>ollama -v</code> prints two different versions. The <code>ollama</code> command you typed is a <em>client</em>. It asks the Ollama <em>server</em> at <code>OLLAMA_HOST</code> (by default <code>127.0.0.1:11434</code>) for its version. <code>ollama version is …</code> is the server's answer. <code>Warning: client version is …</code> is the version of the command you just ran. The command prints that second line only when the two versions differ. The server is the program that listens on the network and runs your models. Security advisories are about the server, so <strong>the <code>ollama version is</code> line is the one that counts</strong>.</p>
+
+<h2>What each output means</h2>
+<table>
+  <tr><th>You see</th><th>What happened</th><th>Go to</th></tr>
+  <tr><td><pre>ollama version is 0.40.14</pre></td><td>A server answered, and it is the same version as the command. All good.</td><td>-</td></tr>
+  <tr><td><pre>Warning: could not connect to a running Ollama instance
+Warning: client version is 0.40.14</pre></td><td>No server answered at <code>OLLAMA_HOST</code>. Nothing is wrong with the install. The second line only appears because there was no server version to compare with.</td><td><a href="#no-server">1</a></td></tr>
+  <tr><td><pre>ollama version is 0.39.2
+Warning: client version is 0.40.14</pre></td><td>A server answered, but it is a <em>different</em> Ollama from the command you typed: an older server still running after an upgrade, a second install, a container or another machine.</td><td><a href="#mismatch">2</a></td></tr>
+  <tr><td><pre>Warning: client version is 0.0.0</pre> (with or without other lines)</td><td>This <code>ollama</code> binary was built without a version number. That usually means a build from source.</td><td><a href="#zero">3</a></td></tr>
+</table>
+<p>The version numbers above are examples. You can ask the server yourself, without the client: <code>curl http://127.0.0.1:11434/api/version</code> returns, for example, <code>{"version":"0.40.14"}</code>.</p>
+
+<h2 id="no-server">1. "Warning: could not connect to a running Ollama instance"</h2>
+<p>Nothing answered at <code>OLLAMA_HOST</code>. <code>curl http://127.0.0.1:11434</code> prints <code>Ollama is running</code> when a server is up.</p>
+<ul>
+  <li><strong>Linux (installed with the script):</strong> <code>systemctl status ollama</code>, then <code>sudo systemctl start ollama</code>. Read <code>journalctl -u ollama -n 50 --no-pager</code> if it doesn't stay up. More causes, including WSL without systemd and Docker, are on <a href="ollama-could-not-connect.html">could not connect to ollama server</a>.</li>
+  <li><strong>macOS and Windows:</strong> open the Ollama app; it runs the server in the background.</li>
+  <li><strong>You set <code>OLLAMA_HOST</code>:</strong> check it with <code>echo $OLLAMA_HOST</code> (PowerShell: <code>$env:OLLAMA_HOST</code>). The command asks the server at exactly that address. A stale value pointing at a machine that is off gives this warning too.</li>
+</ul>
+
+<h2 id="mismatch">2. "ollama version is X" followed by "Warning: client version is Y"</h2>
+<p>Two different Ollamas are involved. Find out which one is the server, because that is the one advisories apply to. If you upgraded and the <code>ollama version is</code> line still shows the old number, <strong>the old server is still the one running</strong>. Whatever the upgrade fixed is not fixed yet on this machine. Check that number against <a href="ollama.html">Ollama's published advisories</a> or the <a href="index.html">CVE checker</a>.</p>
+
+<h3>The server wasn't restarted after an upgrade</h3>
+<ul>
+  <li><strong>Linux:</strong> <code>sudo systemctl restart ollama</code>, then <code>ollama -v</code> again. <code>systemctl cat ollama</code> shows which binary the service starts (the <code>ExecStart=</code> line). If <code>which -a ollama</code> lists a different path first, you have two copies; keep the one the service uses.</li>
+  <li><strong>macOS and Windows:</strong> quit Ollama from its menu-bar or notification-area icon (Quit Ollama) and open it again.</li>
+</ul>
+
+<h3>There are two installs</h3>
+<p>List every <code>ollama</code> on your PATH. The first one listed is the one you ran:</p>
+<pre>which -a ollama        # Linux, macOS, WSL
+where.exe ollama       # Windows</pre>
+<p>A package-manager copy next to the official app or install script is a common cause. Remove the copy you don't use, so that the command and the server come from the same install and upgrade together.</p>
+
+<h3>The server runs in Docker</h3>
+<p>The server's version is the image's. Check it inside the container with <code>docker exec -it ollama ollama -v</code>. To upgrade it, pull the new image and recreate the container. A plain <code>docker restart</code> keeps the old image. When you recreate it, publish the port to localhost only, <code>-p 127.0.0.1:11434:11434</code> (<a href="docker-ollama.html">why</a>).</p>
+
+<h3>The server is another machine</h3>
+<p>If <code>OLLAMA_HOST</code> points at another computer, the <code>ollama version is</code> line is <em>that</em> computer's Ollama. Upgrading your own client changes nothing there. Upgrade the server where it runs.</p>
+
+<h2 id="zero">3. "Warning: client version is 0.0.0"</h2>
+<p>In Ollama's source the version is the placeholder <code>0.0.0</code> (<a href="https://github.com/ollama/ollama/blob/v0.40.14/version/version.go">version/version.go</a>). Official releases fill in the real number when they are built. A binary that reports <code>0.0.0</code> was built without it, usually from source. That's harmless in itself, but you can't tell from the number which advisories apply. Use an official release or record which commit you built from. If a <em>server</em> reports <code>0.0.0</code>, the <a href="index.html">CVE checker</a> can't tell which fixes it has either.</p>
+
+<div class="warn">
+<p><strong>Don't "fix" the connection warning with <code>OLLAMA_HOST=0.0.0.0</code> on the server.</strong> It doesn't make the command find a missing server. It opens Ollama's API, which has no login, to every network the machine is on. For access from other devices, see <a href="ollama-remote-access.html">Use Ollama remotely</a>.</p>
+</div>
+
+<h2>Why the output looks like this</h2>
+<p>In Ollama v0.40.14, <code>-v</code>/<code>--version</code> is a flag on the root command, which then calls <code>versionHandler</code> in <a href="https://github.com/ollama/ollama/blob/v0.40.14/cmd/cmd.go">cmd/cmd.go</a>. <code>versionHandler</code> builds a client with <code>api.ClientFromEnvironment()</code>, which uses <code>OLLAMA_HOST</code> (<a href="https://github.com/ollama/ollama/blob/v0.40.14/api/client.go">api/client.go</a>; the default, <code>127.0.0.1:11434</code>, is in <a href="https://github.com/ollama/ollama/blob/v0.40.14/envconfig/config.go">envconfig/config.go</a>). It then asks the server for <code>GET /api/version</code>, which the server answers with its own build version (<a href="https://github.com/ollama/ollama/blob/v0.40.14/server/routes.go">server/routes.go</a>). If that request fails, it prints <code>Warning: could not connect to a running Ollama instance</code>. If a version came back, it prints <code>ollama version is</code> and that version. Finally, if the server's version (empty when nothing answered) differs from the client's own, it prints <code>Warning: client version is</code> and the client's version.</p>
+
+<h2>Check the result</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script flags AI ports that other machines can reach, and checks your Ollama version, <code>OLLAMA_ORIGINS</code> and Docker port bindings. It's read-only and sends nothing off the machine.</p>
+
+<h2>Want it checked for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not a security certification or professional advice. Only change machines you own or are allowed to manage. Checked on 5 November 2026 against Ollama v0.40.14. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
