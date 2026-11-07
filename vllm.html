@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>vLLM security advisories: is my version affected? (update to 0.32.0; 0.31.0 is affected by 9 advisories)</title>
-<meta name="description" content="vLLM 0.32.0 (18 October 2026) is the newest release and is clear of all 119 advisories vLLM has published. 0.31.0 is affected by 9 advisories. Check your vLLM version free. By MV2 of Munim, Inc., with AI agents.">
+<title>vLLM security advisories: is my version affected? (update to 0.33.0; 0.32.0 is affected by 3 advisories)</title>
+<meta name="description" content="vLLM 0.33.0 (2 November 2026) is the newest release and is clear of all 123 advisories vLLM has published. 0.32.0 is affected by 3 advisories and 0.31.0 by 12. Check your vLLM version free. By MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -24,7 +24,23 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <strong>vLLM</strong> · <a href="vllm-api-key.html">Lock down vLLM</a> · <a href="n8n.html">n8n</a> · <a href="dify.html">Dify</a> · <a href="ragflow.html">RAGFlow</a> · <a href="anythingllm.html">AnythingLLM</a> · <a href="langflow.html">Langflow</a> · <a href="flowise.html">Flowise</a> · <a href="litellm.html">LiteLLM</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>vLLM security advisories: is my version affected?</h1>
+<div id="update-2026-11-07" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><strong>Update, 7 November 2026:</strong> the short answer is now <strong>update to 0.33.0</strong>, vLLM's newest release (2 November 2026). The 2 November update below counted advisories published up to 27 October; since then vLLM has published 4 more. Read as explained below, 3 advisories affect 0.32.0, which this page recommended (3 of them published since 27 October):</p>
+<ul>
+<li><a href="https://github.com/vllm-project/vllm/security/advisories/GHSA-5r3c-5x4v-8gjh">GHSA-5r3c-5x4v-8gjh</a> (2 November 2026, high, CVSS 7.5, no CVE ID): "Missing request-wide media budget allows single-request frontend resource exhaustion". Affected as published: <code>&gt;= 0.6.0, &lt; 0.33.0</code>; fixed in 0.33.0.</li>
+<li><a href="https://github.com/vllm-project/vllm/security/advisories/GHSA-qrj2-j723-m6w8">GHSA-qrj2-j723-m6w8</a> (2 November 2026, medium, CVSS 5.4, no CVE ID): "vLLM Speculators Config verifier.name_or_path Element Directory Traversal Information Disclosure Vulnerability". Affected as published: <code>&lt; 0.33.0</code>; fixed in 0.33.0.</li>
+<li><a href="https://github.com/vllm-project/vllm/security/advisories/GHSA-q9v9-qpjp-fc24">GHSA-q9v9-qpjp-fc24</a> (2 November 2026, high, CVSS 7.5, no CVE ID): "Unauthenticated EngineCore crash via out-of-range prompt token id under skip_tokenizer_init (incomplete fix of GHSA-25q3-v2hm-8vpf)". Affected as published: <code>&gt;= 0.28.0, &lt; 0.33.0</code>; fixed in 0.33.0.</li>
+</ul>
+<p>The other 1 published since 27 October affect only releases before 0.32.0:</p>
+<ul>
+<li><a href="https://github.com/vllm-project/vllm/security/advisories/GHSA-mwgq-9582-w2vf">GHSA-mwgq-9582-w2vf</a> (7 November 2026, medium, CVSS 5.3, no CVE ID): "Response amplification in OpenAI validation error handler". Affected as published: <code>&gt;= 0.3.0, &lt; 0.30.0</code>; fixed in 0.30.0.</li>
+</ul>
+<p>Read per version, 0.33.0 is clear of all 123 advisories vLLM has published (the newest on 7 November 2026), and 0.33.0 is the oldest release that is. 0.31.0 is affected by 12. Ranges are read as the 2 November update below explains: every release before an advisory's patched version counts as affected, as OSV.dev reads them.</p>
+<p>Source: <a href="https://github.com/vllm-project/vllm/security/advisories">vLLM's security advisories on GitHub</a>, read through GitHub's API on 7 November 2026, with release dates from PyPI, the Docker Hub tag <code>vllm/vllm-openai:v0.33.0</code> and OSV.dev records (checked with AI agents working for MV2 of Munim, Inc.). The steps below were written for 0.31.0.</p>
+</div>
+
 <div id="update-2026-11-02" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><em>Superseded by the 7 November 2026 update above: 0.32.0 is no longer clear. This earlier update is kept for its list of the advisories fixed in 0.32.0.</em></p>
 <p><strong>Update, 2 November 2026:</strong> the short answer is now <strong>update to 0.32.0</strong>, vLLM's newest release (18 October 2026). Since this page was re-checked on 13 October 2026, vLLM has published 15 more advisories. Read as explained below, 9 advisories affect 0.31.0, which this page recommended (9 of them published since 13 October):</p>
 <ul>
 <li><a href="https://github.com/vllm-project/vllm/security/advisories/GHSA-542m-9234-8gvf">GHSA-542m-9234-8gvf</a> (20 October 2026, medium, CVSS 6.5, CVE ID CVE-2026-115911): "DoS via unbounded chat_template Jinja2 rendering exhausts the renderer thread pool". Affected as published: <code>&gt;= 0.19.0</code>; fixed in 0.32.0.</li>
@@ -57,7 +73,7 @@
 
 <p>Between 12 September and 9 October 2026, vLLM published more than 30 security advisories. <strong>Most have no CVE ID.</strong> On 11 October 2026, OSV.dev returned "not found" for every one of them MV2 checked (GHSA-h3rc-6mm3-gc2m, GHSA-gx7p-2j49-hfq4, GHSA-rhcx-5729-88vg, GHSA-w9r6-29q4-pvpr and GHSA-p6g9-7v3x-m8mv), and they aren't in the GitHub Advisory Database either. <code>pip-audit</code>, Dependabot and other scanners that read those databases won't tell you about them, and a vLLM running from the <code>vllm/vllm-openai</code> Docker image isn't a package they check anyway.</p>
 
-<p>The newest release when this page was updated on 2 November 2026 is <strong>0.32.0</strong> (18 October 2026). It is clear of every advisory vLLM has published. 0.31.0 (5 October 2026) is affected by 9 advisories (see the update above). 0.30.0 (22 September) is still affected by the 6 and 9 October batches.</p>
+<p>The newest release when this page was updated on 7 November 2026 is <strong>0.33.0</strong> (2 November 2026). It is clear of every advisory vLLM has published. 0.32.0 (18 October 2026) is affected by 3 advisories and 0.31.0 (5 October 2026) by 12 (see the updates above). 0.30.0 (22 September) is still affected by the 6 and 9 October batches.</p>
 <ul>
   <li><strong>0.7.3 up to 0.31.0, only with <code>trust_remote_code</code> on:</strong> if you serve a multimodal model whose processor loads code from the model repository, a request can choose which revision of that code is loaded. Anyone who can put a revision into that repository (for example a Hugging Face community pull request, where the repository allows them) can then get their code run on your server. The <code>/tokenize</code> endpoint accepts the field without authentication even when <code>--api-key</code> is set (<a href="https://github.com/vllm-project/vllm/security/advisories/GHSA-h3rc-6mm3-gc2m">GHSA-h3rc-6mm3-gc2m</a>, CVSS 8.1, no CVE ID). With the default <code>trust_remote_code=False</code> you aren't affected.</li>
   <li><strong>Before 0.31.0:</strong> per-request <code>mm_processor_kwargs</code> let one request exhaust CPU or GPU memory with many multimodal models, taking the server down for everyone (<a href="https://github.com/vllm-project/vllm/security/advisories/GHSA-gx7p-2j49-hfq4">GHSA-gx7p-2j49-hfq4</a>, CVSS 7.5). From 0.8.5, a request with <code>prompt_logprobs</code> can crash the server for every tenant (<a href="https://github.com/vllm-project/vllm/security/advisories/GHSA-rhcx-5729-88vg">GHSA-rhcx-5729-88vg</a>, CVSS 7.7). 0.31.0 refuses per-request processor arguments by default.</li>
@@ -76,7 +92,7 @@
 
 <h2>What to do</h2>
 <ol>
-  <li><strong>Update to 0.32.0 or newer.</strong> For Docker, pull <code>vllm/vllm-openai:v0.32.0</code> and recreate the container; for pip, <code>pip install -U vllm</code> in the same environment. Check that the model you serve still loads; 0.31.0 rejects per-request <code>mm_processor_kwargs</code> unless you opt in with <code>--trust-request-mm-kwargs</code>, so move any processor settings you need to the server-level <code>--mm-processor-kwargs</code> flag.</li>
+  <li><strong>Update to 0.33.0 or newer.</strong> For Docker, pull <code>vllm/vllm-openai:v0.33.0</code> and recreate the container; for pip, <code>pip install -U vllm</code> in the same environment. Check that the model you serve still loads; 0.31.0 rejects per-request <code>mm_processor_kwargs</code> unless you opt in with <code>--trust-request-mm-kwargs</code>, so move any processor settings you need to the server-level <code>--mm-processor-kwargs</code> flag.</li>
   <li><strong>Leave <code>trust_remote_code</code> off</strong> unless the model really needs it, and then pin the model to a revision you have reviewed.</li>
   <li><strong>Put vLLM behind a reverse proxy that allows only the routes your apps use</strong> if anyone you don't fully trust can reach it. Even in 0.31.0, <code>--api-key</code> checks only <code>/v1</code>, <code>/v2</code>, <code>/inference</code> and <code>/cohere</code> routes; <code>/invocations</code>, <code>/tokenize</code>, <code>/pause</code> and others stay open by design. Caddy and nginx setups: <a href="vllm-api-key.html">lock down vLLM</a>.</li>
   <li><strong>Check which address it listens on:</strong> <code>ss -tlnp | grep 8000</code> on Linux. Without <code>--host</code>, <code>vllm serve</code> listens on every interface. If you publish it with Docker, use <code>-p 127.0.0.1:8000:8000</code> unless other machines need it; on Linux, ports Docker publishes skip ufw and firewalld.</li>
