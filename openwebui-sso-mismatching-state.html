@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open WebUI SSO: "mismatching_state: CSRF Warning! State not equal in request and response" (causes and fixes)</title>
+<meta name="description" content="Open WebUI SSO sign-in fails with &#x27;Sign-in with your identity provider failed&#x27; in the browser and &#x27;mismatching_state: CSRF Warning! State not equal in request and response&#x27; in the log. Each cause reproduced with the libraries Open WebUI 0.13.0 uses, and how to tell which one you have. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/openwebui-sso-mismatching-state.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.6rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
+  th, td { border: 1px solid #ddd; padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>SSO "mismatching_state"</strong> · <a href="openwebui-env-ignored.html">Settings "cannot be edited here"</a> · <a href="openwebui-reverse-proxy.html">Open WebUI behind a proxy</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<h1>Open WebUI SSO: "mismatching_state: CSRF Warning! State not equal in request and response"</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 7 November 2026 against the source of Open WebUI 0.13.0, the newest release then. Every cause below was run with the libraries that release pins (Authlib 1.7.2, FastAPI 0.136.3, Starlette 1.10.0) and Open WebUI's own session settings, against a small local identity provider, not a full Open WebUI install.</p>
+
+<p>After you sign in at your identity provider (Keycloak, Authentik, Entra ID, Google, and so on), Open WebUI sends you back to its sign-in page with this message:</p>
+<pre>Sign-in with your identity provider failed. Please contact your administrator for assistance.</pre>
+<p>The reason is in the server log (<code>docker logs open-webui</code>), in a warning like this:</p>
+<pre>OAuth callback error during authorize_access_token for provider oidc: OAuth callback failed: mismatching_state: CSRF Warning! State not equal in request and response.</pre>
+
+<p><strong>Short answer:</strong> the redirect back from the provider arrived without the browser session that started the sign-in, or with a session that no longer holds that sign-in. When you click the SSO button, Open WebUI stores a one-time <em>state</em> in its <code>owui-session</code> cookie, signed with <code>WEBUI_SECRET_KEY</code> (or in Redis, if <code>ENABLE_STAR_SESSIONS_MIDDLEWARE=true</code> and <code>REDIS_URL</code> are set). When the provider sends you back, Authlib compares the state in the URL with the one in that session. If the cookie is missing, was signed with another key, or no longer holds that state, you get this error. Open WebUI's issue <a href="https://github.com/open-webui/open-webui/issues/33783">#33783</a> (opened 5 November 2026) describes one way this happens with automatic SSO redirect after a sign-in token expires; it was closed as completed on 6 November 2026, after Open WebUI 0.13.0 was released, so look for the fix in a later release.</p>
+<p>Open WebUI's own <a href="https://docs.openwebui.com/troubleshooting/sso/">SSO troubleshooting page</a> lists this error too. This page adds a run of each cause, so you can tell them apart.</p>
+
+<h2 id="causes">The causes, each one run</h2>
+<table>
+  <tr><th>Cause</th><th>What we ran</th><th>Result</th><th>Fix</th></tr>
+  <tr><td>Two or more Open WebUI containers or replicas with <strong>different secret keys</strong></td><td>Sign-in started on instance A; the redirect back from the provider landed on instance B, whose <code>WEBUI_SECRET_KEY</code> is different.</td><td><strong>mismatching_state</strong></td><td>Give every replica the same <code>WEBUI_SECRET_KEY</code> (<a href="#key">below</a>).</td></tr>
+  <tr><td>The same two replicas with the <strong>same</strong> secret key</td><td>Same as above, but both instances share one <code>WEBUI_SECRET_KEY</code>.</td><td>signed in</td><td>Nothing to fix: with the default cookie sessions, the cookie carries the state, so any replica with the same key can finish the sign-in.</td></tr>
+  <tr><td><code>OPENID_REDIRECT_URI</code> points at a <strong>different address</strong> than the one in the browser</td><td>Opened Open WebUI at one host; <code>OPENID_REDIRECT_URI</code> named another (for example the IP address versus the domain name). <em>(Browser step simulated: no cookie sent, as a browser would.)</em></td><td><strong>mismatching_state</strong></td><td>Open Open WebUI at exactly the scheme, host and port in <code>OPENID_REDIRECT_URI</code>, or redirect users there.</td></tr>
+  <tr><td><code>WEBUI_SESSION_COOKIE_SAME_SITE=strict</code></td><td>The session cookie was set with SameSite=strict. <em>(Browser step simulated: no cookie sent, as a browser would.)</em></td><td><strong>mismatching_state</strong></td><td>Use <code>lax</code>, the default. <code>WEBUI_AUTH_COOKIE_SAME_SITE</code> sets the sign-in token cookie separately.</td></tr>
+  <tr><td><code>WEBUI_SESSION_COOKIE_SECURE=true</code> while Open WebUI is served over plain <code>http://</code></td><td>The session cookie was marked Secure on an http address. <em>(Browser step simulated: no cookie sent, as a browser would.)</em></td><td><strong>mismatching_state</strong></td><td>Serve Open WebUI over https (for example behind a reverse proxy), or leave it <code>false</code> while you use plain http.</td></tr>
+  <tr><td>Sign-in was <strong>started twice</strong> before the first one finished (a second tab, or the SSO button clicked again)</td><td>Started sign-in twice with one cookie, then finished the first one, then the second.</td><td>first: <strong>mismatching_state</strong>; second: signed in</td><td>Finish the sign-in you started last, or close the other tabs and start once. Authlib 1.7.2 keeps only the newest sign-in state per provider in the session (its Starlette integration removes older ones "to avoid session size growing"), so an earlier tab's sign-in can no longer finish.</td></tr>
+  <tr><td>The session was <strong>cleared between the click and the callback</strong></td><td>Signed out in between: the sign-out response deletes the <code>owui-session</code> cookie.</td><td><strong>mismatching_state</strong></td><td>Sign in again. If it happens with automatic SSO redirect, see Open WebUI issue <a href="https://github.com/open-webui/open-webui/issues/33783">#33783</a>.</td></tr>
+  <tr><td>The callback page was <strong>loaded twice</strong> (reload, back button, or a bookmarked callback URL)</td><td>Signed in, then loaded the same callback URL again.</td><td><strong>mismatching_state</strong></td><td>Harmless: the first load signed in. Start sign-in from the login page instead of reloading the callback.</td></tr>
+</table>
+<p>In every <strong>mismatching_state</strong> row, Authlib raised <code>mismatching_state: CSRF Warning! State not equal in request and response.</code> at the callback; Open WebUI logs that and redirects to <code>/auth?error=…</code> with the message above.</p>
+
+<h2 id="which">Which one is it? Look at the callback request</h2>
+<ol>
+  <li>Open the browser's developer tools (F12), Network tab, and tick "Preserve log".</li>
+  <li>Click the SSO button and sign in at the provider.</li>
+  <li>Find the request to <code>/oauth/&lt;provider&gt;/login/callback</code> (or the older <code>/oauth/&lt;provider&gt;/callback</code>) and look at its request headers.</li>
+</ol>
+<ul>
+  <li><strong>No <code>owui-session</code> in its Cookie header:</strong> the browser didn't send the cookie. Compare the callback's address with the address you opened Open WebUI at (scheme, host, port), then check <code>WEBUI_SESSION_COOKIE_SAME_SITE</code> and <code>WEBUI_SESSION_COOKIE_SECURE</code>.</li>
+  <li><strong><code>owui-session</code> is there:</strong> the cookie arrived but didn't hold the state. Usually another replica with a different secret key handled it, sign-in was started again in another tab, or the callback was loaded a second time.</li>
+</ul>
+
+<h2 id="key">Set one WEBUI_SECRET_KEY for every container</h2>
+<p>If you never set <code>WEBUI_SECRET_KEY</code>, Open WebUI's <code>start.sh</code> generates one into <code>/app/backend/.webui_secret_key</code> inside the container. The <code>docker run</code> commands in Open WebUI's README mount the volume at <code>-v open-webui:/app/backend/data</code>, so that file is not in it: each replica, and each new container (for example after <code>docker pull</code> and re-create), makes its own key. Check whether yours is set:</p>
+<pre>docker exec open-webui sh -c 'if [ -n "$WEBUI_SECRET_KEY" ]; then echo set; else echo "not set: generated in /app/backend/.webui_secret_key"; fi'</pre>
+<p>Generate one value once (<code>openssl rand -hex 32</code>), keep it with your other secrets, and pass the same value to every container, for example <code>-e WEBUI_SECRET_KEY=…</code> in <code>docker run</code> or under <code>environment:</code> in Docker Compose.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI version</a>. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not a security certification or professional advice. Only change systems you own or are allowed to manage. Checked on 7 November 2026 against Open WebUI 0.13.0 (<a href="https://github.com/open-webui/open-webui/blob/v0.13.0/backend/open_webui/main.py">main.py</a>, <a href="https://github.com/open-webui/open-webui/blob/v0.13.0/backend/open_webui/utils/oauth.py">utils/oauth.py</a>, <a href="https://github.com/open-webui/open-webui/blob/v0.13.0/backend/open_webui/env.py">env.py</a>, <a href="https://github.com/open-webui/open-webui/blob/v0.13.0/backend/start.sh">start.sh</a>), with Authlib 1.7.2 (<a href="https://github.com/authlib/authlib/blob/v1.7.2/authlib/integrations/starlette_client/integration.py">starlette_client/integration.py</a>) and Starlette 1.10.0 on Python 3.12. Where a row says the browser step was simulated, the run sent no cookie, as browsers do for SameSite=Strict cookies on a redirect from another site, for Secure cookies set over plain http, and for cookies from another host. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
