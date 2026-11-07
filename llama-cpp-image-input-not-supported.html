@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>llama.cpp "image input is not supported - hint: if this is unexpected, you may need to provide the mmproj": the fix</title>
+<meta name="description" content="Why llama-server answers HTTP 500 'image input is not supported - hint: if this is unexpected, you may need to provide the mmproj', why every later message in the chat fails too (Open WebUI, AnythingLLM), and the two fixes: start llama-server with --mmproj, or turn off Vision for a text-only model. Reproduced with llama.cpp b12110. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/llama-cpp-image-input-not-supported.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.6rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
+  th, td { border: 1px solid #ddd; padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>llama.cpp "image input is not supported"</strong> · <a href="ollama-could-not-connect.html">"could not connect to ollama server"</a> · <a href="openwebui-pip-python.html">pip install open-webui error</a> · <a href="sample-report.html">Sample health check report</a></nav>
+<h1>llama.cpp: "image input is not supported - hint: if this is unexpected, you may need to provide the mmproj"</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 7 November 2026 by running llama.cpp's own prebuilt Linux release <code>b12110</code> (4 November 2026) with a small vision model, SmolVLM-256M-Instruct-Q8_0.gguf, once without its mmproj file and once with it. Every result below is what that server returned. For your own machines only.</p>
+
+<p>llama-server answers the chat request with HTTP 500 and this body:</p>
+<pre>{&quot;error&quot;:{&quot;code&quot;:500,&quot;message&quot;:&quot;image input is not supported - hint: if this is unexpected, you may need to provide the mmproj&quot;,&quot;type&quot;:&quot;server_error&quot;}}</pre>
+<p>Open WebUI, AnythingLLM and other apps that talk to llama-server show the same text, sometimes after "500:" or "Image not supported".</p>
+
+<p><strong>Short answer:</strong> llama-server only accepts images when it was started with a <em>multimodal projector</em>, the separate <code>mmproj-….gguf</code> file that turns an image into something the language model can read. Without one, it refuses any request that contains an image before the model even runs. Text-only requests still work. There are two fixes, depending on your model:</p>
+<ul>
+  <li><strong>The model can see images</strong> (Gemma 3, Qwen-VL, SmolVLM, LLaVA and the like): <a href="#mmproj">start llama-server with the matching <code>--mmproj</code> file</a>.</li>
+  <li><strong>The model is text-only:</strong> <a href="#text-only">stop the app from sending it images</a>. In Open WebUI, turn off <em>Vision</em> for that model. A new chat alone isn't enough if a tool keeps returning screenshots.</li>
+</ul>
+
+<h2 id="measured">What the server returned</h2>
+<p>llama.cpp b12110, model SmolVLM-256M-Instruct-Q8_0.gguf, the same small PNG each time, sent the way OpenAI-compatible apps send it (an <code>image_url</code> part with a <code>data:image/png;base64,…</code> URL):</p>
+<table>
+  <tr><th>Request</th><th>Started without <code>--mmproj</code></th><th>Started with <code>--mmproj mmproj-SmolVLM-256M-Instruct-Q8_0.gguf</code></th></tr>
+  <tr><td><code>GET /props</code>: <code>modalities</code></td><td><code>{&quot;vision&quot;:false,&quot;video&quot;:false,&quot;audio&quot;:false}</code></td><td><code>{&quot;vision&quot;:true,&quot;video&quot;:true,&quot;audio&quot;:false}</code></td></tr>
+  <tr><td>Text-only chat</td><td>works</td><td>works</td></tr>
+  <tr><td>Chat with an image</td><td>HTTP 500, the same "image input is not supported" error</td><td>works (the model answered "Red")</td></tr>
+  <tr><td>Next text message, image still earlier in the chat</td><td>HTTP 500, the same "image input is not supported" error</td><td>works</td></tr>
+  <tr><td>Same chat, image replaced by the text "[image]"</td><td>works</td><td>not needed</td></tr>
+</table>
+<p>The fourth row is why a chat "stays broken": chat apps send the whole conversation again with every message, so one image anywhere in the history makes every later request fail with the same error. The server itself is fine (its <code>/health</code> still answered HTTP 200), and restarting it doesn't help, because the image is in the chat, not the server.</p>
+
+<h2 id="check">1. Check whether your server can take images</h2>
+<pre>curl -s http://127.0.0.1:9931/props</pre>
+<p>Look for <code>"modalities"</code>. <code>"vision":false</code> means no projector is loaded and every image will be refused. <code>"vision":true</code> means images will work. Use your own host and port: 9931 is llama-server's default port in b12110 (its <code>--help</code> says "default: 9931"), and many setups pass their own, such as <code>--port 8080</code>. Add <code>-H "Authorization: Bearer $KEY"</code> if you started llama-server with <code>--api-key</code>.</p>
+
+<h2 id="mmproj">2. Fix for vision models: load the mmproj file</h2>
+<p>Download the mmproj file from the same repository as your model, and pick one made for that exact model. A projector from another model or family won't fit. Then pass it with <code>--mmproj</code> (short form <code>-mm</code>):</p>
+<pre>llama-server -m SmolVLM-256M-Instruct-Q8_0.gguf --mmproj mmproj-SmolVLM-256M-Instruct-Q8_0.gguf</pre>
+<p>If you load models with <code>-hf</code>, llama-server downloads the repository's mmproj file by itself when there is one, unless <code>--no-mmproj</code> is set. We checked that too: this command alone gave <code>{&quot;vision&quot;:true,&quot;video&quot;:true,&quot;audio&quot;:false}</code> and answered the image request. Check your command, script or launcher for <code>--no-mmproj</code>:</p>
+<pre>llama-server -hf ggml-org/SmolVLM-256M-Instruct-GGUF:Q8_0</pre>
+<p>In Docker, Compose or a service file, the same setting is the environment variable <code>LLAMA_ARG_MMPROJ=/models/mmproj-….gguf</code> (or <code>LLAMA_ARG_MMPROJ_URL</code> for a URL). We checked it: started with only <code>-m</code> and that variable, the server reported <code>{&quot;vision&quot;:true,&quot;video&quot;:true,&quot;audio&quot;:false}</code> and answered the image request. Installers and launchers that write their own llama-server command sometimes leave it out. If the model and its projector are both in your folder but images still fail, look at the command the launcher actually runs. Then check <code>/props</code> again: <code>"vision":true</code>.</p>
+
+<h2 id="text-only">3. Fix for text-only models: don't send them images</h2>
+<p>A projector can't give a text-only model sight, so the app has to stop sending images. In <strong>Open WebUI</strong>: <em>Workspace → Models</em> (or <em>Admin Settings → Models</em>), edit the model, and under <em>Capabilities</em> untick <strong>Vision</strong>. Open WebUI's <a href="https://docs.openwebui.com/features/workspace/models/">model docs</a> say that with Vision off, images returned by tools reach the model as a short <code>[image]</code> note instead of the image. In <a href="https://github.com/open-webui/open-webui/issues/33802">issue #33802</a> (Open WebUI 0.13.0, llama.cpp, a text-only model, and a tool that returned a screenshot), a maintainer explained that "The image stays in the chat history and is resent with every new message", and that with Vision off the same chat starts working again on the next message. Our fourth and fifth rows show the server-side half of that: the same chat with the image swapped for text goes through.</p>
+<p>The same maintainer noted that Open WebUI can't detect by itself whether a model is text-only, so the Vision setting is up to you. Admins can set default capabilities for all models under <em>Admin Settings → Models</em>. Other apps: AnythingLLM and Docker Model Runner users have reported the same error (<a href="https://github.com/Mintplex-Labs/anything-llm/issues/4407">AnythingLLM #4407</a>, <a href="https://forums.docker.com/t/i-cannot-submit-images-to-docker-models/148849">Docker forum</a>). The fix is the same: give the server the projector, or don't attach images to that model.</p>
+
+<h2 id="why">Why the message looks like this</h2>
+<p>In llama.cpp b12110, <code>oaicompat_content_load_media</code> in <a href="https://github.com/ggml-org/llama.cpp/blob/b12110/tools/server/server-common.cpp">tools/server/server-common.cpp</a> reads each part of a chat message. When it meets an <code>image_url</code> part and the server wasn't started with image support, it throws "image input is not supported" with the mmproj hint. An <code>input_audio</code> part gets the twin message, "audio input is not supported", for the same reason. The server's flags are documented in its <a href="https://github.com/ggml-org/llama.cpp/blob/b12110/tools/server/README.md">README</a>; <code>llama-server --help</code> in b12110 lists <code>-mm, --mmproj FILE</code> (env <code>LLAMA_ARG_MMPROJ</code>) and <code>--mmproj-auto, --no-mmproj</code>.</p>
+
+<div class="warn">
+<p><strong>While you're in the settings:</strong> llama-server listens on 127.0.0.1:9931 by default, which only your own machine can reach. If you started it with <code>--host 0.0.0.0</code> so Open WebUI on another machine or in Docker can reach it, anyone on that network can use it too. Add <code>--api-key</code> (and put the same key in Open WebUI's connection settings), or keep it behind a firewall.</p>
+</div>
+
+<h2>Check the result</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which advisories affect your Open WebUI or Ollama version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, llama.cpp or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not a security certification or professional advice. Only change machines you own or are allowed to manage. Checked on 7 November 2026 with llama.cpp b12110 (<code>version: 0.9.0-dev (build 12110, commit cd959bae9)</code>) and SmolVLM-256M-Instruct-Q8_0.gguf from <a href="https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF">ggml-org/SmolVLM-256M-Instruct-GGUF</a>. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
