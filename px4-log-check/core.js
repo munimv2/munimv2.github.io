@@ -8,6 +8,9 @@
  * the command line does, so the report is the same one checkup.py writes.
  * No log is uploaded anywhere.
  *
+ * 0.2.1: checkup 0.3.6 (px4-log-health v0.3.6): the u-blox dynamic model note
+ * now says model 6's extra lag behaved like heavier smoothing, on one vehicle
+ * and across public logs. Nothing else changes.
  * 0.2.0: checkup 0.3.4 (px4-log-health v0.3.4): PX4 v1.18's per-receiver GPS
  * delay, the mismatch-2026 line and the u-blox dynamic model note.
  *
@@ -16,16 +19,16 @@
 (function (root) {
   "use strict";
 
-  var VERSION = "0.2.0";
+  var VERSION = "0.2.1";
   var PYODIDE = "314.0.7";
   var PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v" + PYODIDE + "/full/";
   var PYULOG = "1.3.0";
   var RAW = "https://raw.githubusercontent.com/munimtechnologies/";
-  var HEALTH_REF = "v0.3.4";
+  var HEALTH_REF = "v0.3.6";
   var GPS_LAG_REF = "967b5ad92d04ca6ac7e29684b411fbf5df243e05";   // the pin checkup's Action uses
 
   var SOURCES = [
-    {name: "checkup.py", url: RAW + "px4-log-health/" + HEALTH_REF + "/checkup.py", must: '__version__ = "0.3.4"'},
+    {name: "checkup.py", url: RAW + "px4-log-health/" + HEALTH_REF + "/checkup.py", must: '__version__ = "0.3.6"'},
     {name: "health.py", url: RAW + "px4-log-health/" + HEALTH_REF + "/health.py", must: '__version__ = "0.2.2"'},
     {name: "baseline.json", url: RAW + "px4-log-health/" + HEALTH_REF + "/baseline.json", must: '"fields"'},
     {name: "gps_lag.py", url: RAW + "px4-gps-lag/" + GPS_LAG_REF + "/gps_lag.py", must: '__version__ = "0.1.0"'},
