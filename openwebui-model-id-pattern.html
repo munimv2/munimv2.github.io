@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open WebUI: &quot;String should match pattern &#x27;^\S+$&#x27;&quot; when you edit a model or change its access (fix)</title>
+<meta name="description" content="Open WebUI shows [object Object] or does nothing when you edit a model or change its access, and the 422 response says &quot;String should match pattern &#x27;^\S+$&#x27;&quot;. Why model ids with spaces fail since 0.11.4, how to find them, and two fixes. Run with Open WebUI 0.13.0&#x27;s own forms. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/openwebui-model-id-pattern.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.6rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
+  th, td { border: 1px solid #ddd; padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>Model id &quot;String should match pattern &#x27;^\S+$&#x27;&quot;</strong> · <a href="openwebui-env-ignored.html">Settings &quot;cannot be edited here&quot;</a> · <a href="openwebui-sso-mismatching-state.html">SSO &quot;mismatching_state&quot;</a></nav>
+<h1>Open WebUI: &quot;String should match pattern &#x27;^\S+$&#x27;&quot; when you edit a model or change its access</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 7 November 2026 against the source of Open WebUI 0.13.0, the newest release then. Every result below was run through Open WebUI 0.13.0's own request forms, copied unchanged from its <code>models.py</code> files, with the FastAPI 0.136.3 and pydantic 2.13.4 versions it pins, in a small test app, not a full Open WebUI install.</p>
+
+<p>You edit a model in Open WebUI, or change who can use it (Private, Public, groups), and a red popup says <code>[object Object]</code>, or nothing happens at all. That is how Open WebUI issue <a href="https://github.com/open-webui/open-webui/issues/33774">#33774</a> describes it. The real message is in the browser's developer tools (F12, Network tab), in the response to <code>/api/v1/models/model/update</code> or <code>/api/v1/models/model/access/update</code>, which is HTTP 422 with:</p>
+<pre>{&quot;detail&quot;: [{&quot;type&quot;: &quot;string_pattern_mismatch&quot;, &quot;loc&quot;: [&quot;body&quot;, &quot;id&quot;], &quot;msg&quot;: &quot;String should match pattern &#x27;^\\S+$&#x27;&quot;, &quot;input&quot;: &quot;GPT 6 Luna&quot;, &quot;ctx&quot;: {&quot;pattern&quot;: &quot;^\\S+$&quot;}}]}</pre>
+
+<p><strong>Short answer:</strong> the model's <em>id</em> (not its display name) contains a space. Since Open WebUI 0.11.4, a model id must match <code>^\S+$</code>, which means no spaces, tabs or other whitespace anywhere in it. Open WebUI checks this on create, edit and access changes, so a model whose id already has a space can no longer be edited or have its access changed. Delete still works. The display name may have spaces.</p>
+<p>Ids with spaces come from two places:</p>
+<ul>
+  <li><strong>A connection whose model list has spaces.</strong> Open WebUI uses the id your OpenAI-compatible server reports. In #33774 it was a LiteLLM config with <code>model_name: GPT 6 Luna</code>.</li>
+  <li><strong>A workspace model created on Open WebUI 0.10.2 to 0.11.3</strong>, when ids weren't checked. Open WebUI issue <a href="https://github.com/open-webui/open-webui/issues/30439">#30439</a> asked for a migration for these. A maintainer answered that the change is intended and listed in the 0.11.4 changelog, and closed the issue as not planned on 23 September 2026, with a manual workaround (Fix 2 below). #33774 was closed on 5 November 2026 as a duplicate of #30439. Open WebUI 0.13.0's source still has the same check and no migration.</li>
+</ul>
+
+<h2 id="runs">What each action does with a space in the id</h2>
+<table>
+  <tr><th>Action</th><th>Open WebUI endpoint</th><th>Result</th></tr>
+  <tr><td>Save a model whose id has a space (edit)</td><td><code>POST /api/v1/models/model/update</code></td><td><strong>422</strong>, <code>String should match pattern &#x27;^\S+$&#x27;</code> at <code>[&quot;body&quot;, &quot;id&quot;]</code></td></tr>
+  <tr><td>Change that model's access (Private / Public, groups)</td><td><code>POST /api/v1/models/model/access/update</code></td><td><strong>422</strong>, <code>String should match pattern &#x27;^\S+$&#x27;</code> at <code>[&quot;body&quot;, &quot;id&quot;]</code></td></tr>
+  <tr><td>Create a model with a space in its id</td><td><code>POST /api/v1/models/create</code></td><td><strong>422</strong>, <code>String should match pattern &#x27;^\S+$&#x27;</code> at <code>[&quot;body&quot;, &quot;id&quot;]</code></td></tr>
+  <tr><td>Delete the model whose id has a space</td><td><code>POST /api/v1/models/model/delete</code></td><td>200, <strong>accepted</strong> (delete has no id check)</td></tr>
+  <tr><td>Import an exported model whose id has a space</td><td><code>POST /api/v1/models/import</code></td><td>200, answers <code>true</code>, but the model was <strong>skipped</strong> (not imported)</td></tr>
+  <tr><td>Import the same model with the id changed to <code>gpt-6-luna</code></td><td><code>POST /api/v1/models/import</code></td><td>200, imported</td></tr>
+  <tr><td>Save <code>gpt-6-luna</code> with the display name &quot;GPT 6 Luna&quot;</td><td><code>POST /api/v1/models/model/update</code></td><td>200, accepted</td></tr>
+  <tr><td>Change <code>gpt-6-luna</code>'s access</td><td><code>POST /api/v1/models/model/access/update</code></td><td>200, accepted</td></tr>
+  <tr><td>Id with a trailing space (<code>gpt-6-luna </code>)</td><td><code>POST /api/v1/models/model/update</code></td><td><strong>422</strong>, <code>String should match pattern &#x27;^\S+$&#x27;</code> at <code>[&quot;body&quot;, &quot;id&quot;]</code></td></tr>
+  <tr><td>Id with a non-breaking space (often pasted from a web page)</td><td><code>POST /api/v1/models/model/update</code></td><td><strong>422</strong>, <code>String should match pattern &#x27;^\S+$&#x27;</code> at <code>[&quot;body&quot;, &quot;id&quot;]</code></td></tr>
+  <tr><td>The model's Realtime voice setting with spaces (<code>Google US English</code>)</td><td><code>POST /api/v1/models/model/update</code></td><td><strong>422</strong>, <code>String should match pattern &#x27;^\S+$&#x27;</code> at <code>[&quot;body&quot;, &quot;meta&quot;, &quot;voice&quot;, &quot;voice&quot;]</code></td></tr>
+  <tr><td>The model's Realtime voice setting without spaces (<code>en_US-amy-medium</code>)</td><td><code>POST /api/v1/models/model/update</code></td><td>200, accepted</td></tr>
+</table>
+<p>Every 422 above has the same message, <code>String should match pattern &#x27;^\S+$&#x27;</code>, with type <code>string_pattern_mismatch</code>. Where it points tells you which field to fix: <code>[&quot;body&quot;, &quot;id&quot;]</code> is the model id, and <code>[&quot;body&quot;, &quot;meta&quot;, &quot;voice&quot;, &quot;voice&quot;]</code> is the model's <em>Realtime voice</em> field in the model editor (stored as <code>meta.voice.voice</code>; the separate TTS voice field, <code>meta.tts.voice</code>, has no such rule), which has the same no-whitespace rule in Open WebUI 0.13.0. On import, Open WebUI checks each id with its own <code>is_valid_model_id</code> and silently skips the ones that fail, so <strong>re-importing an exported model with a space in its id does nothing</strong>, though the request reports success.</p>
+
+<h2 id="find">Find the ids with spaces</h2>
+<p>With an Open WebUI API key (Settings &gt; Account), list every model id that contains whitespace. <code>/api/models</code> returns the models from your connections and your workspace models together:</p>
+<pre>curl -s -H "Authorization: Bearer $OPENWEBUI_API_KEY" http://localhost:3000/api/models \
+  | python3 -c 'import json,sys; d=json.load(sys.stdin); d=d.get("data", d) if isinstance(d, dict) else d; [print(repr(m["id"])) for m in d if any(c.isspace() for c in m["id"])]'</pre>
+<p>Change <code>http://localhost:3000</code> to your Open WebUI address. <code>repr</code> shows hidden characters, such as a trailing space or <code>\xa0</code> (a non-breaking space).</p>
+
+<h2 id="fix-connection">Fix 1: the id comes from your connection (LiteLLM and similar)</h2>
+<ol>
+  <li>Rename the model at the source so its id has no spaces. In a LiteLLM <code>config.yaml</code>, for example, change <code>model_name: GPT 6 Luna</code> to <code>model_name: gpt-6-luna</code>, then restart LiteLLM.</li>
+  <li>In Open WebUI, open Admin Panel &gt; Settings &gt; Models, edit <code>gpt-6-luna</code>, and set its Name to <code>GPT 6 Luna</code> if you want to keep the old label. Saving and changing access now work (rows &quot;Save <code>gpt-6-luna</code>&quot; and &quot;Change <code>gpt-6-luna</code>'s access&quot; above).</li>
+</ol>
+<p class="warn">Renaming changes the id. Chats, workspace models built on it (their base model) and default-model settings that named the old id still point at the old one, so pick the new model in those places. Anything that calls the API with the old name (scripts, other apps) needs the new one too.</p>
+
+<h2 id="fix-workspace">Fix 2: the id belongs to a workspace model</h2>
+<p><strong>Clone it (the maintainers' workaround from #30439).</strong></p>
+<ol>
+  <li>In Workspace &gt; Models, open the model's menu (&quot;More&quot;) and choose <strong>Clone</strong>. Open WebUI opens the create page with a copy of the model.</li>
+  <li>Fix the <strong>ID</strong> field. Open WebUI 0.13.0 fills it with the old id plus <code>-clone</code> (for example <code>GPT 6 Luna-clone</code>), which still has the space, so saving it unchanged gives the same 422 (row &quot;Create a model with a space in its id&quot;). Type an id without whitespace, such as <code>gpt-6-luna</code>, and save.</li>
+  <li>Check the new model: its access settings, knowledge and tools, and the system prompt. The maintainer's answer in #30439 says to check access on the new model.</li>
+  <li>Delete the old model from its menu. Delete works even with the space in its id.</li>
+</ol>
+<p><strong>Or export, edit and import.</strong></p>
+<ol>
+  <li>In the same menu, choose <strong>Export</strong>. You get a JSON file.</li>
+  <li>In that file, change the <code>&quot;id&quot;</code> value (not <code>&quot;name&quot;</code>) to one without spaces, for example <code>&quot;gpt-6-luna&quot;</code>. Importing the file without this change does nothing (row &quot;Import an exported model whose id has a space&quot;).</li>
+  <li>Import the edited file with the Import button on Workspace &gt; Models. It arrives as a new model with the new id. (If you are not an admin, Open WebUI imports a new model only if it has a base model set.)</li>
+  <li>Check the new model as above, then delete the old one.</li>
+</ol>
+<p>The Clone and menu steps were read from Open WebUI 0.13.0's source (<code>Models.svelte</code>, <code>ModelMenu.svelte</code>); the browser steps were not run. The same warning applies to both ways: chats and settings that used the old id don't move to the new one. Back up your Open WebUI data volume before you delete anything.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI version</a>. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Only change systems you own or are allowed to manage. Checked on 7 November 2026 against Open WebUI 0.13.0 (<a href="https://github.com/open-webui/open-webui/blob/v0.13.0/backend/open_webui/models/models.py">models/models.py</a>, <a href="https://github.com/open-webui/open-webui/blob/v0.13.0/backend/open_webui/routers/models.py">routers/models.py</a>, <a href="https://github.com/open-webui/open-webui/blob/v0.13.0/backend/open_webui/main.py">main.py</a>, <a href="https://github.com/open-webui/open-webui/blob/v0.13.0/src/lib/components/workspace/Models.svelte">Models.svelte</a>), with FastAPI 0.136.3, pydantic 2.13.4 and Starlette 1.10.0 on Python 3.12.15. The test app used Open WebUI's form classes and its <code>is_valid_model_id</code> unchanged; it did not run Open WebUI's database, sign-in or permission checks. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
