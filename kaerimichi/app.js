@@ -1,11 +1,13 @@
 // app.js - Kaerimichi UI: pick a feed, a date and two stops; see if you can go and come back.
 // The service-gap map colours every stop by whether that round trip works to the chosen destination,
-// and can overlay demand-responsive transit (GTFS-Flex) to show where a booked ride fills the gap.
+// and can overlay demand-responsive transit (GTFS-Flex) to show where a booked ride fills the gap,
+// or a booked ride and a bus together (feeder.js, v0.8).
 // A trip card (copy or print) and a printable service-gap summary carry the answer off the screen.
 // MV2 of Munim, Inc. - Apache-2.0 license.
-import { loadFeed, loadFlex, dayView, journeys, roundTrip, serviceGaps, serviceRange, weekday, addDays, fmtTime, fmtSpan, parseFeedList, flexDay, flexCover, flexLinks, flexOk } from './gtfs.js';
+import { loadFeed, loadFlex, dayView, journeys, roundTrip, serviceGaps, serviceRange, weekday, addDays, fmtTime, fmtSpan, parseFeedList, flexDay, flexCover, flexLinks, flexOk, hubJourneys } from './gtfs.js';
+import { rideSegments, feederTimes, feederTrip, busAndRide } from './feeder.js';
 
-const VERSION = '0.7';
+const VERSION = '0.9';
 const API = 'https://api.gtfs-data.jp/v2';
 // The repository's feed list has no CORS header, so a snapshot ships with the app (feeds.txt).
 // The zip files themselves are served with CORS and are fetched live.
@@ -17,8 +19,8 @@ const PREFS = ['北海道', '青森県', '岩手県', '宮城県', '秋田県', 
   '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
   '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県',
   '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'];
-const GAP_ORDER = ['ok', 'okx', 'flex', 'noreturn', 'oneway', 'none', 'idle'];
-const GAP_COLOURS = { ok: '#1a9850', okx: '#91cf60', flex: '#4393c3', noreturn: '#fc8d59', oneway: '#d73027', none: '#762a83', idle: '#9e9e9e', hub: '#ffffff' };
+const GAP_ORDER = ['ok', 'okx', 'flex', 'flexbus', 'noreturn', 'oneway', 'none', 'idle'];
+const GAP_COLOURS = { ok: '#1a9850', okx: '#91cf60', flex: '#4393c3', flexbus: '#92c5de', noreturn: '#fc8d59', oneway: '#d73027', none: '#762a83', idle: '#9e9e9e', hub: '#ffffff' };
 // Bus verdicts that a demand-responsive ride can turn into "possible".
 const FLEX_FILLS = new Set(['noreturn', 'oneway', 'none', 'idle']);
 const ZONE_COLOUR = '#2166ac';
@@ -87,11 +89,15 @@ const TEXT = {
     gapHead: name => `「${name}」へ日帰りで往復できるか`,
     gap: {
       ok: '往復できる（直通）', okx: '往復できる（乗り換えあり）', flex: 'バスでは無理だが、デマンド交通（予約制）なら往復できる見込み',
+      flexbus: 'デマンド交通とバスの乗り継ぎ（運賃2回分・要予約）なら往復できる見込み',
       noreturn: '行けるが、帰りの最終に間に合わない', oneway: '行けるが、帰りの便がない', none: '行けない（便なし・乗り換え2回以上）',
       idle: 'この日は発車なし', hub: '行き先',
     },
     gapCount: n => `${n}か所`,
     gapFacts: (a, b, s) => `着 ${a}／帰りの最終 ${b}／最大 ${s}`,
+    feederFacts: (a, b, v) => `着 ${a}／帰り ${b}` + (v ? `（乗継 ${v}）` : ''),
+    feederPair: (f, s) => `デマンド交通とバスの乗り継ぎ（運賃2回分・要予約）なら往復できる見込みです: ${f}${s ? '。' + s : ''}`,
+    feederRide: (name, b) => `乗るデマンド交通: 「${name}」${b ? '（' + b + '）' : ''}`,
     gapNote: '判定は上の「目的地での最低滞在」と「乗り換え」の設定に従います。CSVは路線の見直しや交通空白の把握にお使いください（出典の表示をお願いします）。',
     csv: 'CSVでダウンロード（停留所ごとの判定）',
     presets: 'ワンタッチで行き先（停留所名から）', preset: { hospital: '病院', station: '駅', office: '役場', shop: '買い物' },
@@ -111,7 +117,7 @@ const TEXT = {
       now: '予約: 当日すぐ', before: m => `予約: 乗車の${m}分前まで`, sameDay: '予約: 当日まで',
       days: (d, tm) => `予約: ${d}日前${tm ? 'の' + tm : ''}まで`, phone: p => `電話 ${p}`,
     },
-    flexNote: 'デマンド交通は、区域・乗降ポイントと運行時間帯だけで判定しています。予約の締切や定員、利用登録などの条件は各自治体・事業者の案内をご確認ください。',
+    flexNote: 'デマンド交通は、区域・乗降ポイントと運行時間帯だけで判定しています。予約の締切や定員、利用登録などの条件は各自治体・事業者の案内をご確認ください。バスとの乗り継ぎ（運賃2回分）は、区域内や乗降ポイント近くの停留所での5分以上の乗り継ぎとして探しています。乗車にかかる時間は含めていません。',
     flexSource: '出典（デマンド交通）', odpt: '公共交通オープンデータセンター',
     copy: 'コピー（LINE・メール用）', copied: 'コピーしました。', copyFail: '自動でコピーできませんでした。下の文を選んでコピーしてください。',
     print: '印刷・PDFで保存',
@@ -150,11 +156,15 @@ const TEXT = {
     gapHead: name => `Same-day round trip to ${name}`,
     gap: {
       ok: 'Round trip, direct buses', okx: 'Round trip with a transfer', flex: 'Not by bus, but likely by demand-responsive ride (booking needed)',
+      flexbus: 'Likely by a demand-responsive ride plus a bus (two fares, booking needed)',
       noreturn: 'Can go, but the last bus back leaves too early', oneway: 'Can go, but no bus back', none: "Can't get there (no bus, or 2+ transfers)",
       idle: 'No departures this day', hub: 'Destination',
     },
     gapCount: n => `${n} stops`,
     gapFacts: (a, b, s) => `arrive ${a}, last bus back ${b}, stay up to ${s}`,
+    feederFacts: (a, b, v) => `arrive ${a}, head back by ${b}` + (v ? ` (change at ${v})` : ''),
+    feederPair: (f, s) => `A round trip looks possible with a demand-responsive ride plus a bus (two fares, booking needed): ${f}${s ? '. ' + s : ''}`,
+    feederRide: (name, b) => `Booked ride: ${name}${b ? ' (' + b + ')' : ''}`,
     gapNote: 'Uses the minimum stay and transfer settings above. The CSV is meant for route reviews and service-gap planning (please credit the data source).',
     csv: 'Download CSV (verdict per stop)',
     presets: 'One-click destinations (by stop name)', preset: { hospital: 'Hospital', station: 'Station', office: 'Town hall', shop: 'Shops' },
@@ -174,7 +184,7 @@ const TEXT = {
       now: 'book: any time', before: m => `book ${m} min ahead`, sameDay: 'book the same day',
       days: (d, tm) => `book ${d} day(s) ahead${tm ? ' by ' + tm : ''}`, phone: p => `phone ${p}`,
     },
-    flexNote: 'Demand-responsive service is judged only by its areas, pickup points and hours. Check booking deadlines, capacity and registration with the town or operator.',
+    flexNote: 'Demand-responsive service is judged only by its areas, pickup points and hours. Check booking deadlines, capacity and registration with the town or operator. A ride plus a bus (two fares) is searched as a change of at least 5 minutes at a stop inside the area or near a pickup point; ride times are not counted.',
     flexSource: 'Source (demand-responsive)', odpt: 'Public Transportation Open Data Center',
     copy: 'Copy (for messages and email)', copied: 'Copied.', copyFail: 'Could not copy automatically. Select the text below and copy it.',
     print: 'Print / save as PDF',
@@ -396,8 +406,16 @@ function fillFlexList() {
 
 // ---- service gaps ----
 
+// Earliest arrival at the destination and latest departure back, per stop, by bus, booked ride or both (feeder.js).
+function feederView() {
+  const segs = rideSegments(flexDay(state.flex, state.ymd), state.flex.locations, cover());
+  const hj = hubJourneys(state.view, state.to, state.transfer ? 1 : 0, MIN_CONNECTION);
+  return feederTimes(hj, segs, state.to, state.model.places.length, MIN_CONNECTION);
+}
+
 // Round-trip verdict of every stop against the destination, or null when the map shows departures.
-// With a demand-responsive overlay, stops the buses can't serve but a booked ride can become 'flex'.
+// With a demand-responsive overlay, stops the buses can't serve but a booked ride can become 'flex',
+// and those a booked ride and a bus can serve together (one change, v0.8) become 'flexbus'.
 function gapView() {
   if (state.mode !== 'gap' || state.to === null || !state.view) return null;
   const key = [state.ymd, state.to, state.transfer, state.stay, state.flexId, !!state.flex].join('|');
@@ -407,6 +425,12 @@ function gapView() {
     if (links) gaps.forEach((g, i) => {
       g.flex = links[i];
       if (FLEX_FILLS.has(g.status) && flexOk(links[i], state.stay * 60)) { g.bus = g.status; g.status = 'flex'; }
+    });
+    const ft = links ? feederView() : null;
+    if (ft) gaps.forEach((g, i) => {
+      if (!FLEX_FILLS.has(g.status)) return;
+      const r = feederTrip(ft, i, state.stay * 60);
+      if (r && busAndRide(r)) { g.bus = g.status; g.status = 'flexbus'; g.feeder = r; }
     });
     state.gaps = gaps;
     state.gapKey = key;
@@ -446,6 +470,7 @@ function gapLine(i) {
   let line = t.gap[g.status];
   if (g.status === 'ok' || g.status === 'okx') line += ' — ' + t.gapFacts(fmtTime(g.rt.firstArr, lang), fmtTime(g.rt.lastBack, lang), fmtSpan(g.rt.maxStay, lang));
   if (g.status === 'flex') line += ' — ' + windowText(g.flex.there.start, g.flex.back.end);
+  if (g.status === 'flexbus') line += ' — ' + feederFactsText(g.feeder);
   return line;
 }
 
@@ -505,7 +530,7 @@ function drawLegend() {
   let html = `<b>${esc(head)}</b><p class="small">${esc(conditions())}</p><ul>`;
   for (const k of GAP_ORDER) {
     if (k === 'okx' && !state.transfer) continue;
-    if (k === 'flex' && !state.flex) continue;
+    if ((k === 'flex' || k === 'flexbus') && !state.flex) continue;
     html += `<li><i style="background:${GAP_COLOURS[k]}"></i>${esc(t.gap[k])}: <b>${t.gapCount(n[k] || 0)}</b></li>`;
     lines.push(`- ${t.gap[k]}: ${t.gapCount(n[k] || 0)}`);
   }
@@ -559,7 +584,7 @@ function downloadCsv(gaps) {
     ];
     if (state.flex) {
       const l = g.flex;
-      const fx = !l ? '' : flexOk(l, state.stay * 60) ? 'round_trip' : l.there ? 'there_only' : l.back ? 'back_only' : '';
+      const fx = g.status === 'flexbus' ? 'feeder' : !l ? '' : flexOk(l, state.stay * 60) ? 'round_trip' : l.there ? 'there_only' : l.back ? 'back_only' : '';
       row.push(g.bus || g.status, fx);
     }
     lines.push(row.map(v => q(String(v))).join(','));
@@ -926,6 +951,25 @@ function flexPairText() {
   return t.flexPair(flexName(trip), windowText(l.there.start, l.back.end), bookingText(trip));
 }
 
+// "着 9:20／帰り 14:00（乗継 ○○）": a round trip by booked ride and bus. A ride's time is the edge of its window.
+function feederFactsText(r) {
+  const { there, back } = r;
+  const tm = x => Math.abs(x) < 1e8 ? fmtTime(x, lang) : '—';
+  const via = there.mode === 'feeder' ? there.via : back.mode === 'feeder' ? back.via : null;
+  return t.feederFacts(tm(there.t), tm(back.t), via === null ? '' : placeName(state.model.places[via]));
+}
+
+// When neither the buses nor one booked ride each way can do the round trip: a booked ride and a bus? Text, or ''.
+function feederPairText() {
+  if (!linksTo(state.to)) return '';
+  const r = feederTrip(feederView(), state.from, state.stay * 60);
+  if (!r || !busAndRide(r)) return '';
+  // v0.9: name the service of each booked leg and its booking rule, as the one-ride text does.
+  const rides = new Map();
+  for (const x of [r.there, r.back]) if (x.mode !== 'bus') rides.set(flexName(x.trip), bookingText(x.trip));
+  return t.feederPair(feederFactsText(r), [...rides].map(([name, b]) => t.feederRide(name, b)).join(' / '));
+}
+
 function render() {
   const box = $('#result');
   const { model } = state;
@@ -976,7 +1020,7 @@ function render() {
     html += `<div class="verdict ok">◯ ${t.ok}</div><dl class="facts">` + facts.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('') + '</dl>';
     card.push('◯ ' + t.ok, ...facts.map(([k, v]) => `${k}: ${v}`));
   }
-  const fx = rt.status !== 'ok' ? flexPairText() : '';
+  const fx = rt.status !== 'ok' ? flexPairText() || feederPairText() : '';
   if (fx) {
     html += `<div class="verdict fx">◯ ${esc(fx)}</div>`;
     card.push('◯ ' + fx);

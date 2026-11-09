@@ -1,11 +1,18 @@
 // national.js - the national results page (national.html). For every feed in Japan's GTFS Data Repository:
 // the share of stops from which a hospital-named stop can be reached, with time there, and left again the same day
-// (data/national/<date>/, written by tools/national_gaps.mjs with the app's own gtfs.js).
+// (data/national/<date>/, written by tools/national_gaps.mjs, and data/national/<date>/edition2/, written by
+// tools/edition2/edition2.mjs, both with the app's own gtfs.js).
 // Tables by prefecture and by feed, and a map of every stop's verdict for one prefecture.
 // MV2 of Munim, Inc. - Apache-2.0 license.
 import { parseCSV } from './gtfs.js';
 
-export const EDITIONS = ['2026-10-21'];
+// Every published edition, oldest first; the page shows the last one unless ?date= and ?ed= ask for another.
+// A second-method edition writes one set of columns per method (e1, strict3, merged3, merged10); `method` is the one shown.
+export const EDITIONS = [
+  { date: '2026-10-21', ed: 1, dir: '2026-10-21/', files: ['feeds.csv', 'prefectures.csv', 'skipped.csv', 'findings.md', 'summary.json', 'README.md'] },
+  { date: '2026-10-21', ed: 2, dir: '2026-10-21/edition2/', method: 'merged10',
+    files: ['feeds.csv', 'prefectures.csv', 'merges.csv', 'skipped.csv', 'findings.md', 'summary.json', 'README.md'] },
+];
 const REPO = 'munimtechnologies/kaerimichi';
 // The data is read from beside the page, else from the repository (raw.githubusercontent.com allows CORS).
 const DATA_ROOTS = ['./data/national/', `https://raw.githubusercontent.com/${REPO}/main/data/national/`];
@@ -13,11 +20,14 @@ export const STATUSES = ['ok', 'okx', 'noreturn', 'oneway', 'none', 'idle', 'hub
 export const COLOURS = { ok: '#1a9850', okx: '#91cf60', noreturn: '#fc8d59', oneway: '#d73027', none: '#762a83', idle: '#9e9e9e', hub: '#ffffff' };
 const NUMBERS = new Set(['pref_id', 'feeds_analysed', 'places_with_departures', 'round_trip', 'share', 'round_trip_sat', 'share_sat',
   'places', 'hub', 'ok', 'okx', 'noreturn', 'oneway', 'none', 'idle', 'share_round_trip', 'share_round_trip_sat',
-  'trips_wed', 'trips_sat', 'lat', 'lon', 'max_stay_min']);
+  'trips_wed', 'trips_sat', 'lat', 'lon', 'max_stay_min', 'feeds', 'merged_places', 'merges']);
+// Edition 2's per-method columns, e.g. base_merged10, share_sat_e1.
+const METHOD_NUMBER = /^(?:base|round_trip|round_trip_sat|share|share_sat)_(?:e1|strict3|merged3|merged10)$/;
 
 export const num = n => (n === null || n === undefined ? '–' : n.toLocaleString('en-US'));
 export const pct = x => (x === null || x === undefined || Number.isNaN(x) ? '–' : (x * 100).toFixed(1) + '%');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const round3 = x => Math.round(x * 1000) / 1000;
 
 // Only stops with coordinates inside Japan go on the map (one source feed lists a stop with latitude and longitude swapped).
 export const onMap = s => s.lat !== null && s.lon !== null && s.lat >= 20 && s.lat <= 46 && s.lon >= 122 && s.lon <= 154;
@@ -33,6 +43,10 @@ export const TEXT = {
       + `病院名の停留所へ行って${Math.round(s.settings.min_stay_s / 60)}分以上いて、その日のうちに戻ってこられるのは<b>平日 ${pct(n.share)}</b>（${num(n.round_trip)}か所）、<b>土曜 ${pct(n.share_sat)}</b>（${num(n.round_trip_sat)}か所）です。`,
     perFeed: f => `データごとの割合の中央値は ${pct(f.median_share)}。どの停留所からも往復できないデータが ${num(f.share_zero)}件、平日は往復できるのに土曜はできないデータが ${num(f.round_trip_weekday_but_not_saturday)}件あり、土曜に運行がないデータは ${num(f.no_saturday_service)}件です。`,
     dateLine: s => `対象日: ${s.date}（水）と ${s.saturday}（土）・乗り換え${s.settings.transfers}回まで（乗り継ぎ${Math.round(s.settings.min_connection_s / 60)}分以上）・病院での滞在${Math.round(s.settings.min_stay_s / 60)}分以上`,
+    edition: e => e.ed === 1
+      ? `第1版（病院の停留所はデータごとに最大3か所）を表示しています。方法を見直した第2版では、全国の割合は平日 88.7%・土曜 65.6% です。`
+      : `第${e.ed}版を表示しています。第1版の方法（病院の停留所はデータごとに最大3か所、停留所名をまとめない）を見直したもので、変えた点は下の「方法と限界」にあります。`,
+    otherEdition: e => `第${e.ed}版を見る`,
     prefHead: '都道府県別',
     feedHead: 'データ（事業者）別',
     mapHead: '停留所ごとの判定',
@@ -61,6 +75,14 @@ export const TEXT = {
       '割合が低く出やすい場合: 病院の停留所はデータごとに最大3か所なので、地区ごとに別の病院へ向かう路線が多い大きなデータ（例: 鹿児島市「あいばす」）では低めに出ます。到着用と出発用で名前が違う停留所（「（着）」「（発）」など）は別の停留所として扱うため、往復できないと判定されることがあります（例: 八重瀬町バス）。また、停留所名のパターンは歯科医院にも一致し、20件のデータで病院の停留所の1つが歯科医院でした（この集計ではそのまま含めています）。座標がデータ上で入れ替わっている停留所は地図に表示しません。',
       '正式な「交通空白」の判断は自治体や運輸局が行うものです。この結果は、その検討や地域公共交通会議の材料としてお使いください。',
     ],
+    method2: [
+      '病院の停留所は、停留所名に「病院・医院・クリニック・診療所・医療センター」を含み、「歯科・動物病院・獣医」を含まないもの（名前の決め方はアプリの「病院」ボタンと同じ）のうち、その日に便が止まるものを、データごとに発車本数の多い順に最大10か所選びます（第1版は3か所で、歯科医院も含んでいました）。停留所ごとに、そのうち最も良い判定を採ります。',
+      '括弧内の向き・乗り場の注記（「（上り）」「（下り）」「（発）」「（着）」など）だけが違い、400m以内にある同名の停留所は1つにまとめます（16件のデータで46組、merges.csv）。第1版では、例えば八重瀬町バスの「（発）南部徳洲会病院」と「（着）南部徳洲会病院」が別の停留所として扱われ、往復できないと判定されていました。',
+      '計算はアプリと同じコード（gtfs.js）です。直通または同じデータ内での乗り換え1回、病院での滞在30分以上。割合の分母は平日に発車がある停留所（病院の停留所を除く）で、土曜も同じ分母です。病院の停留所が増えると分母が減ります（3か所のとき861か所、10か所で1,257か所）。増えた病院の停留所をすべて「往復できる」と数えても「できない」と数えても、全国の割合は88.0〜88.8%で、第1版より高くなります。',
+      '限界: 病院は停留所名だけで見つけているため、病院名の停留所は病院の近さの目安にすぎず、病院名の停留所がないデータは対象外です。10か所にすると小さな診療所の停留所も入り、そこで診られる診療科は分かりません。時刻表だけを使い、運賃・歩行・遅れ・別データ（鉄道や他の事業者）との乗り継ぎは含みません。デマンド交通（予約制）も含みません。複数のデータに入っている停留所は、データごとに数えています。座標がデータ上で入れ替わっている停留所は地図に表示しません。',
+      '方法ごとの結果（第1版の方法 e1、歯科・動物病院を除く strict3、名前をまとめる merged3、最大10か所の merged10）は feeds.csv の列と findings.md にあります。割合が極端なデータは、アプリで個別に確かめてから読んでください。',
+      '正式な「交通空白」の判断は自治体や運輸局が行うものです。この結果は、その検討や地域公共交通会議の材料としてお使いください。',
+    ],
     filesHead: 'データのダウンロード（CC BY 4.0）',
     files: 'feeds.csv（データ別）・prefectures.csv（都道府県別）・stops/NN.csv（停留所別）・skipped.csv（対象外と理由）・summary.json・README.md',
     repo: 'GitHubで一覧を見る',
@@ -77,6 +99,10 @@ export const TEXT = {
       + `From <b>${pct(n.share)} on a weekday</b> (${num(n.round_trip)} stops) and <b>${pct(n.share_sat)} on Saturday</b> (${num(n.round_trip_sat)}) you can reach a hospital-named stop, stay at least ${Math.round(s.settings.min_stay_s / 60)} minutes and get back the same day.`,
     perFeed: f => `The median share per feed is ${pct(f.median_share)}. In ${num(f.share_zero)} feeds no stop can make the round trip; ${num(f.round_trip_weekday_but_not_saturday)} feeds allow it on the weekday but not on Saturday; ${num(f.no_saturday_service)} feeds have no Saturday service.`,
     dateLine: s => `Dates: Wed ${s.date} and Sat ${s.saturday}; up to ${s.settings.transfers} transfer (at least ${Math.round(s.settings.min_connection_s / 60)} min to change); at least ${Math.round(s.settings.min_stay_s / 60)} min at the hospital`,
+    edition: e => e.ed === 1
+      ? 'This is edition 1 (at most three hospital stops per feed). With the revised method of edition 2, the national shares are 88.7% on a weekday and 65.6% on Saturday.'
+      : `This is edition ${e.ed}. It revises edition 1's method (at most three hospital stops per feed, stop names not merged); the changes are under Method and limits below.`,
+    otherEdition: e => `See edition ${e.ed}`,
     prefHead: 'By prefecture',
     feedHead: 'By feed (operator)',
     mapHead: 'Every stop\'s verdict',
@@ -105,6 +131,14 @@ export const TEXT = {
       'Where shares come out low: with at most three hospital stops per feed, large feeds whose routes serve a different hospital in each district (for example Kagoshima\'s Aibus) score lower. Stops named separately for arriving and departing (（着） and （発）) count as different stops, so a round trip through them can be missed (for example Yaese town bus). The name pattern also matches dentists: in 20 feeds one of the three hospital stops is a dentist\'s (kept as is in these results). Stops whose coordinates are swapped in the source data are left off the map.',
       'Official decisions on transport gaps (交通空白) are made by municipalities and MLIT\'s regional bureaus; use this as input for that work.',
     ],
+    method2: [
+      'Hospital stops are the stops whose names contain 病院, 医院, クリニック, 診療所 or 医療センター but not 歯科, 動物病院 or 獣医 (the same names as the app\'s Hospital button) and that a trip serves that day: up to ten per feed, busiest first (edition 1 took three and included dentists). Each stop takes its best verdict over them.',
+      'Same-name stops within 400 m whose names differ only by a bracketed direction or side note such as （上り）/（下り） or （発）/（着） are merged into one (46 pairs in 16 feeds, merges.csv). In edition 1, for example, Yaese town bus\'s （発）南部徳洲会病院 and （着）南部徳洲会病院 counted as different stops, so no round trip was found.',
+      'The calculation is the app\'s own code (gtfs.js): direct buses or one transfer within the same feed, at least 30 minutes at the hospital. Both shares use the same base, the stops with a weekday departure (hospital stops excluded). More hospital stops make the base smaller (861 hospital stops with three, 1,257 with ten). Counting every added hospital stop as a round trip or as a failure gives 88.0% to 88.8% nationally, above edition 1 either way.',
+      'Limits: hospitals are found only by stop names, so a hospital-named stop is a proxy, and feeds without one are left out. With ten, small clinics\' stops count too, and which departments they have is not known. Timetables only: no fares, walking, delays or connections to other feeds (rail or other operators). Demand-responsive transit is not included. A stop that appears in several feeds is counted once per feed. Stops whose coordinates are swapped in the source data are left off the map.',
+      'Results for each method (edition 1\'s e1, strict3 without dentists and vets, merged3 with merged names, merged10 with up to ten hospital stops) are in the columns of feeds.csv and in findings.md. Check feeds with extreme shares in the app before relying on them.',
+      'Official decisions on transport gaps (交通空白) are made by municipalities and MLIT\'s regional bureaus; use this as input for that work.',
+    ],
     filesHead: 'Download the data (CC BY 4.0)',
     files: 'feeds.csv (per feed), prefectures.csv, stops/NN.csv (per stop), skipped.csv (left out, with reasons), summary.json, README.md',
     repo: 'See the files on GitHub',
@@ -121,7 +155,7 @@ export function rows(text) {
     const o = {};
     head.forEach((h, k) => {
       const v = (r[k] || '').trim();
-      o[h] = NUMBERS.has(h) ? (v === '' ? null : +v) : v;
+      o[h] = NUMBERS.has(h) || METHOD_NUMBER.test(h) ? (v === '' ? null : +v) : v;
     });
     return o;
   });
@@ -138,8 +172,68 @@ export function sortRows(list, key, desc = false) {
   });
 }
 
+// The edition for ?date= and ?ed=: the last one of that date, or of the newest date if the date is unknown.
+export function pickEdition(date, ed) {
+  const newest = EDITIONS[EDITIONS.length - 1].date;
+  const pool = EDITIONS.filter(e => e.date === (EDITIONS.some(x => x.date === date) ? date : newest));
+  return pool.find(e => e.ed === +ed) || pool[pool.length - 1];
+}
+
+// Per-feed counts of the first edition's summary.feeds, from feed rows in the first edition's shape.
+export function feedCounts(list) {
+  return {
+    share_zero: list.filter(r => r.share_round_trip === 0).length,
+    round_trip_weekday_but_not_saturday: list.filter(r => r.round_trip > 0 && r.round_trip_sat === 0).length,
+    no_saturday_service: list.filter(r => r.trips_sat === 0).length,
+  };
+}
+
+// A second-method edition in the first edition's shape, so the lead, tables and map read the same names:
+// feed rows take the method's columns, prefecture rows are summed from them (as tools/edition2 sums them),
+// and the summary takes the method's national totals.
+export function fromEdition(summary, feedList, prefList, method) {
+  if (!method) return { summary, feeds: feedList, prefs: prefList };
+  const feeds = feedList.map(r => ({
+    ...r, hubs: r['hubs_' + method], places_with_departures: r['base_' + method], round_trip: r['round_trip_' + method],
+    share_round_trip: r['share_' + method], round_trip_sat: r['round_trip_sat_' + method], share_round_trip_sat: r['share_sat_' + method],
+  }));
+  const sums = new Map();
+  for (const r of feeds) {
+    if (r.places_with_departures === null || r.places_with_departures === undefined) continue;
+    const t = sums.get(r.pref_id) || { feeds_analysed: 0, places_with_departures: 0, round_trip: 0, round_trip_sat: 0 };
+    t.feeds_analysed++; t.places_with_departures += r.places_with_departures; t.round_trip += r.round_trip; t.round_trip_sat += r.round_trip_sat;
+    sums.set(r.pref_id, t);
+  }
+  const prefs = prefList.map(p => {
+    const t = sums.get(p.pref_id) || { feeds_analysed: 0, places_with_departures: 0, round_trip: 0, round_trip_sat: 0 };
+    const base = t.places_with_departures;
+    return { pref_id: p.pref_id, pref_name: p.pref_name, ...t,
+      share: base ? round3(t.round_trip / base) : null, share_sat: base ? round3(t.round_trip_sat / base) : null };
+  });
+  const m = summary.totals.by_method[method];
+  const hubs = summary.settings.hubs_per_feed;
+  return {
+    summary: {
+      ...summary,
+      settings: { ...summary.settings, hubs_per_feed: typeof hubs === 'object' ? hubs[method] : hubs },
+      national: { places_with_departures: m.places_with_departures, round_trip: m.round_trip, share: m.share,
+        round_trip_sat: m.round_trip_sat, share_sat: m.share_sat, status_totals: m.status_totals },
+      feeds: { median_share: m.median_feed_share, share_below_half: m.feeds_below_half, ...feedCounts(feeds) },
+    },
+    feeds, prefs,
+  };
+}
+
 export function leadHtml(s, t) {
   return `<p class="lead">${t.lead(s, s.national)}</p><p>${t.perFeed(s.feeds)}</p><p class="muted small">${esc(t.dateLine(s))}</p>`;
+}
+
+// Which edition is shown, with links to the others of the same date (hrefOf(edition) gives each link).
+export function editionHtml(e, t, hrefOf) {
+  const others = EDITIONS.filter(x => x.date === e.date && x.ed !== e.ed);
+  if (!others.length && e.ed === 1) return '';
+  return `<p class="small">${esc(t.edition(e))}`
+    + others.map(x => ` <a href="${esc(hrefOf(x))}">${esc(t.otherEdition(x))}</a>`).join('') + '</p>';
 }
 
 const shareCell = x => `<td class="share"><span class="bar"><i style="width:${x === null ? 0 : Math.round(x * 100)}%"></i></span>${pct(x)}</td>`;
@@ -190,11 +284,12 @@ async function start() {
   let lang = params.get('lang') || ((navigator.language || 'ja').startsWith('ja') ? 'ja' : 'en');
   if (!TEXT[lang]) lang = 'ja';
   const t = TEXT[lang];
-  const date = EDITIONS.includes(params.get('date')) ? params.get('date') : EDITIONS[EDITIONS.length - 1];
+  const edition = pickEdition(params.get('date'), params.get('ed'));
+  const date = edition.date;
 
   document.documentElement.lang = lang;
   for (const el of document.querySelectorAll('[data-t]')) el.textContent = t[el.dataset.t];
-  $('#method').innerHTML = t.method.map(p => `<p>${esc(p)}</p>`).join('');
+  $('#method').innerHTML = (edition.method ? t.method2 : t.method).map(p => `<p>${esc(p)}</p>`).join('');
   const other = lang === 'ja' ? 'en' : 'ja';
   const q = new URLSearchParams(location.search);
   q.set('lang', other);
@@ -206,19 +301,26 @@ async function start() {
   let root = null, summary;
   for (const r of DATA_ROOTS) {
     try {
-      const res = await fetch(r + date + '/summary.json');
-      if (res.ok) { summary = await res.json(); root = r + date + '/'; break; }
+      const res = await fetch(r + edition.dir + 'summary.json');
+      if (res.ok) { summary = await res.json(); root = r + edition.dir; break; }
     } catch (e) { /* try the next place */ }
   }
   if (!root) { $('#lead').textContent = t.missing; return; }
   const text = async name => { const res = await fetch(root + name); if (!res.ok) throw new Error(res.status + ' ' + name); return res.text(); };
-  const [prefs, feeds] = await Promise.all([text('prefectures.csv').then(rows), text('feeds.csv').then(rows)]);
+  const [prefRows, feedRows] = await Promise.all([text('prefectures.csv').then(rows), text('feeds.csv').then(rows)]);
+  const data = fromEdition(summary, feedRows, prefRows, edition.method);
+  const prefs = data.prefs, feeds = data.feeds;
   const feedOf = new Map(feeds.map(f => [f.organization_id + '/' + f.feed_id, f]));
 
-  $('#lead').innerHTML = leadHtml(summary, t);
-  $('#files').innerHTML = ['feeds.csv', 'prefectures.csv', 'skipped.csv', 'summary.json', 'README.md']
+  const hrefOf = e => {
+    const u = new URLSearchParams(location.search);
+    u.set('date', e.date); u.set('ed', String(e.ed)); u.delete('pref');
+    return '?' + u.toString();
+  };
+  $('#lead').innerHTML = leadHtml(data.summary, t) + editionHtml(edition, t, hrefOf);
+  $('#files').innerHTML = edition.files
     .map(f => `<a href="${esc(root + f)}">${f}</a>`).join('・')
-    + `・<a href="https://github.com/${REPO}/tree/main/data/national/${date}" target="_blank" rel="noopener">${esc(t.repo)}</a>`;
+    + `・<a href="https://github.com/${REPO}/tree/main/data/national/${edition.dir.replace(/\/$/, '')}" target="_blank" rel="noopener">${esc(t.repo)}</a>`;
 
   const state = {
     prefSort: { key: 'pref_id', desc: false }, feedSort: { key: 'share_round_trip', desc: false },
