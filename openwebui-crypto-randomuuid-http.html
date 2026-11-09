@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open WebUI &quot;crypto.randomUUID is not a function&quot; over plain HTTP: which versions have it and how to fix it</title>
+<meta name="description" content="Open WebUI over plain HTTP on a LAN or Docker address: chat page stuck on a spinner, skill editor disabled, 'crypto.randomUUID is not a function'. Which Open WebUI releases (v0.8.0 to v0.13.3) call it where, the fix (0.13.2 or newer, or HTTPS, or an SSH tunnel), read from all 85 release tags. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/openwebui-crypto-randomuuid-http.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>crypto.randomUUID over HTTP</strong> · <a href="openwebui-alembic-cant-locate-revision.html">&quot;Can't locate revision&quot;</a> · <a href="openwebui-env-ignored.html">Settings &quot;cannot be edited here&quot;</a> · <a href="openwebui-reverse-proxy.html">Reverse proxy</a> · <a href="openwebui-sso-mismatching-state.html">SSO &quot;mismatching_state&quot;</a></nav>
+<h1>Open WebUI: &quot;TypeError: crypto.randomUUID is not a function&quot; over plain HTTP</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 9 November 2026 against all 85 Open WebUI release tags from v0.6.0 to v0.13.3 (the newest release then).</p>
+
+<p>You open Open WebUI at a plain-HTTP address such as <code>http://192.168.1.20:8080</code> or a Docker host name, and something stops working: the chat page stays on a spinner and no chat opens (0.13.1), or the skill editor stays disabled (0.12.0), or a button silently does nothing. The browser console (F12) shows <code>Uncaught TypeError: crypto.randomUUID is not a function</code>.</p>
+
+<p><strong>Short answer:</strong> browsers only provide <code>crypto.randomUUID()</code> on <em>secure</em> pages: HTTPS, or <code>http://localhost</code> / <code>127.0.0.1</code>. On any other plain-HTTP address it doesn't exist, and Open WebUI code that calls it throws. <strong>Update to Open WebUI 0.13.2 or newer</strong> (0.13.3 was the newest on 9 November 2026): in those releases no code that runs over plain HTTP calls it. Better still, serve Open WebUI over HTTPS, which also protects the password you type into it.</p>
+
+<h2 id="versions">Which releases call it, and where</h2>
+<p>We listed every <code>crypto.randomUUID()</code> call in Open WebUI's browser code (<code>src/</code>) at each release tag from v0.6.0 on (older releases were not checked).</p>
+<table>
+  <tr><th>Releases</th><th>Files with a call (what may break over plain HTTP)</th><th>Reports</th></tr>
+  <tr><td>v0.6.0 to v0.7.2</td><td>None.</td><td></td></tr>
+  <tr><td>v0.8.0 to v0.11.4</td><td><code>components/playground/Chat.svelte</code> (the Playground chat); from v0.10.0 to v0.11.0 also <code>components/admin/Settings/Integrations.svelte</code></td><td></td></tr>
+  <tr><td><strong>v0.12.0</strong></td><td>The Playground chat, plus <code>workspace/Skills.svelte</code>, <code>Skills/SkillEditor.svelte</code>, <code>Skills/SkillFiles.svelte</code> (creating or editing skills), <code>admin/Settings/Models/ModelControls.svelte</code> (the + under Model controls), <code>workspace/Models/VoiceAvatarEditor.svelte</code>, <code>utils/realtime.ts</code></td><td><a href="https://github.com/open-webui/open-webui/issues/32238">#32238</a>, <a href="https://github.com/open-webui/open-webui/issues/32261">#32261</a></td></tr>
+  <tr><td>v0.12.1 to v0.12.5</td><td>None in v0.12.1 and v0.12.2. From v0.12.3 the only calls are in <code>lib/encryption/client.ts</code>, which (as read at v0.13.3) stops on plain HTTP before reaching them; see <a href="#encryption">below</a>.</td><td></td></tr>
+  <tr><td>v0.13.0</td><td><code>components/chat/ChatTabs.svelte</code> and <code>components/comments/CommentComposer.svelte</code> (comments)</td><td></td></tr>
+  <tr><td><strong>v0.13.1</strong></td><td><code>stores/chatViewStates.ts</code> (the chat page itself: spinner, no chat opens), <code>CommentComposer.svelte</code>, <code>chat/FileNav/MarkdownFileEditor.svelte</code> (editing Markdown files)</td><td><a href="https://github.com/open-webui/open-webui/issues/33919">#33919</a>, fixed by <a href="https://github.com/open-webui/open-webui/pull/33922">PR #33922</a></td></tr>
+  <tr><td><strong>v0.13.2, v0.13.3</strong></td><td>Only the three in <code>lib/encryption/client.ts</code>, which stop on plain HTTP before reaching the call (<a href="#encryption">below</a>).</td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.2">0.13.2 release notes</a></td></tr>
+</table>
+<p>A file having a call doesn't mean every page that uses the file breaks: only the action that reaches that line fails. That is why, for example, #33919 reports that 0.13.0 loaded the chat page fine on the same setup where 0.13.1 did not.</p>
+
+<h2 id="fix">Fix it</h2>
+<ol>
+  <li><strong>Update Open WebUI</strong> to 0.13.2 or newer. Docker: <code>docker pull ghcr.io/open-webui/open-webui:v0.13.3</code> (or your usual tag), then recreate the container with the same volume. pip: <code>pip install -U open-webui</code>. Back up the data volume first. Open WebUI can't be downgraded on the same data (see <a href="openwebui-alembic-cant-locate-revision.html">&quot;Can't locate revision&quot;</a>).</li>
+  <li><strong>Serve it over HTTPS</strong> with a reverse proxy (Caddy, nginx, Traefik) in front of port 8080. See <a href="openwebui-reverse-proxy.html">Open WebUI behind a reverse proxy</a>. This fixes the error on every version, and it also makes the microphone (voice input and calls) and clipboard features work, because browsers only allow those on secure pages too.</li>
+  <li><strong>Or reach it as localhost through an SSH tunnel</strong> from your own computer: <code>ssh -L 8080:localhost:8080 you@server</code>, then open <code>http://localhost:8080</code>. The browser treats localhost as secure.</li>
+  <li><strong>Stop-gap for one Chromium-based browser (Chrome, Edge):</strong> open <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code> (<code>edge://flags/…</code> in Edge), add your exact address such as <code>http://192.168.1.20:8080</code>, enable it and relaunch. This affects only that browser profile, and the traffic is still unencrypted.</li>
+</ol>
+<p class="warn">Plain HTTP on a network sends your Open WebUI password, session token and every chat in clear text to anyone on the same network. Updating fixes the error. Only HTTPS (or the SSH tunnel) fixes the exposure.</p>
+
+<h2 id="encryption">What about the calls still in 0.13.3?</h2>
+<p>From v0.12.3 to v0.13.3, <code>src/lib/encryption/client.ts</code> has three <code>crypto.randomUUID()</code> calls (lines 267, 422 and 440 in v0.13.3). We read that file at v0.13.3. The session setup throws at once if <code>window.isSecureContext</code> is false (line 162), and all three calls are only reached once a session is active, so over plain HTTP that code stops before reaching them. In other words, that feature needs a secure page, by design. We read the code; we did not run it in a browser.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. cloned <a href="https://github.com/open-webui/open-webui">open-webui/open-webui</a> and, at each of its 85 release tags from v0.6.0 to v0.13.3, listed every <code>crypto.randomUUID()</code> call under <code>src/</code> and whether it is guarded (for example by a fallback). Self-checks: v0.13.1 has the call in <code>stores/chatViewStates.ts</code> (#33919, PR #33922), v0.13.2 has none in the three files PR #33922 changed, v0.12.0 has at least one call (#32238, #32261), and the newest tag scanned matched both GitHub's latest release and PyPI. Which feature each file belongs to is our reading of its path, except where an issue names it. A <code>:main</code> or <code>:dev</code> image can differ from the releases. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI version</a>. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Only change systems you own or are allowed to manage. Checked on 9 November 2026 against Open WebUI release tags v0.6.0 to v0.13.3 (<a href="https://github.com/open-webui/open-webui/blob/v0.13.3/src/lib/encryption/client.ts">encryption/client.ts at v0.13.3</a>).</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>

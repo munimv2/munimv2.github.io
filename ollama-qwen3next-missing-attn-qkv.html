@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama &quot;qwen3next: layer N missing attn_qkv/attn_gate projections&quot;: which Ollama versions have it and what the layer number means</title>
+<meta name="description" content="Ollama fails with 'failed to initialize model: qwen3next: layer N missing attn_qkv/attn_gate projections'. The check exists only in Ollama v0.17.0 to v0.24.0 and is gone from v0.30.0. What layer 0, a middle layer and the last layer mean (old Qwen3-Next GGUF, split GGUF, MTP head), read from all 90 Ollama release tags. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/ollama-qwen3next-missing-attn-qkv.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.95rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <a href="secure-ollama.html">Lock down Ollama</a> · <a href="ollama-version-warning.html">ollama -v warnings</a> · <a href="ollama-could-not-connect.html">Could not connect to ollama server</a> · <strong>qwen3next missing attn_qkv</strong></nav>
+<h1>Ollama: &quot;qwen3next: layer N missing attn_qkv/attn_gate projections&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 9 November 2026 by reading Ollama's source at all 90 release tags from v0.17.0 to v0.40.15 (the newest release then).</p>
+
+<p>You load a Qwen3-Next, Qwen3.6 or Qwen3.8 GGUF in Ollama and get one of these:</p>
+<pre>Error: 500 Internal Server Error: failed to initialize model: qwen3next: layer 0 missing attn_qkv/attn_gate projections
+Error: failed to initialize model: qwen3next: layer 40 missing attn_qkv/attn_gate projections</pre>
+
+<p><strong>Short answer: update Ollama.</strong> The <code>layer N</code> form of this message is in Ollama's source from release <strong>v0.17.5 (1 March 2026) to v0.24.0 (14 May 2026)</strong>, and an earlier form without a layer number is in v0.17.0 to v0.18.3. From <strong>v0.30.0 (1 June 2026)</strong> on, Ollama's own <code>qwen3next</code> model code is gone from its source, and no later release, up to v0.40.15 (the newest on 9 November 2026), contains the message. On 2 November 2026 an Ollama maintainer answered a report of this error (on Ollama 0.17.7) by advising an upgrade and showing a Qwen3.8-27B GGUF from the same Hugging Face repo answering on 0.40.12. The reporter confirmed upgrading fixed it on 0.40.13 (<a href="https://github.com/ollama/ollama/issues/19459">#19459</a>).</p>
+<p>Run <code>ollama -v</code> and look at the <code>ollama version is</code> line, which is the version of the <em>server</em> that loads models. If it is 0.24.0 or older, that is your problem. If the command also prints <code>Warning: client version is</code>, an older server is still running; see <a href="ollama-version-warning.html">ollama -v warnings</a>.</p>
+
+<h2 id="layer">What the layer number tells you</h2>
+<p>When the model loads, the check walks its recurrent (linear-attention) layers and stops at the first one without the split tensors <code>attn_qkv</code> and <code>attn_gate</code> (from v0.19.0 on, the older combined <code>ssm_in</code> tensor is accepted instead). Which layer it names points to the cause. The causes in this table are the ones reported in Ollama's issue threads:</p>
+<table>
+  <tr><th>Layer in the error</th><th>Usual cause</th><th>On Ollama 0.17.5 to 0.24.0</th></tr>
+  <tr><td><strong>layer 0</strong>, often <code>qwen3-next:80b</code></td><td>The GGUF stores each linear-attention layer as one combined <code>ssm_in</code> tensor (the older layout). Ollama 0.17.5 to 0.18.3 rejected it (<a href="https://github.com/ollama/ollama/issues/14587">#14587</a>, <a href="https://github.com/ollama/ollama/issues/14700">#14700</a>, <a href="https://github.com/ollama/ollama/issues/15128">#15128</a>).</td><td>Fixed by <a href="https://github.com/ollama/ollama/pull/15133">PR #15133</a>, first in <strong>v0.19.0</strong> (29 March 2026). Upgrade to v0.19.0 or newer.</td></tr>
+  <tr><td><strong>a middle layer</strong> (for example layer 2)</td><td>The GGUF is split into several files (<code>…-00001-of-00004.gguf</code>) and Ollama read only the first one, so later layers' tensors were missing. In <a href="https://github.com/ollama/ollama/issues/15372">#15372</a> (Ollama 0.20.2) merging the parts with <code>llama-gguf-split --merge</code> made the model load.</td><td>Merge the parts into one file and import that. Loading split GGUFs is tracked in <a href="https://github.com/ollama/ollama/issues/5245">#5245</a> (open on 9 November 2026).</td></tr>
+  <tr><td><strong>the last layer</strong> (layer 40 on Qwen3.6-35B-A3B, layer 64 on Qwen3.6/3.8-27B)</td><td>The GGUF includes the extra multi-token-prediction (MTP, &quot;nextn&quot;) layer at the end, which Ollama's own engine treated like an ordinary layer (<a href="https://github.com/ollama/ollama/issues/16282">#16282</a> on 0.24.0, closed as not planned; <a href="https://github.com/ollama/ollama/issues/19459">#19459</a> on 0.17.7). On 23 May 2026 a maintainer replied in #15372 that such models need MTP support, which mainline Ollama did not have yet.</td><td>No fix in these versions: none of the 32 releases from v0.17.0 to v0.24.0 has any MTP or nextn code in the <code>qwen3next</code> model. Upgrade to v0.30.0 or newer, or use a GGUF of the same model without the MTP layer.</td></tr>
+</table>
+
+<h2 id="versions">Ollama versions and this error</h2>
+<table>
+  <tr><th>Ollama release</th><th>What its source does</th></tr>
+  <tr><td>v0.17.0 to v0.17.4 (older releases were not checked)</td><td>The check runs when a layer first runs (<code>model/models/qwen3next/deltanet.go</code>) and has no layer number: <code>qwen3next: missing attn_qkv/attn_gate projections (legacy ssm_in is not supported)</code></td></tr>
+  <tr><td>v0.17.5 to v0.18.3</td><td>Also checked when the model loads (<code>Validate()</code> in <code>model/models/qwen3next/model.go</code>), which gives the <code>layer N</code> form. Old <code>ssm_in</code> GGUFs fail at layer 0.</td></tr>
+  <tr><td>v0.19.0 to v0.24.0</td><td>Only the load-time check is left, and it now accepts <code>ssm_in</code> (PR #15133). MTP GGUFs and split GGUFs still fail.</td></tr>
+  <tr><td><strong>v0.30.0 and newer</strong> (to v0.40.15)</td><td>The <code>model/models/qwen3next</code> folder is gone and the message is in no file. Each release pins a llama.cpp build in its <code>LLAMA_CPP_VERSION</code> file (b9452 in v0.30.0, b12111 in v0.40.15). Ollama's current main branch (7 November 2026) doesn't contain the message either.</td></tr>
+</table>
+<p>Ollama has no release tags between v0.24.0 and v0.30.0.</p>
+
+<h2 id="fix">Fix it</h2>
+<ol>
+  <li><strong>Update the Ollama server.</strong> Linux: <code>curl -fsSL https://ollama.com/install.sh | sh</code>. macOS and Windows: install the current app from <a href="https://ollama.com/download">ollama.com/download</a>, or update it the way you installed it (for example Homebrew), then quit and reopen it. Docker: <code>docker pull ollama/ollama</code>, then recreate the container with the same volume. Check with <code>ollama -v</code> afterwards.</li>
+  <li><strong>Pull or create the model again</strong> if it still fails, so Ollama re-reads the GGUF: <code>ollama pull &lt;model&gt;</code> for library models, or <code>ollama create &lt;name&gt; -f Modelfile</code> for your own GGUF.</li>
+  <li><strong>If you must stay on 0.17.5 to 0.24.0:</strong> for layer 0, upgrade to at least v0.19.0. For a middle layer, merge split files with <code>llama-gguf-split --merge first-part.gguf merged.gguf</code> (from llama.cpp). For the last layer, use a GGUF without the MTP layer.</li>
+</ol>
+<p class="warn">Upgrade from Ollama's own download or your package manager only. Ollama has fixed security issues in many of these releases; the <a href="ollama.html">Ollama CVE list</a> shows which ones affect the version you're on.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. cloned <a href="https://github.com/ollama/ollama">ollama/ollama</a> and, at every release tag from v0.17.0 to v0.40.15 (90 tags), searched for the message, recorded the file and line, whether the PR #15133 fix commit is in the tag, whether a <code>model/models/qwen3next</code> folder exists, any MTP/nextn lines in it, and the pinned llama.cpp build. Self-checks: v0.17.7 has the check (as #14700 and #19459 report), the fix commit is in a release tag, and the newest tag scanned is GitHub's latest release. This is a source reading. We did not load any GGUF. The causes by layer come from the linked issue threads, and that MTP GGUFs load on 0.30.0 and newer is not something we tested; the only test we know of is the maintainer's 0.40.12 run in #19459. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows your Ollama version, which security advisories affect it, and whether other computers can reach port 11434. The <a href="index.html">CVE checker</a> does the version part in your browser. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Checked on 9 November 2026 against Ollama release tags v0.17.0 to v0.40.15 (<a href="https://github.com/ollama/ollama/blob/v0.24.0/model/models/qwen3next/model.go">model.go at v0.24.0</a>, <a href="https://github.com/ollama/ollama/blob/v0.17.0/model/models/qwen3next/deltanet.go">deltanet.go at v0.17.0</a>).</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
