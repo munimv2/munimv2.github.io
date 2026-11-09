@@ -1,0 +1,873 @@
+{
+ "title": "Open WebUI Alembic revision ids and the first release that ships each",
+ "source": "git tags of github.com/open-webui/open-webui, backend/open_webui/migrations/versions",
+ "checked": "2026-11-09",
+ "newest_release": "v0.13.3",
+ "license": "CC BY 4.0",
+ "made_by": "MV2 of Munim, Inc., with AI agents",
+ "page": "https://munimv2.github.io/openwebui-alembic-cant-locate-revision.html",
+ "revisions": [
+  {
+   "revision": "7e5b5dc7342b",
+   "first_release": "v0.3.17",
+   "first_release_date": "2024-09-04",
+   "migration": "init",
+   "file": "7e5b5dc7342b_init.py",
+   "down_revision": [],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "ca81bd47c050",
+   "first_release": "v0.3.17",
+   "first_release_date": "2024-09-04",
+   "migration": "add config table",
+   "file": "ca81bd47c050_add_config_table.py",
+   "down_revision": [
+    "7e5b5dc7342b"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "6a39f3d8e55c",
+   "first_release": "v0.3.31",
+   "first_release_date": "2024-10-07",
+   "migration": "add knowledge table",
+   "file": "6a39f3d8e55c_add_knowledge_table.py",
+   "down_revision": [
+    "c0fbf31ca0db"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "c0fbf31ca0db",
+   "first_release": "v0.3.31",
+   "first_release_date": "2024-10-07",
+   "migration": "update file table",
+   "file": "c0fbf31ca0db_update_file_table.py",
+   "down_revision": [
+    "ca81bd47c050"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "1af9b942657b",
+   "first_release": "v0.3.33",
+   "first_release_date": "2024-10-24",
+   "migration": "migrate tags",
+   "file": "1af9b942657b_migrate_tags.py",
+   "down_revision": [
+    "242a2047eae0"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "242a2047eae0",
+   "first_release": "v0.3.33",
+   "first_release_date": "2024-10-24",
+   "migration": "update chat table",
+   "file": "242a2047eae0_update_chat_table.py",
+   "down_revision": [
+    "6a39f3d8e55c"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "3ab32c4b8f59",
+   "first_release": "v0.3.33",
+   "first_release_date": "2024-10-24",
+   "migration": "update tags",
+   "file": "3ab32c4b8f59_update_tags.py",
+   "down_revision": [
+    "1af9b942657b"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "4ace53fd72c8",
+   "first_release": "v0.3.33",
+   "first_release_date": "2024-10-24",
+   "migration": "update folder table datetime",
+   "file": "4ace53fd72c8_update_folder_table_datetime.py",
+   "down_revision": [
+    "af906e964978"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "af906e964978",
+   "first_release": "v0.3.33",
+   "first_release_date": "2024-10-24",
+   "migration": "add feedback table",
+   "file": "af906e964978_add_feedback_table.py",
+   "down_revision": [
+    "c29facfe716b"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "c29facfe716b",
+   "first_release": "v0.3.33",
+   "first_release_date": "2024-10-24",
+   "migration": "update file table path",
+   "file": "c29facfe716b_update_file_table_path.py",
+   "down_revision": [
+    "c69f45358db4"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "c69f45358db4",
+   "first_release": "v0.3.33",
+   "first_release_date": "2024-10-24",
+   "migration": "add folder table",
+   "file": "c69f45358db4_add_folder_table.py",
+   "down_revision": [
+    "3ab32c4b8f59"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "922e7a387820",
+   "first_release": "v0.4.0",
+   "first_release_date": "2024-11-19",
+   "migration": "add group table",
+   "file": "922e7a387820_add_group_table.py",
+   "down_revision": [
+    "4ace53fd72c8"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "57c599a3cb57",
+   "first_release": "v0.5.0",
+   "first_release_date": "2024-12-25",
+   "migration": "add channel table",
+   "file": "57c599a3cb57_add_channel_table.py",
+   "down_revision": [
+    "922e7a387820"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "7826ab40b532",
+   "first_release": "v0.5.0",
+   "first_release_date": "2024-12-25",
+   "migration": "update file table",
+   "file": "7826ab40b532_update_file_table.py",
+   "down_revision": [
+    "57c599a3cb57"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "3781e22d8b01",
+   "first_release": "v0.5.3",
+   "first_release_date": "2024-12-31",
+   "migration": "update message table",
+   "file": "3781e22d8b01_update_message_table.py",
+   "down_revision": [
+    "7826ab40b532"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "9f0c9cd09105",
+   "first_release": "v0.6.6",
+   "first_release_date": "2025-05-05",
+   "migration": "add note table",
+   "file": "9f0c9cd09105_add_note_table.py",
+   "down_revision": [
+    "3781e22d8b01"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "d31026856c01",
+   "first_release": "v0.6.16",
+   "first_release_date": "2025-07-14",
+   "migration": "update folder table data",
+   "file": "d31026856c01_update_folder_table_data.py",
+   "down_revision": [
+    "9f0c9cd09105"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "018012973d35",
+   "first_release": "v0.6.23",
+   "first_release_date": "2025-08-21",
+   "migration": "add indexes",
+   "file": "018012973d35_add_indexes.py",
+   "down_revision": [
+    "d31026856c01"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "3af16a1c9fb6",
+   "first_release": "v0.6.23",
+   "first_release_date": "2025-08-21",
+   "migration": "update user table",
+   "file": "3af16a1c9fb6_update_user_table.py",
+   "down_revision": [
+    "018012973d35"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "38d63c18f30f",
+   "first_release": "v0.6.27",
+   "first_release_date": "2025-09-09",
+   "migration": "add oauth session table",
+   "file": "38d63c18f30f_add_oauth_session_table.py",
+   "down_revision": [
+    "3af16a1c9fb6"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "a5c220713937",
+   "first_release": "v0.6.32",
+   "first_release_date": "2025-09-29",
+   "migration": "add reply to id column to message",
+   "file": "a5c220713937_add_reply_to_id_column_to_message.py",
+   "down_revision": [
+    "38d63c18f30f"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "37f288994c47",
+   "first_release": "v0.6.37",
+   "first_release_date": "2025-11-24",
+   "migration": "add group member table",
+   "file": "37f288994c47_add_group_member_table.py",
+   "down_revision": [
+    "a5c220713937"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "2f1211949ecc",
+   "first_release": "v0.6.41",
+   "first_release_date": "2025-12-02",
+   "migration": "update message and channel member table",
+   "file": "2f1211949ecc_update_message_and_channel_member_table.py",
+   "down_revision": [
+    "37f288994c47"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "3e0e00844bb0",
+   "first_release": "v0.6.41",
+   "first_release_date": "2025-12-02",
+   "migration": "add knowledge file table",
+   "file": "3e0e00844bb0_add_knowledge_file_table.py",
+   "down_revision": [
+    "90ef40d4714e"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "90ef40d4714e",
+   "first_release": "v0.6.41",
+   "first_release_date": "2025-12-02",
+   "migration": "update channel and channel members table",
+   "file": "90ef40d4714e_update_channel_and_channel_members_table.py",
+   "down_revision": [
+    "b10670c03dd5"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "b10670c03dd5",
+   "first_release": "v0.6.41",
+   "first_release_date": "2025-12-02",
+   "migration": "update user table",
+   "file": "b10670c03dd5_update_user_table.py",
+   "down_revision": [
+    "2f1211949ecc"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "6283dc0e4d8d",
+   "first_release": "v0.6.42",
+   "first_release_date": "2025-12-21",
+   "migration": "add channel file table",
+   "file": "6283dc0e4d8d_add_channel_file_table.py",
+   "down_revision": [
+    "3e0e00844bb0"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "81cc2ce44d79",
+   "first_release": "v0.6.42",
+   "first_release_date": "2025-12-21",
+   "migration": "update channel file and knowledge table",
+   "file": "81cc2ce44d79_update_channel_file_and_knowledge_table.py",
+   "down_revision": [
+    "6283dc0e4d8d"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "c440947495f3",
+   "first_release": "v0.6.42",
+   "first_release_date": "2025-12-21",
+   "migration": "add chat file table",
+   "file": "c440947495f3_add_chat_file_table.py",
+   "down_revision": [
+    "81cc2ce44d79"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "374d2f66af06",
+   "first_release": "v0.8.0",
+   "first_release_date": "2026-02-12",
+   "migration": "add prompt history table",
+   "file": "374d2f66af06_add_prompt_history_table.py",
+   "down_revision": [
+    "c440947495f3"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "8452d01d26d7",
+   "first_release": "v0.8.0",
+   "first_release_date": "2026-02-12",
+   "migration": "add chat message table",
+   "file": "8452d01d26d7_add_chat_message_table.py",
+   "down_revision": [
+    "374d2f66af06"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "a1b2c3d4e5f6",
+   "first_release": "v0.8.0",
+   "first_release_date": "2026-02-12",
+   "migration": "add skill table",
+   "file": "a1b2c3d4e5f6_add_skill_table.py",
+   "down_revision": [
+    "f1e2d3c4b5a6"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "f1e2d3c4b5a6",
+   "first_release": "v0.8.0",
+   "first_release_date": "2026-02-12",
+   "migration": "add access grant table",
+   "file": "f1e2d3c4b5a6_add_access_grant_table.py",
+   "down_revision": [
+    "8452d01d26d7"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "b2c3d4e5f6a7",
+   "first_release": "v0.8.1",
+   "first_release_date": "2026-02-14",
+   "migration": "add scim column to user table",
+   "file": "b2c3d4e5f6a7_add_scim_column_to_user_table.py",
+   "down_revision": [
+    "a1b2c3d4e5f6"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "56359461a091",
+   "first_release": "v0.9.0",
+   "first_release_date": "2026-04-21",
+   "migration": "add calendar tables",
+   "file": "56359461a091_add_calendar_tables.py",
+   "down_revision": [
+    "c1d2e3f4a5b6"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "a3dd5bedd151",
+   "first_release": "v0.9.0",
+   "first_release_date": "2026-04-21",
+   "migration": "add tasks and summary to chat",
+   "file": "a3dd5bedd151_add_tasks_and_summary_to_chat.py",
+   "down_revision": [
+    "b2c3d4e5f6a7"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "b7c8d9e0f1a2",
+   "first_release": "v0.9.0",
+   "first_release_date": "2026-04-21",
+   "migration": "add last read at to chat",
+   "file": "b7c8d9e0f1a2_add_last_read_at_to_chat.py",
+   "down_revision": [
+    "d4e5f6a7b8c9"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "c1d2e3f4a5b6",
+   "first_release": "v0.9.0",
+   "first_release_date": "2026-04-21",
+   "migration": "add shared chat table",
+   "file": "c1d2e3f4a5b6_add_shared_chat_table.py",
+   "down_revision": [
+    "e1f2a3b4c5d6"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "d4e5f6a7b8c9",
+   "first_release": "v0.9.0",
+   "first_release_date": "2026-04-21",
+   "migration": "add automation tables",
+   "file": "d4e5f6a7b8c9_add_automation_tables.py",
+   "down_revision": [
+    "a3dd5bedd151"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "e1f2a3b4c5d6",
+   "first_release": "v0.9.0",
+   "first_release_date": "2026-04-21",
+   "migration": "add is pinned to note",
+   "file": "e1f2a3b4c5d6_add_is_pinned_to_note.py",
+   "down_revision": [
+    "b7c8d9e0f1a2"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "4de81c2a3af1",
+   "first_release": "v0.9.3",
+   "first_release_date": "2026-05-09",
+   "migration": "add pinned note table",
+   "file": "4de81c2a3af1_add_pinned_note_table.py",
+   "down_revision": [
+    "56359461a091"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "a0b1c2d3e4f5",
+   "first_release": "v0.9.3",
+   "first_release_date": "2026-05-09",
+   "migration": "add memory user id index",
+   "file": "a0b1c2d3e4f5_add_memory_user_id_index.py",
+   "down_revision": [
+    "4de81c2a3af1"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "3c9b0ca343fd",
+   "first_release": "v0.9.6",
+   "first_release_date": "2026-06-01",
+   "migration": "add knowledge directory table",
+   "file": "3c9b0ca343fd_add_knowledge_directory_table.py",
+   "down_revision": [
+    "a0b1c2d3e4f5"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "461111b60977",
+   "first_release": "v0.9.6",
+   "first_release_date": "2026-06-01",
+   "migration": "add missing primary keys to legacy",
+   "file": "461111b60977_add_missing_primary_keys_to_legacy_.py",
+   "down_revision": [
+    "3c9b0ca343fd"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "3ff2c63645b8",
+   "first_release": "v0.10.0",
+   "first_release_date": "2026-06-29",
+   "migration": "reshape config to per key rows",
+   "file": "3ff2c63645b8_reshape_config_to_per_key_rows.py",
+   "down_revision": [
+    "461111b60977"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "42e2978c7933",
+   "first_release": "v0.10.0",
+   "first_release_date": "2026-06-29",
+   "migration": "add memory path and meta",
+   "file": "42e2978c7933_add_memory_path_and_meta.py",
+   "down_revision": [
+    "7b3f2a9c1d4e"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "4c5ce3d2f27f",
+   "first_release": "v0.10.0",
+   "first_release_date": "2026-06-29",
+   "migration": "add context summary to chat message",
+   "file": "4c5ce3d2f27f_add_context_summary_to_chat_message.py",
+   "down_revision": [
+    "3ff2c63645b8"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "7b3f2a9c1d4e",
+   "first_release": "v0.10.0",
+   "first_release_date": "2026-06-29",
+   "migration": "add memory type",
+   "file": "7b3f2a9c1d4e_add_memory_type.py",
+   "down_revision": [
+    "4c5ce3d2f27f"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "55f1302ac17c",
+   "first_release": "v0.11.0",
+   "first_release_date": "2026-07-27",
+   "migration": "add memory id user id covering index",
+   "file": "55f1302ac17c_add_memory_id_user_id_covering_index.py",
+   "down_revision": [
+    "b0018471bbbe"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "856c5b02fb54",
+   "first_release": "v0.11.0",
+   "first_release_date": "2026-07-27",
+   "migration": "add chat message meta",
+   "file": "856c5b02fb54_add_chat_message_meta.py",
+   "down_revision": [
+    "42e2978c7933"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "959eaac8f909",
+   "first_release": "v0.11.0",
+   "first_release_date": "2026-07-27",
+   "migration": "add automation folder id",
+   "file": "959eaac8f909_add_automation_folder_id.py",
+   "down_revision": [
+    "55f1302ac17c"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "9a1b2c3d4e5f",
+   "first_release": "v0.11.0",
+   "first_release_date": "2026-07-27",
+   "migration": "add current message id to chat",
+   "file": "9a1b2c3d4e5f_add_current_message_id_to_chat.py",
+   "down_revision": [
+    "856c5b02fb54"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "b0018471bbbe",
+   "first_release": "v0.11.0",
+   "first_release_date": "2026-07-27",
+   "migration": "add user variables",
+   "file": "b0018471bbbe_add_user_variables.py",
+   "down_revision": [
+    "c49178636c78"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "c49178636c78",
+   "first_release": "v0.11.0",
+   "first_release_date": "2026-07-27",
+   "migration": "add chat variables",
+   "file": "c49178636c78_add_chat_variables.py",
+   "down_revision": [
+    "9a1b2c3d4e5f"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "f0bd01a18a3d",
+   "first_release": "v0.11.0",
+   "first_release_date": "2026-07-27",
+   "migration": "add unique normalized user email index",
+   "file": "f0bd01a18a3d_add_unique_normalized_user_email_index.py",
+   "down_revision": [
+    "959eaac8f909"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "1ce6ade7d93b",
+   "first_release": "v0.11.1",
+   "first_release_date": "2026-08-25",
+   "migration": "add group member user id index",
+   "file": "1ce6ade7d93b_add_group_member_user_id_index.py",
+   "down_revision": [
+    "f0bd01a18a3d"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "6d09d1bf1f23",
+   "first_release": "v0.11.1",
+   "first_release_date": "2026-08-25",
+   "migration": "repair double encoded user oauth",
+   "file": "6d09d1bf1f23_repair_double_encoded_user_oauth.py",
+   "down_revision": [
+    "1ce6ade7d93b"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "d4c1a8e37b62",
+   "first_release": "v0.11.1",
+   "first_release_date": "2026-08-25",
+   "migration": "add chat timer at and chat indexes",
+   "file": "d4c1a8e37b62_add_chat_timer_at_and_chat_indexes.py",
+   "down_revision": [
+    "6d09d1bf1f23"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "a7d3e9f2b641",
+   "first_release": "v0.12.0",
+   "first_release_date": "2026-10-10",
+   "migration": "add mfa and session stamp",
+   "file": "a7d3e9f2b641_add_mfa_and_session_stamp.py",
+   "down_revision": [
+    "d4c1a8e37b62"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "b8e4f0a3c752",
+   "first_release": "v0.12.0",
+   "first_release_date": "2026-10-10",
+   "migration": "add group hierarchy",
+   "file": "b8e4f0a3c752_add_group_hierarchy.py",
+   "down_revision": [
+    "a7d3e9f2b641"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "b8f2c6d91a04",
+   "first_release": "v0.12.0",
+   "first_release_date": "2026-10-10",
+   "migration": "add postgres pending files index",
+   "file": "b8f2c6d91a04_add_postgres_pending_files_index.py",
+   "down_revision": [
+    "f8c0e5b134cd"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "d6a8c3f912ab",
+   "first_release": "v0.12.0",
+   "first_release_date": "2026-10-10",
+   "migration": "add skill history",
+   "file": "d6a8c3f912ab_add_skill_history.py",
+   "down_revision": [
+    "b8e4f0a3c752"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "e7b9d4a023bc",
+   "first_release": "v0.12.0",
+   "first_release_date": "2026-10-10",
+   "migration": "add model history",
+   "file": "e7b9d4a023bc_add_model_history.py",
+   "down_revision": [
+    "d6a8c3f912ab"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "f8c0e5b134cd",
+   "first_release": "v0.12.0",
+   "first_release_date": "2026-10-10",
+   "migration": "add tool history and function history",
+   "file": "f8c0e5b134cd_add_tool_history_and_function_history.py",
+   "down_revision": [
+    "e7b9d4a023bc"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "0bd252b206fb",
+   "first_release": "v0.12.1",
+   "first_release_date": "2026-10-14",
+   "migration": "add missing auth rows",
+   "file": "0bd252b206fb_add_missing_auth_rows.py",
+   "down_revision": [
+    "c92da83b017f"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "c92da83b017f",
+   "first_release": "v0.12.1",
+   "first_release_date": "2026-10-14",
+   "migration": "add apps",
+   "file": "c92da83b017f_add_apps.py",
+   "down_revision": [
+    "b8f2c6d91a04"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "6f8c2a91d4e7",
+   "first_release": "v0.13.0",
+   "first_release_date": "2026-11-03",
+   "migration": "add tool is active",
+   "file": "6f8c2a91d4e7_add_tool_is_active.py",
+   "down_revision": [
+    "c41f8d9e2a10"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "c41f8d9e2a10",
+   "first_release": "v0.13.0",
+   "first_release_date": "2026-11-03",
+   "migration": "add resource comments",
+   "file": "c41f8d9e2a10_add_resource_comments.py",
+   "down_revision": [
+    "0bd252b206fb"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "e42c8f710a36",
+   "first_release": "v0.13.0",
+   "first_release_date": "2026-11-03",
+   "migration": "add notification inbox",
+   "file": "e42c8f710a36_add_notification_inbox.py",
+   "down_revision": [
+    "6f8c2a91d4e7"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "6a23bd107e54",
+   "first_release": "v0.13.1",
+   "first_release_date": "2026-11-08",
+   "migration": "add chat view state",
+   "file": "6a23bd107e54_add_chat_view_state.py",
+   "down_revision": [
+    "8bc7e5a902d1"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "8bc7e5a902d1",
+   "first_release": "v0.13.1",
+   "first_release_date": "2026-11-08",
+   "migration": "add auth session",
+   "file": "8bc7e5a902d1_add_auth_session.py",
+   "down_revision": [
+    "e42c8f710a36"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  },
+  {
+   "revision": "9f6c2a8d1b43",
+   "first_release": "v0.13.1",
+   "first_release_date": "2026-11-08",
+   "migration": "add channel lookup indexes",
+   "file": "9f6c2a8d1b43_add_channel_lookup_indexes.py",
+   "down_revision": [
+    "6a23bd107e54"
+   ],
+   "removed_in": null,
+   "image_tag_found": true
+  }
+ ]
+}

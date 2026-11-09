@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open WebUI &quot;Can&#x27;t locate revision identified by&quot; (alembic): which release your database needs</title>
+<meta name="description" content="Open WebUI won&#x27;t start with &quot;Can&#x27;t locate revision identified by&quot;: your database was migrated by a newer release. Look up your id among all 72 migrations (Open WebUI 0.3.17 to 0.13.3) to see which release to run, and read your id with a tested command. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/openwebui-alembic-cant-locate-revision.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.92rem; }
+  th, td { border: 1px solid #ddd; padding: 0.3rem 0.45rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  tr:target { background: #fff3b0; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  .box { border: 1px solid #ccc; padding: 0.6em 1em; margin: 1em 0; background: #fafafa; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>&quot;Can't locate revision&quot;</strong> · <a href="openwebui-env-ignored.html">Settings &quot;cannot be edited here&quot;</a> · <a href="openwebui-model-id-pattern.html">Model id pattern</a> · <a href="openwebui-sso-mismatching-state.html">SSO &quot;mismatching_state&quot;</a></nav>
+<h1>Open WebUI: &quot;alembic.util.exc.CommandError: Can&#x27;t locate revision identified by '…'&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 9 November 2026 against every Open WebUI release tag from v0.3.17 to v0.13.3 (8 November 2026), the newest release then.</p>
+
+<p>Open WebUI stops at startup, often in a restart loop, and its log shows <code>Error running migrations: Can't locate revision identified by '…'</code> followed by <code>alembic.util.exc.CommandError: Can&#x27;t locate revision identified by '…'</code> with a 12-character id.</p>
+
+<p><strong>Short answer:</strong> the id is the last database migration your Open WebUI data has been through. A newer Open WebUI release applied it, and the release you are starting now is older, so it doesn't know that id and refuses to start. Find your id below to see which release first shipped it, then run <strong>that release or any newer one</strong> (the newest on 9 November 2026 was <a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.3">v0.13.3</a>). Open WebUI's migrations only go forward, so you can't go back to an older release on the same data. Going back means restoring a backup taken before the upgrade.</p>
+
+<form class="box" onsubmit="return findRev()"><label for="rev">Your id: </label><input id="rev" size="40" placeholder="e.g. 9f6c2a8d1b43"> <button>Look it up</button> <span id="revout" role="status"></span></form>
+<script>
+function findRev(){var m=(document.getElementById('rev').value.match(/[0-9a-f]{12}/i)||[''])[0].toLowerCase();var out=document.getElementById('revout');if(!m){out.textContent='Paste the 12-character id from your error.';return false;}var row=document.getElementById('rev-'+m);if(row){location.hash='rev-'+m;out.textContent='Found: your database was migrated by '+row.getAttribute('data-tag')+' or newer. Run '+row.getAttribute('data-tag')+' or any newer release.';}else{out.textContent='Not in this table (releases up to v0.13.3, checked 9 November 2026). It may come from a :dev build, a fork or plugin that adds its own migrations, or a newer release.';}return false;}
+</script>
+
+<h2 id="why">Why it happens</h2>
+<p>Open WebUI records the newest migration it has applied in the <code>alembic_version</code> table of its database. Each time it starts, it runs <code>command.upgrade(alembic_cfg, 'head')</code> (its <code>run_migrations()</code> in <code>config.py</code>; <code>ENABLE_DB_MIGRATIONS</code> is on unless you set it to false). Alembic first looks up the recorded id among the migrations that release ships. If the id is from a newer release, it isn't there, and Alembic stops with this error. Open WebUI never runs a downgrade.</p>
+<p>It usually shows up after one of these:</p>
+<ul>
+  <li>a rollback to an older image after an upgrade (by hand, a <code>helm rollback</code>, or an automatic rollback after a failed health check while migrations were running),</li>
+  <li>a floating tag such as <code>:main</code> or <code>:ollama</code> that resolved to an older build than the one that last ran on this data,</li>
+  <li>two Open WebUI instances of different versions sharing one database,</li>
+  <li>a <code>:dev</code> build, which can carry migrations that no release has yet.</li>
+</ul>
+
+<h2 id="known">Ids reported in public threads</h2>
+<ul>
+  <li><code>9f6c2a8d1b43</code> (rolling back from the 0.13.1 / 0.13.2 <code>:ollama</code> image, whose amd64 build had no Ollama, <a href="https://github.com/open-webui/open-webui/issues/33942">issue #33942</a>): first shipped in <a href="#rev-9f6c2a8d1b43">v0.13.1</a>, so the database had been migrated by v0.13.1 or newer.</li>
+  <li><code>3e0e00844bb0</code> (reported in a thread about a failed start, <a href="https://github.com/open-webui/open-webui/issues/19797">issue #19797</a>): first shipped in <a href="#rev-3e0e00844bb0">v0.6.41</a>, so the database had been migrated by v0.6.41 or newer.</li>
+  <li><code>9f0c9cd09105</code> (after switching between versions, <a href="https://github.com/open-webui/open-webui/discussions/13789">discussion #13789</a>): first shipped in <a href="#rev-9f0c9cd09105">v0.6.6</a>, so the database had been migrated by v0.6.6 or newer.</li>
+</ul>
+<h2 id="ollama-image">If you rolled back because the <code>:ollama</code> image had no Ollama</h2>
+<p>On 8 November 2026 an Open WebUI maintainer confirmed in <a href="https://github.com/open-webui/open-webui/issues/33942">#33942</a> that the amd64 <code>:ollama</code> images for 0.13.1 and 0.13.2 were built without Ollama, and that rolling back to 0.13.0 does not work because 0.13.1 added a database migration (<code>9f6c2a8d1b43</code>, the id in the error). On 9 November the maintainer added that the 0.13.3 <code>:ollama</code> image (amd64 and arm64) ships Ollama again. So the fix is to go forward, not back: pull the <code>:ollama</code> image again so you get 0.13.3 or newer, and start it on the same volume.</p>
+
+<h2 id="find">Find your id</h2>
+<p>From the log (change <code>open-webui</code> to your container name):</p>
+<pre>docker logs open-webui 2&gt;&amp;1 | grep "locate revision"</pre>
+<p>Or read it straight from the database while Open WebUI is stopped. With the default SQLite database in the official Docker image (the volume mounted at <code>/app/backend/data</code>), using a throwaway Python container (change <code>open-webui</code> to your volume name from <code>docker volume ls</code>, or to the host folder you mounted):</p>
+<pre>docker run --rm -v open-webui:/data python:3.12-slim python3 -c "import sqlite3; print(sqlite3.connect(&#x27;/data/webui.db&#x27;).execute(&#x27;select version_num from alembic_version&#x27;).fetchall())"</pre>
+<p>With PostgreSQL (<code>DATABASE_URL</code> starts with <code>postgresql://</code>), run <code>SELECT version_num FROM alembic_version;</code> in that database (in the schema named by <code>DATABASE_SCHEMA</code>, if you set it).</p>
+
+<h2 id="fix">Fix it</h2>
+<ol>
+  <li><strong>Look up the id</strong> in the table. The release in its row is the oldest one that can start on your data.</li>
+  <li><strong>Run that release or newer.</strong> With Docker, pin the tag, for example <code>docker pull ghcr.io/open-webui/open-webui:v0.13.3</code>, then start the container again with the same options and volume you used before, changing only the image tag. With Docker Compose, set <code>image: ghcr.io/open-webui/open-webui:v0.13.3</code> and run <code>docker compose up -d</code>. With pip, <code>pip install "open-webui==0.13.3"</code>. A pinned tag keeps a floating tag from moving you back again.</li>
+  <li><strong>If you really need the older release</strong> (say a newer one has a bug that blocks you), stop Open WebUI and restore the copy of your data volume or <code>webui.db</code> (or your PostgreSQL dump) taken <em>before</em> the upgrade, then start the older release on it. Anything created after that backup is lost. If you have no such backup, stay on the newer release and wait for a fix.</li>
+</ol>
+<p class="warn">Don't edit <code>alembic_version</code> to an older id (&quot;stamping&quot;), and don't set <code>ENABLE_DB_MIGRATIONS=false</code> to force the old release to start. Either way the tables keep the newer layout that the old code doesn't expect, and the next upgrade tries to apply migrations whose changes are already there. Before any upgrade, copy the data volume (or dump the database) first; the 0.13.1 release notes recommend backing up the database and all associated data before upgrading in production.</p>
+
+
+<h2 id="table">All 72 Open WebUI migration ids, newest first</h2>
+<p>72 migrations, first shipped across 26 releases from v0.3.17 to v0.13.3. &quot;Image tag&quot; shows the pinned tag on <code>ghcr.io/open-webui/open-webui</code> where ghcr.io had one on 9 November 2026. The same table is available as JSON: <a href="openwebui-alembic-revisions.json">openwebui-alembic-revisions.json</a> (CC BY 4.0).</p>
+<table>
+  <tr><th>Revision id</th><th>First release</th><th>Released</th><th>Migration</th><th>Image tag</th></tr>
+  <tr id="rev-6a23bd107e54" data-tag="v0.13.1"><td><code>6a23bd107e54</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.1">v0.13.1</a></td><td>2026-11-08</td><td>add chat view state</td><td><code>:v0.13.1</code></td></tr>
+  <tr id="rev-8bc7e5a902d1" data-tag="v0.13.1"><td><code>8bc7e5a902d1</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.1">v0.13.1</a></td><td>2026-11-08</td><td>add auth session</td><td><code>:v0.13.1</code></td></tr>
+  <tr id="rev-9f6c2a8d1b43" data-tag="v0.13.1"><td><code>9f6c2a8d1b43</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.1">v0.13.1</a></td><td>2026-11-08</td><td>add channel lookup indexes</td><td><code>:v0.13.1</code></td></tr>
+  <tr id="rev-6f8c2a91d4e7" data-tag="v0.13.0"><td><code>6f8c2a91d4e7</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.0">v0.13.0</a></td><td>2026-11-03</td><td>add tool is active</td><td><code>:v0.13.0</code></td></tr>
+  <tr id="rev-c41f8d9e2a10" data-tag="v0.13.0"><td><code>c41f8d9e2a10</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.0">v0.13.0</a></td><td>2026-11-03</td><td>add resource comments</td><td><code>:v0.13.0</code></td></tr>
+  <tr id="rev-e42c8f710a36" data-tag="v0.13.0"><td><code>e42c8f710a36</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.0">v0.13.0</a></td><td>2026-11-03</td><td>add notification inbox</td><td><code>:v0.13.0</code></td></tr>
+  <tr id="rev-0bd252b206fb" data-tag="v0.12.1"><td><code>0bd252b206fb</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.12.1">v0.12.1</a></td><td>2026-10-14</td><td>add missing auth rows</td><td><code>:v0.12.1</code></td></tr>
+  <tr id="rev-c92da83b017f" data-tag="v0.12.1"><td><code>c92da83b017f</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.12.1">v0.12.1</a></td><td>2026-10-14</td><td>add apps</td><td><code>:v0.12.1</code></td></tr>
+  <tr id="rev-a7d3e9f2b641" data-tag="v0.12.0"><td><code>a7d3e9f2b641</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.12.0">v0.12.0</a></td><td>2026-10-10</td><td>add mfa and session stamp</td><td><code>:v0.12.0</code></td></tr>
+  <tr id="rev-b8e4f0a3c752" data-tag="v0.12.0"><td><code>b8e4f0a3c752</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.12.0">v0.12.0</a></td><td>2026-10-10</td><td>add group hierarchy</td><td><code>:v0.12.0</code></td></tr>
+  <tr id="rev-b8f2c6d91a04" data-tag="v0.12.0"><td><code>b8f2c6d91a04</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.12.0">v0.12.0</a></td><td>2026-10-10</td><td>add postgres pending files index</td><td><code>:v0.12.0</code></td></tr>
+  <tr id="rev-d6a8c3f912ab" data-tag="v0.12.0"><td><code>d6a8c3f912ab</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.12.0">v0.12.0</a></td><td>2026-10-10</td><td>add skill history</td><td><code>:v0.12.0</code></td></tr>
+  <tr id="rev-e7b9d4a023bc" data-tag="v0.12.0"><td><code>e7b9d4a023bc</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.12.0">v0.12.0</a></td><td>2026-10-10</td><td>add model history</td><td><code>:v0.12.0</code></td></tr>
+  <tr id="rev-f8c0e5b134cd" data-tag="v0.12.0"><td><code>f8c0e5b134cd</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.12.0">v0.12.0</a></td><td>2026-10-10</td><td>add tool history and function history</td><td><code>:v0.12.0</code></td></tr>
+  <tr id="rev-1ce6ade7d93b" data-tag="v0.11.1"><td><code>1ce6ade7d93b</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.1">v0.11.1</a></td><td>2026-08-25</td><td>add group member user id index</td><td><code>:v0.11.1</code></td></tr>
+  <tr id="rev-6d09d1bf1f23" data-tag="v0.11.1"><td><code>6d09d1bf1f23</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.1">v0.11.1</a></td><td>2026-08-25</td><td>repair double encoded user oauth</td><td><code>:v0.11.1</code></td></tr>
+  <tr id="rev-d4c1a8e37b62" data-tag="v0.11.1"><td><code>d4c1a8e37b62</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.1">v0.11.1</a></td><td>2026-08-25</td><td>add chat timer at and chat indexes</td><td><code>:v0.11.1</code></td></tr>
+  <tr id="rev-55f1302ac17c" data-tag="v0.11.0"><td><code>55f1302ac17c</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.0">v0.11.0</a></td><td>2026-07-27</td><td>add memory id user id covering index</td><td><code>:v0.11.0</code></td></tr>
+  <tr id="rev-856c5b02fb54" data-tag="v0.11.0"><td><code>856c5b02fb54</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.0">v0.11.0</a></td><td>2026-07-27</td><td>add chat message meta</td><td><code>:v0.11.0</code></td></tr>
+  <tr id="rev-959eaac8f909" data-tag="v0.11.0"><td><code>959eaac8f909</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.0">v0.11.0</a></td><td>2026-07-27</td><td>add automation folder id</td><td><code>:v0.11.0</code></td></tr>
+  <tr id="rev-9a1b2c3d4e5f" data-tag="v0.11.0"><td><code>9a1b2c3d4e5f</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.0">v0.11.0</a></td><td>2026-07-27</td><td>add current message id to chat</td><td><code>:v0.11.0</code></td></tr>
+  <tr id="rev-b0018471bbbe" data-tag="v0.11.0"><td><code>b0018471bbbe</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.0">v0.11.0</a></td><td>2026-07-27</td><td>add user variables</td><td><code>:v0.11.0</code></td></tr>
+  <tr id="rev-c49178636c78" data-tag="v0.11.0"><td><code>c49178636c78</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.0">v0.11.0</a></td><td>2026-07-27</td><td>add chat variables</td><td><code>:v0.11.0</code></td></tr>
+  <tr id="rev-f0bd01a18a3d" data-tag="v0.11.0"><td><code>f0bd01a18a3d</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.11.0">v0.11.0</a></td><td>2026-07-27</td><td>add unique normalized user email index</td><td><code>:v0.11.0</code></td></tr>
+  <tr id="rev-3ff2c63645b8" data-tag="v0.10.0"><td><code>3ff2c63645b8</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.10.0">v0.10.0</a></td><td>2026-06-29</td><td>reshape config to per key rows</td><td><code>:v0.10.0</code></td></tr>
+  <tr id="rev-42e2978c7933" data-tag="v0.10.0"><td><code>42e2978c7933</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.10.0">v0.10.0</a></td><td>2026-06-29</td><td>add memory path and meta</td><td><code>:v0.10.0</code></td></tr>
+  <tr id="rev-4c5ce3d2f27f" data-tag="v0.10.0"><td><code>4c5ce3d2f27f</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.10.0">v0.10.0</a></td><td>2026-06-29</td><td>add context summary to chat message</td><td><code>:v0.10.0</code></td></tr>
+  <tr id="rev-7b3f2a9c1d4e" data-tag="v0.10.0"><td><code>7b3f2a9c1d4e</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.10.0">v0.10.0</a></td><td>2026-06-29</td><td>add memory type</td><td><code>:v0.10.0</code></td></tr>
+  <tr id="rev-3c9b0ca343fd" data-tag="v0.9.6"><td><code>3c9b0ca343fd</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.6">v0.9.6</a></td><td>2026-06-01</td><td>add knowledge directory table</td><td><code>:v0.9.6</code></td></tr>
+  <tr id="rev-461111b60977" data-tag="v0.9.6"><td><code>461111b60977</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.6">v0.9.6</a></td><td>2026-06-01</td><td>add missing primary keys to legacy</td><td><code>:v0.9.6</code></td></tr>
+  <tr id="rev-4de81c2a3af1" data-tag="v0.9.3"><td><code>4de81c2a3af1</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.3">v0.9.3</a></td><td>2026-05-09</td><td>add pinned note table</td><td><code>:v0.9.3</code></td></tr>
+  <tr id="rev-a0b1c2d3e4f5" data-tag="v0.9.3"><td><code>a0b1c2d3e4f5</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.3">v0.9.3</a></td><td>2026-05-09</td><td>add memory user id index</td><td><code>:v0.9.3</code></td></tr>
+  <tr id="rev-56359461a091" data-tag="v0.9.0"><td><code>56359461a091</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.0">v0.9.0</a></td><td>2026-04-21</td><td>add calendar tables</td><td><code>:v0.9.0</code></td></tr>
+  <tr id="rev-a3dd5bedd151" data-tag="v0.9.0"><td><code>a3dd5bedd151</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.0">v0.9.0</a></td><td>2026-04-21</td><td>add tasks and summary to chat</td><td><code>:v0.9.0</code></td></tr>
+  <tr id="rev-b7c8d9e0f1a2" data-tag="v0.9.0"><td><code>b7c8d9e0f1a2</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.0">v0.9.0</a></td><td>2026-04-21</td><td>add last read at to chat</td><td><code>:v0.9.0</code></td></tr>
+  <tr id="rev-c1d2e3f4a5b6" data-tag="v0.9.0"><td><code>c1d2e3f4a5b6</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.0">v0.9.0</a></td><td>2026-04-21</td><td>add shared chat table</td><td><code>:v0.9.0</code></td></tr>
+  <tr id="rev-d4e5f6a7b8c9" data-tag="v0.9.0"><td><code>d4e5f6a7b8c9</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.0">v0.9.0</a></td><td>2026-04-21</td><td>add automation tables</td><td><code>:v0.9.0</code></td></tr>
+  <tr id="rev-e1f2a3b4c5d6" data-tag="v0.9.0"><td><code>e1f2a3b4c5d6</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.9.0">v0.9.0</a></td><td>2026-04-21</td><td>add is pinned to note</td><td><code>:v0.9.0</code></td></tr>
+  <tr id="rev-b2c3d4e5f6a7" data-tag="v0.8.1"><td><code>b2c3d4e5f6a7</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.8.1">v0.8.1</a></td><td>2026-02-14</td><td>add scim column to user table</td><td><code>:v0.8.1</code></td></tr>
+  <tr id="rev-374d2f66af06" data-tag="v0.8.0"><td><code>374d2f66af06</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.8.0">v0.8.0</a></td><td>2026-02-12</td><td>add prompt history table</td><td><code>:v0.8.0</code></td></tr>
+  <tr id="rev-8452d01d26d7" data-tag="v0.8.0"><td><code>8452d01d26d7</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.8.0">v0.8.0</a></td><td>2026-02-12</td><td>add chat message table</td><td><code>:v0.8.0</code></td></tr>
+  <tr id="rev-a1b2c3d4e5f6" data-tag="v0.8.0"><td><code>a1b2c3d4e5f6</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.8.0">v0.8.0</a></td><td>2026-02-12</td><td>add skill table</td><td><code>:v0.8.0</code></td></tr>
+  <tr id="rev-f1e2d3c4b5a6" data-tag="v0.8.0"><td><code>f1e2d3c4b5a6</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.8.0">v0.8.0</a></td><td>2026-02-12</td><td>add access grant table</td><td><code>:v0.8.0</code></td></tr>
+  <tr id="rev-6283dc0e4d8d" data-tag="v0.6.42"><td><code>6283dc0e4d8d</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.42">v0.6.42</a></td><td>2025-12-21</td><td>add channel file table</td><td><code>:v0.6.42</code></td></tr>
+  <tr id="rev-81cc2ce44d79" data-tag="v0.6.42"><td><code>81cc2ce44d79</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.42">v0.6.42</a></td><td>2025-12-21</td><td>update channel file and knowledge table</td><td><code>:v0.6.42</code></td></tr>
+  <tr id="rev-c440947495f3" data-tag="v0.6.42"><td><code>c440947495f3</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.42">v0.6.42</a></td><td>2025-12-21</td><td>add chat file table</td><td><code>:v0.6.42</code></td></tr>
+  <tr id="rev-2f1211949ecc" data-tag="v0.6.41"><td><code>2f1211949ecc</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.41">v0.6.41</a></td><td>2025-12-02</td><td>update message and channel member table</td><td><code>:v0.6.41</code></td></tr>
+  <tr id="rev-3e0e00844bb0" data-tag="v0.6.41"><td><code>3e0e00844bb0</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.41">v0.6.41</a></td><td>2025-12-02</td><td>add knowledge file table</td><td><code>:v0.6.41</code></td></tr>
+  <tr id="rev-90ef40d4714e" data-tag="v0.6.41"><td><code>90ef40d4714e</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.41">v0.6.41</a></td><td>2025-12-02</td><td>update channel and channel members table</td><td><code>:v0.6.41</code></td></tr>
+  <tr id="rev-b10670c03dd5" data-tag="v0.6.41"><td><code>b10670c03dd5</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.41">v0.6.41</a></td><td>2025-12-02</td><td>update user table</td><td><code>:v0.6.41</code></td></tr>
+  <tr id="rev-37f288994c47" data-tag="v0.6.37"><td><code>37f288994c47</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.37">v0.6.37</a></td><td>2025-11-24</td><td>add group member table</td><td><code>:v0.6.37</code></td></tr>
+  <tr id="rev-a5c220713937" data-tag="v0.6.32"><td><code>a5c220713937</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.32">v0.6.32</a></td><td>2025-09-29</td><td>add reply to id column to message</td><td><code>:v0.6.32</code></td></tr>
+  <tr id="rev-38d63c18f30f" data-tag="v0.6.27"><td><code>38d63c18f30f</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.27">v0.6.27</a></td><td>2025-09-09</td><td>add oauth session table</td><td><code>:v0.6.27</code></td></tr>
+  <tr id="rev-018012973d35" data-tag="v0.6.23"><td><code>018012973d35</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.23">v0.6.23</a></td><td>2025-08-21</td><td>add indexes</td><td><code>:v0.6.23</code></td></tr>
+  <tr id="rev-3af16a1c9fb6" data-tag="v0.6.23"><td><code>3af16a1c9fb6</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.23">v0.6.23</a></td><td>2025-08-21</td><td>update user table</td><td><code>:v0.6.23</code></td></tr>
+  <tr id="rev-d31026856c01" data-tag="v0.6.16"><td><code>d31026856c01</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.16">v0.6.16</a></td><td>2025-07-14</td><td>update folder table data</td><td><code>:v0.6.16</code></td></tr>
+  <tr id="rev-9f0c9cd09105" data-tag="v0.6.6"><td><code>9f0c9cd09105</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.6.6">v0.6.6</a></td><td>2025-05-05</td><td>add note table</td><td><code>:v0.6.6</code></td></tr>
+  <tr id="rev-3781e22d8b01" data-tag="v0.5.3"><td><code>3781e22d8b01</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.5.3">v0.5.3</a></td><td>2024-12-31</td><td>update message table</td><td><code>:v0.5.3</code></td></tr>
+  <tr id="rev-57c599a3cb57" data-tag="v0.5.0"><td><code>57c599a3cb57</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.5.0">v0.5.0</a></td><td>2024-12-25</td><td>add channel table</td><td><code>:v0.5.0</code></td></tr>
+  <tr id="rev-7826ab40b532" data-tag="v0.5.0"><td><code>7826ab40b532</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.5.0">v0.5.0</a></td><td>2024-12-25</td><td>update file table</td><td><code>:v0.5.0</code></td></tr>
+  <tr id="rev-922e7a387820" data-tag="v0.4.0"><td><code>922e7a387820</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.4.0">v0.4.0</a></td><td>2024-11-19</td><td>add group table</td><td><code>:v0.4.0</code></td></tr>
+  <tr id="rev-1af9b942657b" data-tag="v0.3.33"><td><code>1af9b942657b</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.33">v0.3.33</a></td><td>2024-10-24</td><td>migrate tags</td><td><code>:v0.3.33</code></td></tr>
+  <tr id="rev-242a2047eae0" data-tag="v0.3.33"><td><code>242a2047eae0</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.33">v0.3.33</a></td><td>2024-10-24</td><td>update chat table</td><td><code>:v0.3.33</code></td></tr>
+  <tr id="rev-3ab32c4b8f59" data-tag="v0.3.33"><td><code>3ab32c4b8f59</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.33">v0.3.33</a></td><td>2024-10-24</td><td>update tags</td><td><code>:v0.3.33</code></td></tr>
+  <tr id="rev-4ace53fd72c8" data-tag="v0.3.33"><td><code>4ace53fd72c8</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.33">v0.3.33</a></td><td>2024-10-24</td><td>update folder table datetime</td><td><code>:v0.3.33</code></td></tr>
+  <tr id="rev-af906e964978" data-tag="v0.3.33"><td><code>af906e964978</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.33">v0.3.33</a></td><td>2024-10-24</td><td>add feedback table</td><td><code>:v0.3.33</code></td></tr>
+  <tr id="rev-c29facfe716b" data-tag="v0.3.33"><td><code>c29facfe716b</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.33">v0.3.33</a></td><td>2024-10-24</td><td>update file table path</td><td><code>:v0.3.33</code></td></tr>
+  <tr id="rev-c69f45358db4" data-tag="v0.3.33"><td><code>c69f45358db4</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.33">v0.3.33</a></td><td>2024-10-24</td><td>add folder table</td><td><code>:v0.3.33</code></td></tr>
+  <tr id="rev-6a39f3d8e55c" data-tag="v0.3.31"><td><code>6a39f3d8e55c</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.31">v0.3.31</a></td><td>2024-10-07</td><td>add knowledge table</td><td><code>:v0.3.31</code></td></tr>
+  <tr id="rev-c0fbf31ca0db" data-tag="v0.3.31"><td><code>c0fbf31ca0db</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.31">v0.3.31</a></td><td>2024-10-07</td><td>update file table</td><td><code>:v0.3.31</code></td></tr>
+  <tr id="rev-7e5b5dc7342b" data-tag="v0.3.17"><td><code>7e5b5dc7342b</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.17">v0.3.17</a></td><td>2024-09-04</td><td>init</td><td><code>:v0.3.17</code></td></tr>
+  <tr id="rev-ca81bd47c050" data-tag="v0.3.17"><td><code>ca81bd47c050</code></td><td><a href="https://github.com/open-webui/open-webui/releases/tag/v0.3.17">v0.3.17</a></td><td>2024-09-04</td><td>add config table</td><td><code>:v0.3.17</code></td></tr>
+</table>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. listed <code>backend/open_webui/migrations/versions</code> at every release tag (vX.Y.Z) of the Open WebUI git repository, read each migration's own <code>revision</code> and <code>down_revision</code>, and took the first tag that contains it. Dates are GitHub release dates. The mapping is by git tag. A floating image tag (<code>:main</code>, <code>:ollama</code>, <code>:cuda</code>) can point at a build between releases, so it can hold migrations that the next release ships, and a <code>:dev</code> build can hold migrations that are not in this table yet. Helm chart versions are not Open WebUI versions: check the chart's <code>appVersion</code>. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI version</a>. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Only change systems you own or are allowed to manage. Checked on 9 November 2026 against Open WebUI v0.13.3 (<a href="https://github.com/open-webui/open-webui/blob/v0.13.3/backend/open_webui/config.py">config.py</a>, <a href="https://github.com/open-webui/open-webui/blob/v0.13.3/backend/open_webui/env.py">env.py</a>, <a href="https://github.com/open-webui/open-webui/tree/v0.13.3/backend/open_webui/migrations/versions">migrations/versions</a>).</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
