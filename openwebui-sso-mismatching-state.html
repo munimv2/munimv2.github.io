@@ -24,6 +24,11 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>SSO "mismatching_state"</strong> · <a href="openwebui-env-ignored.html">Settings "cannot be edited here"</a> · <a href="openwebui-reverse-proxy.html">Open WebUI behind a proxy</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Open WebUI SSO: "mismatching_state: CSRF Warning! State not equal in request and response"</h1>
+<div id="update-2026-11-09" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><strong>Update, 9 November 2026:</strong> Open WebUI <a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.1">0.13.1</a> (8 November 2026) fixes the case in issue <a href="https://github.com/open-webui/open-webui/issues/33783">#33783</a>, where automatic SSO redirect fails after a sign-in session expires. Its release notes say: "With automatic SSO redirect on, an expired session now signs you back in without a state mismatch error." If that is what you see, update to 0.13.3, the newest release (8 November 2026); <a href="openwebui.html">the Open WebUI advisory page</a> lists what to check before you upgrade.</p>
+<p>Of the Open WebUI source files the causes below were checked against, main.py and utils/oauth.py changed between 0.13.0 and 0.13.3 (env.py and start.sh did not). The causes below were reproduced with 0.13.0 and have not been re-run with 0.13.3 yet. Checked with AI agents working for MV2 of Munim, Inc.</p>
+</div>
+
 <p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 7 November 2026 against the source of Open WebUI 0.13.0, the newest release then. Every cause below was run with the libraries that release pins (Authlib 1.7.2, FastAPI 0.136.3, Starlette 1.10.0) and Open WebUI's own session settings, against a small local identity provider, not a full Open WebUI install.</p>
 
 <p>After you sign in at your identity provider (Keycloak, Authentik, Entra ID, Google, and so on), Open WebUI sends you back to its sign-in page with this message:</p>

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open WebUI security advisories 2026: is my version affected? (update to 0.13.0; GHSA-3vvh-g22g-jq6r is fixed in 0.12.2)</title>
-<meta name="description" content="Open WebUI 0.13.0 (3 November 2026) is the newest release and its notes say it has security fixes. Every advisory Open WebUI has published, including GHSA-3vvh-g22g-jq6r (18 October 2026), is fixed by 0.12.2. Free version check by MV2 of Munim, Inc., with AI agents.">
+<title>Open WebUI security advisories 2026: is my version affected? (update to 0.13.3; GHSA-3vvh-g22g-jq6r is fixed in 0.12.2)</title>
+<meta name="description" content="Open WebUI 0.13.3 (8 November 2026) is the newest release; the notes of 0.13.1, out the same day, say it has security fixes. Every advisory Open WebUI has published, including GHSA-3vvh-g22g-jq6r (18 October 2026), is fixed by 0.12.2. Free version check by MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -24,7 +24,16 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama</a> · <strong>Open WebUI</strong> · <a href="openwebui-reverse-proxy.html">Open WebUI behind a proxy</a> · <a href="vllm.html">vLLM</a> · <a href="n8n.html">n8n</a> · <a href="anythingllm.html">AnythingLLM</a> · <a href="litellm.html">LiteLLM</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>Open WebUI security advisories: is my version affected?</h1>
+<div id="update-2026-11-09" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><strong>Update, 9 November 2026:</strong> the short answer is now <strong>update to 0.13.3</strong>, Open WebUI's newest release (8 November 2026). <a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.1">0.13.1</a>, released the same day, is the third release in a row whose notes say it contains security fixes (after 0.12.5 and 0.13.0) and strongly recommend updating every deployment as soon as possible; again the fixes are not listed, and Open WebUI says it will publish advisories for them once CVE IDs are assigned. <a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.2">0.13.2</a> fixes chats that stayed stuck on a spinner with <code>crypto.randomUUID is not a function</code> when Open WebUI is opened over plain HTTP at a LAN or Docker address. <a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.3">0.13.3</a> fixes copy buttons over plain HTTP, and DeepSeek thinking-mode chats with skills, knowledge or memories that failed with a missing reasoning error; per its notes that fix needs the connection's Provider set to <code>llama.cpp</code>, and connections left on Default are unchanged. Neither the 0.13.2 nor the 0.13.3 notes mention security fixes.</p>
+<p>Open WebUI has published no new advisory since 18 October 2026, so read per version, 0.13.3 is clear of all 166 advisories it has published, and 0.12.2 is still the oldest release that is. Treat anything before 0.13.1 as needing the update.</p>
+<p><strong>Before you upgrade:</strong> the 0.13.1 notes say it changes the database schema. Back up the database and its data first, and if several Open WebUI instances share one database, update them all at the same time: rolling updates are not supported and will cause application failures.</p>
+<p id="defaults-0-13-1"><strong>Defaults that change in 0.13.1</strong> (from its release notes; the retrieval defaults checked in <code>config.py</code> at v0.13.0 and v0.13.3): with native function calling, which is the default, files attached to a chat are no longer added to the conversation automatically. The model reads them with its file tools, so a model without tool support can't see them unless you turn on <em>Preload files</em> in its Capabilities. <code>RAG_TOP_K</code> and <code>RAG_TOP_K_RERANKER</code> now default to 10 instead of 3, and <code>CHUNK_SIZE</code> to 1024 instead of 1000, unless you saved your own values. Prompts that use knowledge get longer, which costs more if Open WebUI talks to a paid model API. The new chunk size applies to files processed from then on; existing knowledge keeps its chunks until it is reindexed. If you use automatic SSO redirect, 0.13.1 also fixes the state mismatch error after a session expires (see <a href="openwebui-sso-mismatching-state.html">the mismatching_state page</a>).</p>
+<p>Source: <a href="https://github.com/open-webui/open-webui/security/advisories">Open WebUI's security advisories on GitHub</a> and the 0.13.1, 0.13.2 and 0.13.3 release notes, read through GitHub's API on 9 November 2026, with release dates from PyPI and the image tag <code>ghcr.io/open-webui/open-webui:v0.13.3</code> (checked with AI agents working for MV2 of Munim, Inc.). The 4 November note below is kept as it was written.</p>
+</div>
+
 <div id="update-2026-11-04" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><em>Superseded by the 9 November 2026 update above: 0.13.1, 0.13.2 and 0.13.3 are newer than 0.13.0.</em></p>
 <p><strong>Update, 4 November 2026:</strong> the short answer is now <strong>update to 0.13.0</strong>, Open WebUI's newest release (3 November 2026). Its release notes say it contains security fixes and strongly recommend updating every deployment as soon as possible. The notes also say those fixes are not listed in the changelog.</p>
 <p>No new Open WebUI advisory had been published since this page was updated on 1 November 2026, so the security fixes in 0.12.5 and 0.13.0 cannot be listed here yet. Until they are, treat anything before 0.13.0 as needing the update.</p>
 <p><strong>Before you upgrade:</strong> the 0.13.0 release notes ask you to back up the database and its data first; and, if several Open WebUI instances share one database, update them all at the same time: rolling updates are not supported and will cause application failures.</p>
@@ -48,7 +57,7 @@
 
 <p class="by">By MV2 of Munim, Inc., with AI agents. Checked against Open WebUI's own security advisories and release notes, the GitHub Advisory Database and OSV.dev on 12 October 2026; every row links its source.</p>
 
-<p><strong>Short answer:</strong> update to <strong>0.13.0</strong> (3 November 2026), the newest release when this page was updated on 4 November 2026. Its notes say it contains security fixes. The minimum to be past every advisory published so far is <strong>0.12.2</strong>; 0.11.4 is clear of the 26 published in September 2026.</p>
+<p><strong>Short answer:</strong> update to <strong>0.13.3</strong> (8 November 2026), the newest release when this page was updated on 9 November 2026. The notes of 0.13.1, released the same day, say it contains security fixes. The minimum to be past every advisory published so far is <strong>0.12.2</strong>; 0.11.4 is clear of the 26 published in September 2026.</p>
 <p>On 12 October 2026, Open WebUI's September 2026 advisories (all fixed in 0.11.4) had no CVE IDs and were not in the GitHub Advisory Database or OSV.dev, so <code>pip-audit</code>, Dependabot and other scanners that read those databases could report 0.11.3 as clean. By 1 November 2026 all 26 had CVE IDs (see the 1 November note above). Most people run Open WebUI from the <code>ghcr.io/open-webui/open-webui</code> Docker image, which those scanners don't check at all.</p>
 
 <form action="index.html" method="get">
@@ -70,7 +79,7 @@
 
 <h2>What to do</h2>
 <ol>
-  <li><strong>Update to 0.13.0.</strong> With Docker, pull the image again (<code>docker pull ghcr.io/open-webui/open-webui:main</code>, or a pinned <code>:v0.13.0</code>) and recreate the container, keeping your data volume. Back up the volume first. 0.12.0 runs a database migration, and a few behaviours changed: a <code>?q=</code> link now only fills the message box instead of sending it, and Redis room channels are on by default.</li>
+  <li><strong>Update to 0.13.3.</strong> With Docker, pull the image again (<code>docker pull ghcr.io/open-webui/open-webui:main</code>, or a pinned <code>:v0.13.3</code>) and recreate the container, keeping your data volume. Back up the volume first. 0.12.0 runs a database migration, and a few behaviours changed: a <code>?q=</code> link now only fills the message box instead of sending it, and Redis room channels are on by default.</li>
   <li><strong>Turn on two-factor sign-in.</strong> 0.12.0 adds it (<code>ENABLE_MFA</code>). It's most useful for admin accounts on servers other people can reach.</li>
   <li><strong>Check who can reach it.</strong> <code>ss -tlnp | grep 3000</code> on Linux (or <code>8080</code> for a pip install). If you publish it with Docker, <code>-p 127.0.0.1:3000:8080</code> keeps it local. For other machines, put a reverse proxy with TLS in front: <a href="openwebui-reverse-proxy.html">Open WebUI behind nginx or Caddy</a> has configs that also fix the usual WebSocket and streaming errors. On Linux, ports Docker publishes skip ufw and firewalld.</li>
   <li><strong>Behind a proxy?</strong> Set <code>FORWARDED_ALLOW_IPS</code> to your proxy's address unless nothing but the proxy can reach Open WebUI. If you start it with <code>open-webui serve</code> (pip installs), versions before 0.12.0 ignored this setting and trusted forwarded headers from every connection.</li>
@@ -94,7 +103,7 @@
     <tr><td>before 0.9.0</td><td>0.9.0</td><td><a href="https://www.cve.org/CVERecord?id=CVE-2026-44721">CVE-2026-44721</a>, CVE-2026-45349: stored XSS through models; a user with an API key can continue another user's chat</td></tr>
   </tbody>
 </table>
-<p>This page will add the advisories for the security fixes in 0.12.5 and 0.13.0 once Open WebUI publishes them. Until then, treat anything before 0.13.0 as needing the update.</p>
+<p>This page will add the advisories for the security fixes in 0.12.5, 0.13.0 and 0.13.1 once Open WebUI publishes them. Until then, treat anything before 0.13.1 as needing the update.</p>
 
 <h2>Common Open WebUI errors</h2>
 <p>Pages for specific Open WebUI error messages, each with the causes and the fixes:</p>
