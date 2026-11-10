@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama pull &quot;Error: redirect target not allowed&quot;: proxy, 198.18.x.x fake-IP DNS and NAT64 fixes by version</title>
+<meta name="description" content="Why ollama pull fails with 'redirect target not allowed: resolving ...: no such host' or '... resolves to non-public 198.18.x.x / 64:ff9b::...', which Ollama versions ignore HTTPS_PROXY (0.35.0 to 0.40.5), what still fails on the newest release (fake-IP DNS, NAT64), and the fix for each case. Built from Ollama's source at 24 release tags. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/ollama-redirect-target-not-allowed.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  h3 { font-size: 1.08rem; margin-top: 1.4rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  blockquote { margin: 0.8rem 0; padding: 0.2rem 1rem; border-left: 4px solid #ccc; color: #333; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama CVEs</a> · <a href="secure-ollama.html">Lock down Ollama</a> · <a href="ollama-version-warning.html">ollama -v warnings</a> · <a href="ollama-could-not-connect.html">Could not connect to ollama server</a> · <strong>redirect target not allowed</strong></nav>
+<h1>Ollama pull: &quot;Error: redirect target not allowed&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 10 November 2026 by reading Ollama's source at all 24 release tags from v0.34.0 to v0.40.16 (the newest release then), running Ollama's own transfer tests at v0.40.16, and calling its address check in a test.</p>
+
+<p><code>ollama pull</code> stops with one of these (the host and address vary):</p>
+<pre>Error: redirect target not allowed: resolving dd20bb891979d25aebc8bec07b2b3bbc.r2.cloudflarestorage.com: lookup dd20bb891979d25aebc8bec07b2b3bbc.r2.cloudflarestorage.com: no such host
+Error: redirect target not allowed: dd20bb891979d25aebc8bec07b2b3bbc.r2.cloudflarestorage.com resolves to non-public 198.xxx.xxx.xxx
+redirect target not allowed: us.aws.cdn.hf.co resolves to non-public 64:ff9b::d27:f13a, retrying in 1s</pre>
+<p>(From <a href="https://github.com/ollama/ollama/issues/18716">#18716</a>, <a href="https://github.com/ollama/ollama/issues/19086">#19086</a> and <a href="https://github.com/ollama/ollama/issues/19345">#19345</a>; the second address was redacted by its reporter.)</p>
+
+<p><strong>Short answer:</strong></p>
+<ul>
+  <li><strong>Behind a company proxy</strong> (&quot;no such host&quot;, or pulls that stall): update to <strong>Ollama 0.40.6 or newer</strong> and set <code>HTTPS_PROXY</code> where the <em>Ollama server</em> runs (service, app or container), not just in your shell. Ollama 0.35.0 to 0.40.5 send the model download around the proxy.</li>
+  <li><strong>Your DNS answers with 198.18.x.x or 198.19.x.x</strong> (a VPN or proxy app in fake-IP mode, or DNS redirection on the router), or <strong>64:ff9b::…</strong> (IPv6-only network with DNS64/NAT64): this still fails on 0.40.16, the newest release on 10 November 2026. Point Ollama at an HTTP proxy with <code>HTTPS_PROXY</code>, or make those hosts resolve to their real addresses. <a href="#fake-ip">Details below.</a></li>
+</ul>
+
+<h2 id="why">Why Ollama refuses the download</h2>
+<p>When you pull a model, the registry answers with a redirect to where the file actually lives: a Cloudflare R2 host (<code>….r2.cloudflarestorage.com</code>) for models from ollama.com, a CDN host under <code>hf.co</code> for Hugging Face. Since the change &quot;tighten redirect handling for registry requests&quot; (<a href="https://github.com/ollama/ollama/pull/18512">#18512</a>, first released in v0.34.2), Ollama checks that target before connecting. It refuses any address that isn't public internet, so that a registry can't steer the Ollama server at your internal network or a cloud metadata address. The function is <code>isPublicIP()</code> in <code>transfer/redirect.go</code>. We called it at v0.40.16 in a test:</p>
+<table>
+  <tr><th>Address</th><th>What it is</th><th>Allowed at v0.40.16?</th></tr>
+  <tr><td><code>104.18.16.170</code>, <code>172.64.66.1</code></td><td>Cloudflare public addresses</td><td>yes</td></tr>
+  <tr><td><code>2606:4700::6812:10aa</code></td><td>public IPv6</td><td>yes</td></tr>
+  <tr><td><code>198.18.0.1</code>, <code>198.19.255.254</code></td><td>198.18.0.0/15, the &quot;benchmarking&quot; block that fake-IP DNS hands out</td><td><strong>no</strong></td></tr>
+  <tr><td><code>100.64.0.1</code></td><td>100.64.0.0/10, shared (carrier-grade NAT) space</td><td><strong>no</strong></td></tr>
+  <tr><td><code>10.0.0.1</code>, <code>192.168.1.1</code></td><td>private</td><td><strong>no</strong></td></tr>
+  <tr><td><code>64:ff9b::6812:10aa</code></td><td>NAT64 form of 104.18.16.170 (64:ff9b::/96)</td><td><strong>no</strong>: v0.40.16 accepts only IPv6 inside 2000::/3</td></tr>
+</table>
+
+<h2 id="versions">What changed in which version</h2>
+<table>
+  <tr><th>Ollama</th><th>Tagged</th><th>Redirect check</th><th>Uses <code>HTTPS_PROXY</code> for the download</th></tr>
+  <tr><td>v0.34.0, v0.34.1</td><td>9 to 14 Sep 2026</td><td>none</td><td>n/a</td></tr>
+  <tr><td>v0.34.2 to v0.34.4</td><td>17 to 23 Sep 2026</td><td>code present (<code>x/transfer/redirect.go</code>)*</td><td>no*</td></tr>
+  <tr><td><strong>v0.35.0 to v0.40.5</strong></td><td>28 Sep to 15 Oct 2026</td><td>yes (<code>transfer/redirect.go</code>)</td><td><strong>no</strong></td></tr>
+  <tr><td><strong>v0.40.6 to v0.40.16</strong></td><td>16 Oct to 7 Nov 2026</td><td>yes; also a list of trusted download hosts</td><td><strong>yes</strong></td></tr>
+</table>
+<p>* Users in #18716 and <a href="https://github.com/ollama/ollama/issues/19035">#19035</a> report pulls behind their proxies working on 0.34.x and failing from 0.35.0, and one commenter traced it to the download code switching to the checked client in v0.35.0. We read the check's code at every tag but did not trace which download path each 0.34.x release used. The proxy fix is commit <code>4d2e2501</code>, &quot;transfer: support proxies on registry redirect targets (#19065)&quot;, first in v0.40.6.</p>
+<p>From v0.40.6, two things changed in <code>ValidateRedirectTarget()</code>:</p>
+<ol>
+  <li>When a proxy carries the request, Ollama no longer resolves the name itself (&quot;Behind a proxy, the proxy resolves the name; defer to its rules.&quot;).</li>
+  <li>Targets under <code>ollama.com</code>, <code>ollama.ai</code>, <code>hf.co</code>, <code>huggingface.co</code> and <code>cloudflarestorage.com</code> pass that first check without a local DNS lookup.</li>
+</ol>
+<p>But for a <strong>direct</strong> connection (no proxy), Ollama's dialer (<code>checkedDialer()</code>) still resolves the name locally and refuses a non-public address with the same words, <code>… resolves to non-public …</code>, so a trusted host still fails when your DNS hands back a fake or NAT64 address. That part comes from reading the v0.40.16 source. In our test call the check itself passed for an R2 host with and without a proxy, and an unknown host failed only without one:</p>
+<pre>no proxy, host mv2-probe-host.invalid: ValidateRedirectTarget = redirect target not allowed: resolving mv2-probe-host.invalid: lookup mv2-probe-host.invalid on 127.0.0.11:53: no such host
+HTTPS proxy set, host mv2-probe-host.invalid: ValidateRedirectTarget = &lt;nil&gt;</pre>
+
+<h2 id="fix">Fix it</h2>
+<h3 id="proxy">1. Company proxy: update, then give the proxy to the server</h3>
+<p>Check the version with <code>ollama -v</code> (the server's version is the <code>ollama version is</code> line). On 0.40.5 or older, update first. The pull is done by the <strong>server</strong>, so <code>HTTPS_PROXY</code> must be in the server's environment. Ollama's FAQ says to use <code>HTTPS_PROXY</code> and adds:</p>
+<blockquote><p>Avoid setting <code>HTTP_PROXY</code>. Ollama does not use HTTP for model pulls, only HTTPS. Setting <code>HTTP_PROXY</code> may interrupt client connections to the server.</p></blockquote>
+<ul>
+  <li><strong>Linux (systemd):</strong> <code>sudo systemctl edit ollama.service</code>, add
+<pre>[Service]
+Environment="HTTPS_PROXY=http://proxy.example:8080"</pre>
+  then <code>sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart ollama</code>.</li>
+  <li><strong>Docker:</strong> recreate the container with <code>-e HTTPS_PROXY=http://proxy.example:8080</code>.</li>
+  <li><strong>Windows:</strong> quit Ollama from the taskbar, add <code>HTTPS_PROXY</code> under <em>Edit environment variables for your account</em>, and start Ollama again from the Start menu.</li>
+  <li><strong>macOS app:</strong> <code>launchctl setenv HTTPS_PROXY "http://proxy.example:8080"</code>, then restart the Ollama app.</li>
+</ul>
+<p>If your proxy inspects TLS, its certificate must be installed as a system certificate (also in Ollama's FAQ).</p>
+
+<h3 id="fake-ip">2. 198.18.x.x answers: fake-IP DNS or router DNS redirection</h3>
+<p>VPN and proxy apps in fake-IP mode, and some routers that redirect DNS for a VPN, answer every lookup with an address from 198.18.0.0/15 and sort out the real destination later. Ollama treats those addresses as non-public, on every version from v0.35.0 up to at least v0.40.16. Choose one:</p>
+<ul>
+  <li><strong>Send Ollama through the app's HTTP proxy port</strong> instead of the fake-IP tunnel: set <code>HTTPS_PROXY=http://127.0.0.1:&lt;port&gt;</code> for the Ollama server as in step 1 (Ollama 0.40.6 or newer). Ollama then leaves name resolution to the proxy.</li>
+  <li><strong>Exclude the download hosts from fake-IP</strong> so they resolve to real addresses: <code>registry.ollama.ai</code>, <code>*.r2.cloudflarestorage.com</code>, and for Hugging Face models <code>*.hf.co</code> and <code>*.huggingface.co</code>. Most fake-IP apps have a filter or bypass list for this.</li>
+  <li><strong>One pull at a time:</strong> <code>ollama pull --insecure &lt;model&gt;</code>. In the source, this option turns off the address checks for that pull (an https registry still can't redirect to plain http). It also stops Ollama protecting you from a registry that redirects into your network, so use it only with a registry you trust. The reporter of #19086 closed it with this.</li>
+</ul>
+
+<h3 id="nat64">3. 64:ff9b::… answers: IPv6-only network with DNS64/NAT64</h3>
+<p>Ollama v0.40.16 accepts only IPv6 addresses inside 2000::/3, and the NAT64 prefix 64:ff9b::/96 is outside it. This is open as <a href="https://github.com/ollama/ollama/issues/19345">#19345</a> (no reply when we checked on 10 November 2026). Until it changes: give the Ollama host IPv4, set <code>HTTPS_PROXY</code> to a proxy that has IPv4, or use <code>--insecure</code> as above.</p>
+
+<h3 id="manual">4. Last resort: fetch the blobs yourself</h3>
+<p>In #18716, Isulion fetched each blob with <code>curl -L</code> from <code>https://registry.ollama.ai/v2/library/&lt;model&gt;/blobs/&lt;digest&gt;</code> through the proxy, checked its SHA-256, saved it as <code>models/blobs/sha256-&lt;digest&gt;</code> in Ollama's model folder, and ran <code>ollama pull</code> again.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read <code>transfer/redirect.go</code> (and <code>x/transfer/redirect.go</code>) at all 24 release tags from v0.34.0 to v0.40.16 in <a href="https://github.com/ollama/ollama">ollama/ollama</a>, matched the change history to the first release containing each commit, and ran Ollama's own <code>transfer</code> package tests at v0.40.16 (all passed). They also added a test file there that calls <code>isPublicIP()</code> and <code>ValidateRedirectTarget()</code> directly. That test is Ollama's own code called in a test, not a real pull. We did not pull a model through a proxy, a fake-IP DNS server or a NAT64 network. The dialer behaviour on direct connections and the effect of <code>--insecure</code> come from reading the source. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="ollama.html">Ollama version</a>. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>Corporate networks with proxies, VPNs and locked-down DNS are where local AI setups break most often. MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Checked on 10 November 2026 against Ollama v0.34.0 to v0.40.16 (<a href="https://github.com/ollama/ollama/blob/v0.40.16/transfer/redirect.go">transfer/redirect.go at v0.40.16</a>) and Ollama's FAQ at v0.40.16.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>

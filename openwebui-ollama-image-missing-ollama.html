@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open WebUI :ollama image has no ollama (&quot;ollama: command not found&quot;): which tags are broken, and the fix</title>
+<meta name="description" content="The amd64 builds of Open WebUI's 0.13.1-ollama and 0.13.2-ollama Docker images contain no ollama binary, so bundled Ollama never starts. A per-tag, per-platform check of GHCR on 10 November 2026 (both tags still broken), why the build didn't notice, and the fix: 0.13.3-ollama. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/openwebui-ollama-image-missing-ollama.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  blockquote { margin: 0.8rem 0; padding: 0.2rem 1rem; border-left: 4px solid #ccc; color: #333; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>:ollama image without ollama</strong> · <a href="openwebui-alembic-cant-locate-revision.html">&quot;Can't locate revision&quot;</a> · <a href="openwebui-deepseek-reasoning-content.html">DeepSeek reasoning_content</a> · <a href="docker-ollama.html">Ollama in Docker</a></nav>
+<h1>Open WebUI's <code>:ollama</code> image has no Ollama inside (&quot;ollama: command not found&quot;)</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 10 November 2026 (about 20:25 UTC) by reading every layer list of the tags below straight from GitHub's container registry (GHCR). Open WebUI v0.13.3 was still the newest release when this page was published.</p>
+
+<p>You run Open WebUI with bundled Ollama (<code>ghcr.io/open-webui/open-webui:ollama</code> or a <code>-ollama</code> version tag) on an ordinary x86-64 machine, and after updating there is no Ollama: no local models, and inside the container the command is simply missing. The report that started it, <a href="https://github.com/open-webui/open-webui/issues/33942">open-webui#33942</a>, shows:</p>
+<pre>docker run --rm -it ghcr.io/open-webui/open-webui:ollama bash
+command -v ollama        # prints nothing
+type ollama
+bash: type: ollama: not found</pre>
+<p>When the image's start script reaches the line that starts bundled Ollama (<code>ollama serve &amp;</code>, line 54 of <code>backend/start.sh</code> in 0.13.1 and 0.13.2), bash prints this, and the script carries on without Ollama:</p>
+<pre>start.sh: line 54: ollama: command not found</pre>
+
+<p><strong>Short answer:</strong> the <strong>linux/amd64</strong> images of <code>0.13.1-ollama</code> and <code>0.13.2-ollama</code> were published without the <code>ollama</code> binary. arm64 images are fine. <strong>0.13.3-ollama has Ollama again</strong>, so pull it (or <code>:ollama</code>) and recreate the container with the same volumes. Don't go back to 0.13.0: the database can't be downgraded.</p>
+
+<h2 id="table">Which tags have Ollama (GHCR, 10 November 2026)</h2>
+<p>For each tag we read the image index, then the layer made by the Dockerfile's Ollama install step, and listed its files. The version is what the bundled binary's <code>ollama -v</code> printed in our check (amd64 only; we could not run the arm64 binary).</p>
+<table>
+  <tr><th>Tag</th><th>Image built</th><th>linux/amd64</th><th>linux/arm64</th></tr>
+  <tr><td><code>0.12.0-ollama</code></td><td>10 Oct 2026</td><td>ollama present (29,872,208 bytes), client version 0.40.2</td><td>ollama present (27,602,600 bytes)</td></tr>
+  <tr><td><code>0.13.0-ollama</code></td><td>3 Nov 2026</td><td>ollama present (43,796,048 bytes), client version 0.40.14</td><td>ollama present (40,650,312 bytes)</td></tr>
+  <tr><td><code>0.13.1-ollama</code></td><td>8 Nov 2026</td><td><strong>NO ollama</strong>: the install layer is 151 bytes and holds only <code>tmp/ollama_build_hash</code></td><td>ollama present (40,983,240 bytes)</td></tr>
+  <tr><td><code>0.13.2-ollama</code></td><td>8 Nov 2026</td><td><strong>NO ollama</strong>: the same 151-byte layer (<code>sha256:589d2d29c570…</code>)</td><td>ollama present (the same layer as 0.13.1)</td></tr>
+  <tr><td><strong><code>0.13.3-ollama</code></strong></td><td>8 Nov 2026 (23:53 UTC)</td><td>ollama present (44,145,360 bytes), client version 0.40.15</td><td>ollama present (40,983,240 bytes)</td></tr>
+  <tr><td><code>ollama</code> (moves with each release)</td><td>8 Nov 2026 (23:52 UTC)</td><td>ollama present (44,145,360 bytes), client version 0.40.15</td><td>ollama present (40,983,240 bytes)</td></tr>
+</table>
+<p class="warn">The two broken tags had <strong>not been rebuilt</strong> when we checked on 10 November 2026. If you pinned <code>0.13.1-ollama</code> or <code>0.13.2-ollama</code>, pulling again does not help. Move to <code>0.13.3-ollama</code>.</p>
+<p>The image digest quoted in #33942 (<code>sha256:cf7d2bd4f3ea…</code>) matched none of the digests these tags pointed to on 10 November. That fits <code>:ollama</code> being a moving tag that had already moved to the 0.13.3 build by then.</p>
+
+<h2 id="why">Why the build didn't notice</h2>
+<p>The Dockerfile installs Ollama with one <code>RUN</code> line that the build runs under <code>/bin/sh</code>:</p>
+<pre>curl -fsSL https://ollama.com/install.sh | sh &amp;&amp; \</pre>
+<p>In a pipeline the shell only looks at the last command's exit status. If the download fails, <code>curl</code> fails, but <code>sh</code> gets an empty script, runs nothing and exits 0, so the build carries on. We replayed that pattern locally with a download that answers HTTP 500:</p>
+<pre># the Dockerfile's pattern under /bin/sh -c (dash):
+curl: (22) The requested URL returned error: 500
+next command in the RUN chain ran
+exit=0
+# the same under bash with pipefail:
+curl: (22) The requested URL returned error: 500
+exit=22</pre>
+<p>Open WebUI's maintainer gave the same cause in #33942: the Ollama installer download hit a server error during the 0.13.1 build, the build continued, and 0.13.2 reused that empty layer from the build cache. The registry agrees: 0.13.1 and 0.13.2 carry the identical 151-byte install layer on amd64 (and an identical, full layer on arm64). The fix, <a href="https://github.com/open-webui/open-webui/pull/33944">PR #33944</a> (merged 8 November 2026, released in v0.13.3), adds one line after the installer, so a build without Ollama now fails instead of shipping:</p>
+<pre>    command -v ollama &amp;&amp; \</pre>
+
+<h2 id="fix">Fix it</h2>
+<ol>
+  <li><strong>Check what you have.</strong> <code>docker exec open-webui sh -c 'command -v ollama || echo missing'</code> (use your container's name). <code>missing</code> means you are on one of the broken builds.</li>
+  <li><strong>Back up the data volume</strong> (for example the <code>open-webui</code> volume mounted at <code>/app/backend/data</code>).</li>
+  <li><strong>Pull 0.13.3 or newer and recreate the container</strong> with the same volumes and options as before:
+<pre>docker pull ghcr.io/open-webui/open-webui:0.13.3-ollama
+docker stop open-webui &amp;&amp; docker rm open-webui
+docker run -d -p 3000:8080 --gpus=all \
+  -v ollama:/root/.ollama -v open-webui:/app/backend/data \
+  --name open-webui --restart always ghcr.io/open-webui/open-webui:0.13.3-ollama</pre>
+  Leave out <code>--gpus=all</code> if you have no NVIDIA GPU, and keep your own port, volume names and environment. Models already pulled live in the <code>ollama</code> volume and are kept. With Docker Compose, change the image tag and run <code>docker compose pull &amp;&amp; docker compose up -d</code>.</li>
+  <li><strong>Confirm:</strong> <code>docker exec open-webui ollama -v</code> should print a version (0.40.15 in the 0.13.3 amd64 image we checked).</li>
+</ol>
+<p><strong>Don't roll back to 0.13.0.</strong> 0.13.1 changed the database, and the reporter in #33942 got <code>Can't locate revision identified by '9f6c2a8d1b43'</code> when trying. See <a href="openwebui-alembic-cant-locate-revision.html">&quot;Can't locate revision&quot;</a> for which version created which revision.</p>
+<p><strong>If you can't update yet,</strong> Open WebUI's maintainer (Classic298) posted this workaround in #33942. It installs Ollama into the running container, and the install is lost whenever the container is recreated:</p>
+<pre>docker exec -it open-webui sh -c 'curl -fsSL https://ollama.com/install.sh | sh'
+docker restart open-webui</pre>
+<p>The reporter (jytou) added that for Ollama to find the GPU, install <code>pciutils</code> and <code>lshw</code> first (<code>apt update &amp;&amp; apt install -y pciutils lshw</code> in the container).</p>
+<p><strong>A setup that doesn't depend on the bundled build:</strong> run the plain <code>:main</code> image and Ollama in its own <code>ollama/ollama</code> container, and point Open WebUI at it. Each one then updates on its own schedule. See <a href="docker-ollama.html">Ollama in Docker</a>.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read the image index and per-platform manifests of the six tags above from <code>ghcr.io/open-webui/open-webui</code> on 10 November 2026, found the layer made by the Ollama install step (its <code>created_by</code> line), and streamed that layer to list its files. They ran the amd64 binary's <code>ollama -v</code> (no server running, so it prints only the client version) and read <code>Dockerfile</code> and <code>backend/start.sh</code> at v0.13.0 to v0.13.3. The <code>start.sh: line 54</code> message and the pipe behaviour come from replaying those lines in a test shell, not from running the full image. Tags change: <code>:ollama</code> is rebuilt with every release, and the broken tags may still be rebuilt later. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI version</a>. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Checked on 10 November 2026 against ghcr.io/open-webui/open-webui and the <a href="https://github.com/open-webui/open-webui/blob/v0.13.3/Dockerfile">Dockerfile at v0.13.3</a>; thread facts from <a href="https://github.com/open-webui/open-webui/issues/33942">#33942</a> and <a href="https://github.com/open-webui/open-webui/pull/33944">#33944</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
