@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open WebUI SearXNG: &quot;404 Client Error: Not Found for url: https://example.com/search?...&amp;number_of_results=3&quot; and how to fix it</title>
+<meta name="description" content="That example.com request comes from the community tool 'Web Search using SearXNG and Scrape first N Pages', not Open WebUI's built-in web search. Its URL setting defaults to https://example.com/search. The exact message for each mistake (placeholder URL, JSON off, wrong host, nothing listening), from running the tool's own code against a real SearXNG, and the fix. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/openwebui-searxng-example-com-404.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+  blockquote { margin: 0.8rem 0; padding: 0.2rem 1rem; border-left: 4px solid #ccc; color: #333; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  td code { font-size: 0.82rem; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>SearXNG example.com 404</strong> · <a href="openwebui-ollama-image-missing-ollama.html">:ollama image without ollama</a> · <a href="openwebui-deepseek-reasoning-content.html">DeepSeek reasoning_content</a> · <a href="openwebui-alembic-cant-locate-revision.html">&quot;Can't locate revision&quot;</a></nav>
+<h1>Open WebUI + SearXNG: &quot;404 Client Error: Not Found for url: https://example.com/search?...&amp;number_of_results=3&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Checked on 11 November 2026 (about 00:03 UTC) by running the tool's own search code against example.com, a real local SearXNG and two unreachable addresses. Open WebUI v0.13.3 was the newest release then.</p>
+
+<p>You set up SearXNG for web search in Open WebUI, ask a question, and the chat shows the search failing against <code>example.com</code>, as if your URL had been ignored. The report in <a href="https://github.com/open-webui/open-webui/issues/33995">open-webui#33995</a> (Open WebUI v0.13.3, Docker) showed:</p>
+<pre>{
+  "error": "404 Client Error: Not Found for url: https://example.com/search?q=noticias+tecnolog%C3%ADa+hoy+2025&amp;format=json&amp;number_of_results=3"
+}</pre>
+<p>When we ran the same code, the status line in the chat read:</p>
+<pre>Error during search: 404 Client Error: Not Found for url: https://example.com/search?q=open+webui&amp;format=json&amp;number_of_results=3</pre>
+
+<p><strong>Short answer:</strong> Open WebUI does not fall back to example.com. This request comes from a <strong>community tool</strong>, almost always <a href="https://openwebui.com/t/constliakos/web_search">&quot;Web Search using SearXNG and Scrape first N Pages&quot;</a> (by constLiakos, with enhancements by justinh-rahb and ther3zz). The tool has its own URL setting, <code>SEARXNG_ENGINE_API_BASE_URL</code>, and its default is the placeholder <code>https://example.com/search</code>. Changing the SearXNG URL in Admin Panel &gt; Settings &gt; Web Search doesn't touch it. Fix: open <strong>Workspace &gt; Tools</strong>, click the <strong>gear icon (Valves)</strong> next to that tool, and set <code>SEARXNG_ENGINE_API_BASE_URL</code> to your SearXNG address including <code>/search</code>, for example <code>http://searxng:8080/search</code>. Or switch the tool off and use the built-in web search instead.</p>
+
+<h2 id="which">Tool or built-in search? How to tell from the message</h2>
+<p>Open WebUI's maintainer Classic298 pointed this out in #33995: the built-in search never sends <code>number_of_results</code>, and its errors look different. We checked both against their source code:</p>
+<table>
+  <tr><th></th><th>The community tool (0.1.12 and 0.1.14)</th><th>Open WebUI's built-in SearXNG search (v0.13.3)</th></tr>
+  <tr><td>Where its URL comes from</td><td>Only the tool's own valve: <code>search_engine_url = self.valves.SEARXNG_ENGINE_API_BASE_URL</code></td><td>Admin Panel &gt; Settings &gt; Web Search (Query URL), or <code>SEARXNG_QUERY_URL</code></td></tr>
+  <tr><td>Default URL</td><td><code>https://example.com/search</code></td><td>none</td></tr>
+  <tr><td>Parameters it sends</td><td><code>q</code>, <code>format</code>, <code>number_of_results</code></td><td><code>q</code>, <code>format</code>, <code>pageno</code>, <code>safesearch</code>, <code>language</code>, <code>time_range</code>, <code>categories</code>, <code>theme</code>, <code>image_proxy</code></td></tr>
+  <tr><td>HTTP library</td><td><code>requests</code>: messages read <code>404 Client Error: Not Found for url: ...</code></td><td><code>aiohttp</code>: per Classic298, messages read <code>404, message='Not Found', url='...'</code></td></tr>
+  <tr><td>Status lines in the chat</td><td><code>Initiating web search for: ...</code>, <code>Sending request to search engine</code>, then <code>Error during search: ...</code></td><td>Open WebUI's own web search status</td></tr>
+</table>
+<p>So if the URL in the error ends in <code>number_of_results=3</code> or the message starts with <code>Error during search:</code>, it is the tool. The model called it because the tool is enabled for that model or chat.</p>
+
+<h2 id="table">Every mistake and its exact message</h2>
+<p>We ran the tool's own <code>search_web()</code> function in a test, with a stand-in for Open WebUI that records the status lines, against <code>example.com</code>, an unused local port, a hostname that doesn't exist, and a real SearXNG (built from its official source, default engines, rate limiter off). Both versions of the tool we found printed exactly the same thing in every case. The query was <code>open webui</code>.</p>
+<table>
+  <tr><th>Situation</th><th>Valve value</th><th>What the chat shows (the tool's last status line)</th><th>Fix</th></tr>
+  <tr><td><strong>Valve never set</strong></td><td>(default)</td><td><code>Error during search: 404 Client Error: Not Found for url: https://example.com/search?q=open+webui&amp;format=json&amp;number_of_results=3</code></td><td>Set the valve to your SearXNG URL.</td></tr>
+  <tr><td><strong>SearXNG reached, but JSON output not enabled</strong></td><td><code>http://127.0.0.1:8888/search</code></td><td><code>Error during search: 403 Client Error: FORBIDDEN for url: http://127.0.0.1:8888/search?q=open+webui&amp;format=json&amp;number_of_results=3</code></td><td>Add <code>json</code> to <code>search: formats:</code> in SearXNG's <code>settings.yml</code> and restart SearXNG.</td></tr>
+  <tr><td><strong>Nothing listening at that address</strong> (wrong port, SearXNG down, or <code>localhost</code> inside a container)</td><td><code>http://127.0.0.1:9/search</code></td><td><code>Error during search: HTTPConnectionPool(host='127.0.0.1', port=9): Max retries exceeded with url: /search?q=open+webui&amp;format=json&amp;number_of_results=3 (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=9): Failed to establish a new connection: [Errno 111] Connection refused"))</code></td><td>Use the address Open WebUI's server can reach (see below).</td></tr>
+  <tr><td><strong>Hostname doesn't resolve</strong> (typo, or the containers aren't on the same Docker network)</td><td><code>http://searxng.invalid:8080/search</code></td><td><code>Error during search: HTTPConnectionPool(host='searxng.invalid', port=8080): Max retries exceeded with url: /search?q=open+webui&amp;format=json&amp;number_of_results=3 (Caused by NameResolutionError("HTTPConnection(host='searxng.invalid', port=8080): Failed to resolve 'searxng.invalid' ([Errno -2] Name or service not known)"))</code></td><td>Use the SearXNG service or container name, and put both containers on one network.</td></tr>
+  <tr><td>Working, URL without <code>/search</code></td><td><code>http://127.0.0.1:8888</code></td><td><code>Web search completed. Retrieved content from 3 pages</code></td><td>Worked in our test, because SearXNG answered <code>/?q=...</code> with <code>308 PERMANENT REDIRECT</code> to <code>/search?q=...</code> and the tool followed it. Adding <code>/search</code> is still the safer setting.</td></tr>
+  <tr><td><strong>Working</strong></td><td><code>http://127.0.0.1:8888/search</code></td><td><code>Retrieved 5 search results</code>, <code>Processing search results</code>, <code>Web search completed. Retrieved content from 3 pages</code></td><td>Nothing to fix.</td></tr>
+</table>
+<p>The JSON-off answer from SearXNG itself was <code>HTTP/1.0 403 FORBIDDEN</code> with an HTML &quot;Forbidden&quot; page. SearXNG ignored <code>number_of_results=3</code> in our run: the tool still got 5 results back (its own <code>SCRAPPED_PAGES_NO</code> limit) and then read the first 3 pages.</p>
+
+<h2 id="fix">Fix it</h2>
+<ol>
+  <li><strong>Find the tool.</strong> Go to <strong>Workspace &gt; Tools</strong> and look for &quot;Web Search using SearXNG and Scrape first N Pages&quot;, or any tool with a <code>SEARXNG_ENGINE_API_BASE_URL</code> valve. At least one other published SearXNG tool, <a href="https://github.com/EntropyYue/web_search">EntropyYue/web_search</a> (version 10.4), uses the same <code>https://example.com/search</code> default. If you also have functions installed, check <strong>Admin Panel &gt; Functions</strong> too.</li>
+  <li><strong>Set the URL.</strong> Click the gear icon (Valves) next to the tool and set <code>SEARXNG_ENGINE_API_BASE_URL</code>. The request is made by Open WebUI's server, not your browser, so use an address the server can reach:
+    <ul>
+      <li>Both in Docker on one network (services in one Compose file share one by default): <code>http://searxng:8080/search</code>, where <code>searxng</code> is the service or container name and <code>8080</code> is SearXNG's port <em>inside</em> its container.</li>
+      <li>Open WebUI in Docker, SearXNG on the host: <code>http://host.docker.internal:&lt;port&gt;/search</code> (on Linux, add <code>--add-host=host.docker.internal:host-gateway</code> to Open WebUI's container).</li>
+      <li>Both installed directly on one machine: <code>http://127.0.0.1:&lt;port&gt;/search</code>.</li>
+    </ul>
+    Inside the Open WebUI container, <code>localhost</code> and <code>127.0.0.1</code> mean that container, not your machine.</li>
+  <li><strong>Turn on JSON in SearXNG</strong> if you get the 403. In SearXNG's <code>settings.yml</code> (this is what our working test used):
+<pre>search:
+  formats: [html, json]</pre>
+    then restart SearXNG.</li>
+  <li><strong>Check from the Open WebUI container</strong> before trying the chat again: <code>docker exec open-webui curl -s -o /dev/null -w '%{http_code}\n' 'http://searxng:8080/search?q=test&amp;format=json'</code> should print <code>200</code> (use your container name and URL; if the image has no <code>curl</code>, run <code>python3 -c</code> with <code>urllib.request</code> instead).</li>
+</ol>
+<p><strong>Or skip the tool:</strong> switch it off in Workspace &gt; Tools (and in the model's tool list) and use the built-in search: Admin Panel &gt; Settings &gt; Web Search, engine <code>searxng</code>, Query URL with the search path, for example <code>http://searxng:8080/search</code>, as in Open WebUI's <a href="https://docs.openwebui.com/features/chat-conversations/web-search/providers/searxng">SearXNG guide</a>. Then turn on web search in the chat. The built-in search needs the same JSON setting in SearXNG.</p>
+<p class="warn">If you keep the tool, set the valve even if you never meant to use it: as long as the tool is on for a model, the model can call it, and it will send your users' search queries to <code>example.com</code> (which answers 404).</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. saved two published copies of the tool on 11 November 2026: version 0.1.12 as posted in <a href="https://github.com/open-webui/open-webui/discussions/12990">open-webui discussion #12990</a>, and version 0.1.14 from its <a href="https://openwebui.com/t/constliakos/web_search">openwebui.com page</a> (last updated 15 June 2026; the page showed 57,753 downloads and 137,859 views). Both copies have the same default URL and send the same parameters. They ran each copy's <code>search_web()</code> with Python 3.12 outside Open WebUI, with a small stand-in that records the status lines Open WebUI would show; that is the tool's own code, called in a test, not a full Open WebUI install. SearXNG was built from <a href="https://github.com/searxng/searxng/commit/57ff753ad416b7bf27e59d72ae8c7cac93b56be4">commit 57ff753</a> (9 November 2026), run once with only HTML output and once with HTML and JSON, with one query per case. The <code>aiohttp</code> message format for the built-in search is quoted from Classic298's reply in #33995; we read the built-in code at v0.13.3 but did not run it. The EntropyYue default was read from its source at commit 8569c87, not run. The tool is MIT-licensed and its authors' work; this page only explains its settings. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI version</a>. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Checked on 11 November 2026 against the tool's published copies, <a href="https://github.com/open-webui/open-webui/blob/v0.13.3/backend/open_webui/retrieval/web/searxng.py">Open WebUI's searxng.py at v0.13.3</a> and SearXNG at commit 57ff753; thread facts from <a href="https://github.com/open-webui/open-webui/issues/33995">#33995</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
