@@ -2,12 +2,17 @@
  *
  * Shared by the page (index.html), its worker (worker.js) and the test
  * (test_core.js, Node). prepare() loads numpy and pyulog into Pyodide and
- * fetches checkup.py, health.py and baseline.json from px4-log-health and
+ * fetches checkup.py, health.py, compass.py, battery_r.py and baseline.json
+ * from px4-log-health and
  * gps_lag.py and innov.py from px4-gps-lag, at pinned refs. run() writes the
  * logs into Pyodide's in-memory file system and calls checkup.main exactly as
  * the command line does, so the report is the same one checkup.py writes.
  * No log is uploaded anywhere.
  *
+ * 0.3.0: checkup 0.3.9 (px4-log-health v0.3.9): the compass check (0.3.8) and
+ * the battery-resistance check (0.3.9) now run here too, so compass.py and
+ * battery_r.py are fetched as well, and px4-gps-lag is pinned where v0.3.9's
+ * agent skill pins it (gps_lag 0.2.0, innov 0.2.0).
  * 0.2.1: checkup 0.3.6 (px4-log-health v0.3.6): the u-blox dynamic model note
  * now says model 6's extra lag behaved like heavier smoothing, on one vehicle
  * and across public logs. Nothing else changes.
@@ -19,19 +24,21 @@
 (function (root) {
   "use strict";
 
-  var VERSION = "0.2.1";
+  var VERSION = "0.3.0";
   var PYODIDE = "314.0.7";
   var PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v" + PYODIDE + "/full/";
   var PYULOG = "1.3.0";
   var RAW = "https://raw.githubusercontent.com/munimtechnologies/";
-  var HEALTH_REF = "v0.3.6";
-  var GPS_LAG_REF = "967b5ad92d04ca6ac7e29684b411fbf5df243e05";   // the pin checkup's Action uses
+  var HEALTH_REF = "v0.3.9";
+  var GPS_LAG_REF = "f0b39b3eff9819c0e9cbbed5d23e3d50a639696b";   // the pin checkup's Action uses
 
   var SOURCES = [
-    {name: "checkup.py", url: RAW + "px4-log-health/" + HEALTH_REF + "/checkup.py", must: '__version__ = "0.3.6"'},
+    {name: "checkup.py", url: RAW + "px4-log-health/" + HEALTH_REF + "/checkup.py", must: '__version__ = "0.3.9"'},
     {name: "health.py", url: RAW + "px4-log-health/" + HEALTH_REF + "/health.py", must: '__version__ = "0.2.2"'},
     {name: "baseline.json", url: RAW + "px4-log-health/" + HEALTH_REF + "/baseline.json", must: '"fields"'},
-    {name: "gps_lag.py", url: RAW + "px4-gps-lag/" + GPS_LAG_REF + "/gps_lag.py", must: '__version__ = "0.1.0"'},
+    {name: "compass.py", url: RAW + "px4-log-health/" + HEALTH_REF + "/compass.py", must: '__version__ = "0.1.0"'},
+    {name: "battery_r.py", url: RAW + "px4-log-health/" + HEALTH_REF + "/battery_r.py", must: '__version__ = "0.1.0"'},
+    {name: "gps_lag.py", url: RAW + "px4-gps-lag/" + GPS_LAG_REF + "/gps_lag.py", must: '__version__ = "0.2.0"'},
     {name: "innov.py", url: RAW + "px4-gps-lag/" + GPS_LAG_REF + "/innov.py", must: '__version__ = "0.2.0"'}
   ];
 

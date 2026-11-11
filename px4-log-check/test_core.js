@@ -3,15 +3,16 @@
  *   node test_core.js --unit             # no network: Markdown, names, page wiring, pins
  *   node test_core.js --real OUT_DIR     # the real thing, see below
  *
- * --real waits until px4-log-health v0.3.6 is on GitHub, downloads the two
+ * --real waits until px4-log-health v0.3.9 is on GitHub, downloads the two
  * public logs attached to PX4-Autopilot PR #24831 (logs_dynmodel.zip, checked
  * against the sha256 px4-gps-lag's paired job recorded; no Flight Review
  * download), unpacks them inside Pyodide, runs them through core.js exactly as
- * the page's worker does, and compares the report with v0.3.6's
- * studies/dynmodel/report-0.3.6.md, which checkup.py wrote on the same two
- * logs in v0.3.6's sealed check. Exit 1 on any failure.
+ * the page's worker does, and compares the report with v0.3.9's
+ * studies/v039/report-dynmodel.md, which checkup.py wrote on the same two
+ * logs in v0.3.9's sealed build. Exit 1 on any failure.
  *
- * 0.2.1 (core.js 0.2.1, checkup 0.3.6). 0.2.0 compared checkup 0.3.4 with
+ * 0.3.0 (core.js 0.3.0, checkup 0.3.9) also checks the Compass and Battery
+ * sections. 0.2.1 (core.js 0.2.1, checkup 0.3.6). 0.2.0 compared checkup 0.3.4 with
  * v0.3.4's studies/dynmodel/report.md. 0.1.0 compared three Flight Review
  * logs with v0.3.1's sample report.
  *
@@ -24,13 +25,13 @@ const fs = require("fs");
 const path = require("path");
 const core = require("./core.js");
 
-const CHECKUP = "0.3.6";
+const CHECKUP = "0.3.9";
 const TAG = "v" + CHECKUP;
 const ZIP = "https://github.com/user-attachments/files/20456409/logs_dynmodel.zip";
 const ZIP_SHA = "aa6997a9754d4a11149bb4aa23f9721e16450eba4dc4808c0644ed2e04343b49";
 const LOGS = ["log_5_2025-5-27-11-50-34.ulg", "log_8_2025-5-27-12-55-02.ulg"];   // sorted, as checkup.py got them
 const EXPECTED = "https://raw.githubusercontent.com/munimtechnologies/px4-log-health/" + TAG + "/" +
-                 "studies/dynmodel/report-0.3.6.md";
+                 "studies/v039/report-dynmodel.md";
 const UA = "px4-log-check-test/" + core.VERSION + " (MV2 of Munim, Inc.; mv2@munimtech.com)";
 const NOTE = "**u-blox dynamic model 6.**";
 const FLEET = "GRADE-tau-fleet.md";
@@ -74,7 +75,9 @@ function unit() {
   assert.ok(worker.includes('importScripts("core.js")') && worker.includes("PX4Check.PYODIDE_URL"));
   assert.ok(!/\bMIT\b/.test(page + worker + fs.readFileSync(path.join(__dirname, "core.js"), "utf8")));
   assert.ok(page.includes("(" + TAG + ")"), "the page names the checkup it runs");
-  assert.ok(!page.includes("v0.3.4"), "no stale version on the page");
+  assert.ok(!page.includes("v0.3.4") && !page.includes("v0.3.6"), "no stale version on the page");
+  assert.ok(page.includes("magcurrent-2026/GRADE.md") && page.includes("battery-r-2026/GRADE.md"),
+            "the page links the compass and battery censuses");
   assert.ok(page.includes(FLEET), "the page links the fleet smoothing result");
   core.SOURCES.forEach(function (s) {
     assert.ok(/^https:\/\/raw\.githubusercontent\.com\/munimtechnologies\/px4-(log-health|gps-lag)\//.test(s.url), s.url);
@@ -82,17 +85,21 @@ function unit() {
   });
 
   // the pins
-  assert.strictEqual(core.VERSION, "0.2.1");
+  assert.strictEqual(core.VERSION, "0.3.0");
   const byName = {};
   core.SOURCES.forEach(function (s) { byName[s.name] = s; });
-  assert.deepStrictEqual(Object.keys(byName), ["checkup.py", "health.py", "baseline.json", "gps_lag.py", "innov.py"]);
-  ["checkup.py", "health.py", "baseline.json"].forEach(function (n) {
+  assert.deepStrictEqual(Object.keys(byName), ["checkup.py", "health.py", "baseline.json", "compass.py", "battery_r.py",
+                                              "gps_lag.py", "innov.py"]);
+  ["checkup.py", "health.py", "baseline.json", "compass.py", "battery_r.py"].forEach(function (n) {
     assert.ok(byName[n].url.includes("/px4-log-health/" + TAG + "/"), byName[n].url);
   });
   assert.strictEqual(byName["checkup.py"].must, '__version__ = "' + CHECKUP + '"');
   assert.strictEqual(byName["health.py"].must, '__version__ = "0.2.2"');
+  assert.strictEqual(byName["compass.py"].must, '__version__ = "0.1.0"');
+  assert.strictEqual(byName["battery_r.py"].must, '__version__ = "0.1.0"');
+  assert.strictEqual(byName["gps_lag.py"].must, '__version__ = "0.2.0"');
   ["gps_lag.py", "innov.py"].forEach(function (n) {
-    assert.ok(byName[n].url.includes("/px4-gps-lag/967b5ad92d04ca6ac7e29684b411fbf5df243e05/"), byName[n].url);
+    assert.ok(byName[n].url.includes("/px4-gps-lag/f0b39b3eff9819c0e9cbbed5d23e3d50a639696b/"), byName[n].url);
   });
   console.log("unit: all checks passed");
 }
@@ -188,7 +195,7 @@ function unzipInPyodide(pyodide, bytes) {
 
 async function real(outDir) {
   fs.mkdirSync(outDir, {recursive: true});
-  const result = {test: "0.2.1", core: core.VERSION, pyodide: core.PYODIDE, pyulog: core.PYULOG,
+  const result = {test: "0.3.0", core: core.VERSION, pyodide: core.PYODIDE, pyulog: core.PYULOG,
                   sources: core.SOURCES.map(function (s) { return s.url; }), zip: ZIP, expected: EXPECTED};
   const installed = require("pyodide/package.json").version;
   assert.strictEqual(installed, core.PYODIDE, "npm pyodide " + installed + " is not the page's " + core.PYODIDE);
@@ -222,6 +229,10 @@ async function real(outDir) {
   result.compare = cmp;
   result.dynmodel_notes = res.md.split(NOTE).length - 1;
   result.fleet_sources = res.md.split(FLEET).length - 1;
+  result.compass_sections = res.md.split("### Compass").length - 1;
+  result.battery_sections = res.md.split("### Battery").length - 1;
+  result.expected_compass_sections = want.split("### Compass").length - 1;
+  result.expected_battery_sections = want.split("### Battery").length - 1;
   const rows = res.rows.trim().split("\n").map(function (l) { return JSON.parse(l); });
   result.gps_dynmodel = rows.map(function (r) { return r.gps_dynmodel; });
   result.lag_ms = rows.map(function (r) { return r.gps_verdict && r.gps_verdict.lag_ms; });
@@ -234,6 +245,10 @@ async function real(outDir) {
   assert.strictEqual(rows.length, 2);
   assert.strictEqual(result.dynmodel_notes, 1, "the note shows on the model-6 log only");
   assert.strictEqual(result.fleet_sources, 1, "the note cites GRADE-tau-fleet.md once");
+  assert.strictEqual(result.battery_sections, 2, "a Battery section for each log");
+  assert.strictEqual(result.expected_battery_sections, 2, "v0.3.9's report has a Battery section for each log");
+  assert.ok(result.compass_sections >= 1, "a Compass section");
+  assert.strictEqual(result.compass_sections, result.expected_compass_sections, "as many Compass sections as v0.3.9's");
   assert.deepStrictEqual(result.gps_dynmodel.map(function (d) { return d && d.value; }), [7, 6]);
   assert.notStrictEqual(cmp.verdict, "different", "the browser report differs from checkup.py's");
   console.log("real: the browser report is " + cmp.verdict + " to checkup.py's " + TAG + " dynmodel report");
