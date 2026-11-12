@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP &quot;Redirect to ... not followed; use that URL as the endpoint if it is the intended server&quot;: what it means in each client, and when NOT to use that URL</title>
+<meta name="description" content="Why an MCP client says &quot;Redirect to https://... not followed; use that URL as the endpoint if it is the intended server&quot; (Python SDK 1.30+ and 2.2+, TypeScript SDK 1.32+ and 2.3+, OpenAI Agents SDK, Open WebUI). Which redirects are still followed, the exact text per SDK, which clients have an opt-out, and three cases where the URL in the message is the wrong fix: login pages, Modal's 150-second 303, and allowlisting proxies. From the source, 12 November 2026. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/mcp-redirect-not-followed.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <a href="openwebui-failed-to-connect-to-mcp-server.html">Failed to connect to MCP server</a> · <a href="mcp-request-initialize-timed-out.html">MCP initialize timed out</a> · <strong>MCP redirect not followed</strong> · <a href="mcp-sse-event-exceeded-1048576-byte-limit.html">MCP 1 MiB event limit</a></nav>
+<h1>MCP: &quot;Redirect to … not followed; use that URL as the endpoint if it is the intended server&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 12 November 2026 from the source of the MCP Python SDK (v2.3.0, v1.30.0 and v1.29.1) and the MCP TypeScript SDK (v2.4.0 and 1.32.2), their release notes, and the issues linked below. Nothing was run; see <a href="#limits">limits</a>.</p>
+
+<p>An MCP server that worked yesterday now fails on connect, or on one tool call, with something like:</p>
+<pre>mcp.shared.exceptions.MCPError: Redirect to https://mcp.example.com/mcp/ not followed; use that URL as the endpoint if it is the intended server</pre>
+<p>The server (or something in front of it) answered the client's POST with an HTTP redirect, and the client refused to follow it. Since September and October 2026 the official MCP SDKs follow a redirect only when it stays on the same origin and keeps the POST a POST; before that they followed redirects anywhere. So this often appears right after an upgrade, with no change on the server. Most of the time the message's advice is right: put the URL it shows into your config. <a href="#not-the-fix">Three cases below</a> are exceptions where that URL is the wrong fix.</p>
+
+<h2 id="rule">Which redirects are still followed</h2>
+<p>The Python SDK (1.30.0 and later, 2.2.0 and later) and the TypeScript SDK (1.32.0 and later, 2.3.0 and later, default <code>redirectPolicy: 'same-origin'</code>) use the same rule. A redirect of an MCP request is followed only if all of these hold:</p>
+<ol>
+  <li><strong>The method stays the same.</strong> MCP messages are POSTs. A 301, 302 or 303 turns a POST into a body-less GET, so for a POST only <strong>307 and 308</strong> are followed. A <code>return 301 https://…</code> rule in nginx, or a redirect directive that defaults to 301 or 302, therefore breaks the connection even when it points to the same host. (The long-lived GET stream may follow any of the five redirect codes.)</li>
+  <li><strong>The origin stays the same:</strong> same scheme, host and port. The one exception is <code>http://host/…</code> to <code>https://host/…</code> when both use the default port. <code>http://host:8000</code> to <code>https://host:8443</code>, <code>example.com</code> to <code>www.example.com</code>, and any https-to-http step are refused.</li>
+  <li><strong>No new user name or password</strong> (<code>user:pass@</code>) in the target URL.</li>
+  <li><strong>At most a few hops:</strong> the httpx client's <code>max_redirects</code> in Python, <code>MAX_REDIRECTS = 5</code> in the TypeScript SDK.</li>
+</ol>
+<p>The rule came in with Python SDK PR #3397 (v2.2.0) and its backport PR #3448 (v1.30.0), both released 7 September 2026, and in TypeScript SDK 1.32.0 and v2.3.0 on 2 October 2026. Following redirects to another host had sent the client's configured headers, and on 307/308 the request body, to that host. Before the change, Python's <code>create_mcp_http_client()</code> set <code>follow_redirects=True</code> with no origin check (read at v1.29.1), and the TypeScript release notes say redirects were left to <code>fetch</code>, which follows them anywhere.</p>
+
+<h2 id="messages">The exact text, SDK by SDK</h2>
+<table>
+  <tr><th>SDK (version read)</th><th>What you see</th><th>How it reaches you</th></tr>
+  <tr><td>MCP Python SDK 2.x (v2.3.0; rule since v2.2.0)</td><td><code>Redirect to {location} not followed; use that URL as the endpoint if it is the intended server</code><br>or, for https to http, three lines starting <code>Redirect to {location} not followed: it would downgrade this HTTPS endpoint to plain HTTP.</code> then <code>The server is likely behind a TLS-terminating proxy whose forwarded headers it does not trust,</code> and <code>often combined with a trailing-slash difference. Try &lt;the https form&gt; instead, or fix the proxy settings.</code></td><td>Streamable HTTP: the transport logs it as a warning and answers that one request with a JSON-RPC error, code <code>INVALID_REQUEST</code> (-32600), whose message is this text, so you get an <code>MCPError</code>. The session itself stays open (<code>_handle_post_request</code> in <code>mcp/client/streamable_http.py</code>). A redirected notification is only logged. The GET stream logs <code>GET stream not opened: …</code> and carries on. The SSE transport raises <code>httpx2.HTTPStatusError</code> instead (v2.2.0 release notes).</td></tr>
+  <tr><td>MCP Python SDK 1.x (v1.30.0)</td><td>The same two texts.</td><td>Raised as <code>httpx.HTTPStatusError</code> (<code>_raise_for_unfollowed_redirect</code>), not turned into a JSON-RPC error. A redirected request's exception leaves the transport's task group, so depending on your code it can show up wrapped in an exception group; for a redirected notification, the transport logs <code>Error in post_writer</code> and closes its streams.</td></tr>
+  <tr><td>MCP TypeScript SDK 2.x (v2.4.0)</td><td><code>Error POSTing to endpoint: Redirect to {url} not followed; use that URL as the endpoint if it is the intended server (redirectPolicy: 'same-origin')</code><br>https to http: <code>Redirect from https to plain http not followed; try {https url} as the endpoint</code><br>In a browser: <code>Redirect not followed: this runtime does not expose where it points</code></td><td><code>SdkHttpError</code> with code <code>CLIENT_HTTP_NOT_IMPLEMENTED</code> for a POST (<code>Failed to open SSE stream: …</code> with <code>CLIENT_HTTP_FAILED_TO_OPEN_STREAM</code> for the GET stream).</td></tr>
+  <tr><td>MCP TypeScript SDK 1.x (1.32.2; rule since 1.32.0)</td><td><code>Streamable HTTP error: Error POSTing to endpoint: Redirect to {url} not followed (redirectPolicy: 'same-origin')</code><br>https to http: <code>Redirect to plain http not followed; try {https url} instead</code><br>In a browser: <code>Redirect not followed: this runtime does not expose the redirect target</code></td><td><code>StreamableHTTPError</code>, HTTP status in <code>.code</code>. Note the 1.x text has no &quot;use that URL&quot; hint.</td></tr>
+  <tr><td>OpenAI Agents SDK (main, 12 Nov 2026)</td><td>The Python SDK texts above.</td><td>Its <code>pyproject.toml</code> requires <code>mcp&gt;=1.30.0, &lt;3, !=2.0.*, !=2.1.*</code>, so every install has the new rule.</td></tr>
+  <tr><td>Open WebUI (0.12.4 to 0.13.3, bundles mcp 2.3.0)</td><td><code>Failed to connect to MCP server '&lt;id&gt;'</code> in the UI; the Python 2.x text in the backend log.</td><td>See <a href="openwebui-failed-to-connect-to-mcp-server.html#redirects">the Open WebUI page</a>.</td></tr>
+</table>
+<p>In both SDKs the location in the message has its user name, password, <strong>query string</strong> and fragment removed. That matters for <a href="#modal">the Modal case</a>.</p>
+
+<h2 id="causes">Common causes and the fix for each</h2>
+<table>
+  <tr><th>What the message shows</th><th>Usual cause</th><th>Fix</th></tr>
+  <tr><td>Your URL with or without a trailing <code>/</code>, same host</td><td>A proxy rule or framework sends 301/302 for the slash (refused for a POST). Starlette's own slash redirect is a 307 and is followed if nothing else is wrong.</td><td>Use the URL from the message, slash included.</td></tr>
+  <tr><td>Your URL with <code>https://</code> instead of <code>http://</code></td><td>The proxy redirects all plain HTTP to HTTPS with 301 or 302. The origin step is allowed, the method change is not.</td><td>Configure the <code>https://</code> URL.</td></tr>
+  <tr><td>An <code>http://</code> URL while you configured <code>https://</code> (the &quot;downgrade&quot; text)</td><td>The app behind a TLS-terminating proxy builds its own redirects (usually the trailing slash) with <code>http://</code>, because it doesn't trust the proxy's <code>X-Forwarded-Proto</code>. Uvicorn, for example, trusts forwarded headers only from <code>--forwarded-allow-ips</code>, which defaults to <code>$FORWARDED_ALLOW_IPS</code> or else just 127.0.0.1 and ::1, so a proxy in another container doesn't count.</td><td>Use the exact https URL that needs no redirect, or make the app trust the proxy's forwarded headers.</td></tr>
+  <tr><td>Another host or port: <code>www.</code>, a new domain, a load balancer, a different port</td><td>The service moved, or a gateway sends you on. Refused even with 307/308.</td><td>If that host is the same service and you trust it, use it as the endpoint.</td></tr>
+</table>
+
+<h2 id="not-the-fix">When the URL in the message is the wrong fix</h2>
+<p class="warn"><strong>1. A login page.</strong> If the target is an identity provider or a <code>/login</code>, <code>/oauth2/start</code>, <code>/sso</code> path, an auth gateway (an SSO proxy, Cloudflare Access, a corporate portal) wants a browser sign-in. Making that URL the endpoint can't work. The fix is credentials the gateway accepts from a program (a service token or header it documents), or connecting past the gateway.</p>
+<p class="warn" id="modal"><strong>2. The target is your own endpoint, unchanged (Modal and similar platforms).</strong> Modal answers any web request that runs longer than 150 seconds with an HTTP 303 to the same URL plus a query parameter for the result (<a href="https://modal.com/docs/guide/webhook-timeouts">Modal: Request timeouts</a>). The SDK refuses the 303 because it would turn the POST into a GET, and since the message drops the query string, it reads like <code>Redirect to https://you--app.modal.run/mcp not followed</code>, your own URL. Per <a href="https://github.com/PolicyEngine/macro/issues/236">PolicyEngine/macro#236</a> (merged 11 November 2026), a 5.5-minute tool call on mcp 1.30 failed exactly this way, and following the 303 by hand would not help, because Modal rejects the GET with <code>400 modal-http: bad redirect method</code>. The fix is a tool that answers within 150 seconds: start the work as a job and poll for its result, as that project did. If the redirect only appears on slow tool calls and never on connect, suspect this.</p>
+<p class="warn"><strong>3. A proxy that is meant to refuse it.</strong> A gateway that only lets MCP traffic reach allowlisted hosts relies on this rule: a redirect from an allowed host to another one is refused. Per LiteLLM PR <a href="https://github.com/BerriAI/litellm/pull/50629">#50629</a> (open), its test case 9 gets <code>MCPError: Redirect to http://…:8722/mcp not followed; …</code> as a tool error for a 307 to a different port. There the error is the protection working; adding the target to the allowlist is a security decision, not a fix.</p>
+
+<h2 id="optout">Can you switch it off?</h2>
+<table>
+  <tr><th>Client</th><th>Opt-out</th></tr>
+  <tr><td>MCP Python SDK 1.30.0+ / 2.2.0+</td><td><strong>None.</strong> Requests are sent with <code>follow_redirects=False</code> and the SDK follows within the origin itself; the <code>follow_redirects</code> setting of an <code>httpx</code>/<code>httpx2</code> client you pass in is not consulted (<code>mcp/shared/_httpx_utils.py</code>). You can only change the hop count (<code>max_redirects</code>). Per <a href="https://github.com/modelcontextprotocol/python-sdk/issues/3504">python-sdk#3504</a> (open, labelled question), people behind reverse proxies are asking for an allowlist; there was none in v2.3.0.</td></tr>
+  <tr><td>MCP TypeScript SDK 1.32.0+ / 2.3.0+</td><td><code>redirectPolicy: 'follow'</code> on <code>StreamableHTTPClientTransport</code> or <code>SSEClientTransport</code> restores the old behaviour (redirects left to <code>fetch</code>, any origin). It gives up the protection described above, so prefer the final URL. In browsers, a redirected request fails unless that option is set (1.32.0 release notes).</td></tr>
+  <tr><td>Apps built on them (OpenAI Agents SDK, Open WebUI, …)</td><td>Whatever the app exposes; in Open WebUI 0.13.3 nothing. Use the final URL.</td></tr>
+</table>
+
+<h2 id="probe">See the redirect yourself</h2>
+<p>This sends one MCP <code>initialize</code> POST without following redirects and prints the status code and where it points. Add an <code>-H 'Authorization: Bearer …'</code> if the server needs one. <strong>We have not run this command.</strong></p>
+<pre>curl -sS -o /dev/null -w '%{http_code} -&gt; %{redirect_url}\n' -X POST \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"probe","version":"0"}}}' \
+  https://mcp.example.com/mcp</pre>
+<p><code>200 -&gt;</code> with nothing after it: no redirect on connect (if the error comes only on some tool calls, see <a href="#modal">the Modal case</a>). <code>307</code> or <code>308</code> to the same host: followed by the SDKs, so look further along the chain by running the command again on the target. Anything else: the URL after the arrow is what the SDK refused; check it against the tables above. The <a href="openwebui-failed-to-connect-to-mcp-server.html#probe">Open WebUI page</a> has a Python version that runs inside the container.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read these files on GitHub on 12 November 2026. MCP Python SDK v2.3.0: <code>src/mcp/client/streamable_http.py</code> and <code>src/mcp/shared/_httpx_utils.py</code>; v1.30.0: the same two files; v1.29.1: <code>src/mcp/shared/_httpx_utils.py</code>; the diff of PR #3397 and the v2.2.0 and v1.30.0 release notes. MCP TypeScript SDK v2.4.0: <code>packages/client/src/client/streamableHttp.ts</code>, <code>packages/core-internal/src/shared/transport.ts</code> and <code>src/errors/sdkErrors.ts</code>; 1.32.2: <code>src/client/streamableHttp.ts</code> and <code>src/shared/transport.ts</code>; the 1.32.0 and v2.3.0 release notes. OpenAI Agents SDK: <code>pyproject.toml</code> on main. Nothing was run, including the command above; the texts in the tables are built by that code, and the class name or wrapping in your traceback can differ. Versions between the ones named were not read one by one (Python 2.0.x and 2.1.x were not read; per python-sdk#3504 they still followed these redirects). The Modal and LiteLLM cases come from the linked issue and pull request, not from our own tests. The Uvicorn default is from its settings documentation (<code>docs/settings.md</code> on its main branch), not from its code. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> or <a href="ollama.html">Ollama</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 12 November 2026 from <a href="https://github.com/modelcontextprotocol/python-sdk/tree/v2.3.0/src/mcp">mcp v2.3.0</a>, <a href="https://github.com/modelcontextprotocol/python-sdk/tree/v1.30.0/src/mcp">mcp v1.30.0</a>, <a href="https://github.com/modelcontextprotocol/python-sdk/pull/3397">python-sdk PR #3397</a>, <a href="https://github.com/modelcontextprotocol/typescript-sdk/tree/v2.4.0">the TypeScript SDK v2.4.0</a> and <a href="https://github.com/modelcontextprotocol/typescript-sdk/tree/1.32.2">1.32.2</a>, <a href="https://github.com/openai/openai-agents-python/blob/main/pyproject.toml">the OpenAI Agents SDK</a>, <a href="https://modal.com/docs/guide/webhook-timeouts">Modal's documentation</a> and the issues linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
