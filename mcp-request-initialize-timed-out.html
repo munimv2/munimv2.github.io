@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP &quot;Request 'initialize' timed out&quot;: which timeout, which default, in which client (Python SDK, TypeScript SDK, OpenAI Agents SDK, Pydantic AI, Open WebUI)</title>
+<meta name="description" content="Why an MCP client says &quot;Request 'initialize' timed out&quot; (or &quot;Timed out while waiting for response to ClientRequest&quot;, or &quot;MCP error -32001: Request timed out&quot;), which setting controls it in each client and its default: no timeout in the MCP Python SDK, 60 s in the TypeScript SDK, 5 s in the OpenAI Agents SDK and Pydantic AI, 10 s in Open WebUI. From the source, 12 November 2026. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/mcp-request-initialize-timed-out.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <a href="openwebui-failed-to-connect-to-mcp-server.html">Failed to connect to MCP server</a> · <strong>MCP initialize timed out</strong> · <a href="mcp-sse-event-exceeded-1048576-byte-limit.html">MCP 1 MiB event limit</a></nav>
+<h1>MCP: &quot;Request 'initialize' timed out&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 12 November 2026 from the source of the MCP Python SDK (v2.3.0 and v1.27.2), the MCP TypeScript SDK (v2.4.0 and 1.32.2), the OpenAI Agents SDK (main branch that day), Pydantic AI v2.68.0 and Open WebUI v0.13.3. Nothing was run; see <a href="#limits">limits</a>.</p>
+
+<p>Your agent or chat app starts an MCP server and fails before any tool is listed:</p>
+<pre>mcp.shared.exceptions.MCPError: Request 'initialize' timed out</pre>
+<p>The client sent the MCP handshake and the server did not answer in time. Almost always the server is slow to <em>start</em>, not broken: <code>npx</code> or <code>uvx</code> downloading the package on first launch, a Python server importing heavy libraries, a server that logs in somewhere before it answers, or a busy CI runner. The fix is to give the handshake more time in <em>your client's</em> setting, and the setting, its name and its default differ a lot between clients. That is what this page lists.</p>
+
+<h2 id="messages">Same timeout, different text</h2>
+<p>Which text you see depends on the SDK version under your client, not on the server.</p>
+<table>
+  <tr><th>Text you see</th><th>Where it comes from</th><th>Notes</th></tr>
+  <tr><td><code>Request 'initialize' timed out</code> (or another method in the quotes: <code>'tools/list'</code>, <code>'tools/call'</code>)</td><td>MCP Python SDK 2.x. Built as <code>f&quot;Request {method!r} timed out&quot;</code> in <code>mcp/shared/jsonrpc_dispatcher.py</code> (read at v2.3.0), raised as <code>MCPError</code> with code <code>REQUEST_TIMEOUT</code> (-32001).</td><td>The method name tells you which step was slow.</td></tr>
+  <tr><td><code>Timed out while waiting for response to ClientRequest. Waited 5.0 seconds.</code></td><td>MCP Python SDK 1.x (read at v1.27.2, <code>mcp/shared/session.py</code>), raised as <code>McpError</code> with code 408.</td><td>No method name: <code>ClientRequest</code> is the wrapper class used for every client request, so the same text appears for the handshake, <code>tools/list</code> and tool calls. Look at whether any tool was listed before it.</td></tr>
+  <tr><td><code>MCP error -32001: Request timed out</code></td><td>MCP TypeScript SDK 1.x (read at 1.32.2): <code>McpError</code> with <code>ErrorCode.RequestTimeout</code> (-32001); the class adds the <code>MCP error &lt;code&gt;:</code> prefix.</td><td>Used by many Node-based clients and IDEs.</td></tr>
+  <tr><td><code>Request timed out</code> (an <code>SdkError</code> with code <code>RequestTimeout</code>)</td><td>MCP TypeScript SDK 2.x (read at v2.4.0, <code>packages/core-internal/src/shared/protocol.ts</code>).</td><td>We did not check how your client prints <code>SdkError</code>.</td></tr>
+  <tr><td><code>Failed to connect to MCP server '&lt;id&gt;'</code></td><td>Open WebUI. The timeout text above is in the backend log under it.</td><td>See <a href="openwebui-failed-to-connect-to-mcp-server.html">that page</a> for the other causes.</td></tr>
+</table>
+
+<h2 id="clients">The setting and its default, client by client</h2>
+<table>
+  <tr><th>Client (version read)</th><th>Setting that bounds the handshake</th><th>Default</th><th>Also applies to</th></tr>
+  <tr><td>MCP Python SDK 2.x, <code>ClientSession</code> or <code>Client</code> (v2.3.0)</td><td><code>read_timeout_seconds</code> (float, seconds)</td><td><code>None</code>: no timeout at all</td><td>Every later request that doesn't pass its own timeout, including <code>call_tool</code> (its <code>read_timeout_seconds</code> defaults to the session's). See also <a href="#discover">the 10-second probe</a>.</td></tr>
+  <tr><td>MCP Python SDK 1.x, <code>ClientSession</code> (v1.27.2)</td><td><code>read_timeout_seconds</code> (a <code>datetime.timedelta</code>)</td><td><code>None</code>: no timeout</td><td>Same: a per-request value wins, otherwise the session value is used.</td></tr>
+  <tr><td>MCP TypeScript SDK 1.x / 2.x (1.32.2, v2.4.0)</td><td><code>client.connect(transport, { timeout })</code> in milliseconds; in 1.32.2 <code>connect()</code> passes these options to the <code>initialize</code> request</td><td><code>DEFAULT_REQUEST_TIMEOUT_MSEC</code> = 60,000 (60 s), per request</td><td>Each request takes its own <code>timeout</code>; <code>resetTimeoutOnProgress</code> (default false) and <code>maxTotalTimeout</code> (default none) exist for long tool calls.</td></tr>
+  <tr><td>OpenAI Agents SDK, <code>MCPServerStdio</code>, <code>MCPServerSse</code>, <code>MCPServerStreamableHttp</code> (main, 12 Nov 2026)</td><td><code>client_session_timeout_seconds</code></td><td><strong>5</strong> seconds in all three classes</td><td>It is passed to the SDK as the session read timeout (a <code>timedelta</code> with mcp 1.x, a float with mcp 2.x), so with the Python SDK rules above it is also the default for later requests. <code>None</code> or <code>0</code> turns it off. Per <a href="https://github.com/openai/openai-agents-python/issues/5405">openai-agents-python#5405</a>, the stock stdio example can fail with <code>Request 'initialize' timed out</code> on a cold start.</td></tr>
+  <tr><td>Pydantic AI, <code>MCPToolset</code> (v2.68.0)</td><td><code>init_timeout</code>: &quot;Timeout in seconds for the initial connection and <code>initialize</code> handshake&quot;</td><td><strong>5</strong> seconds</td><td>Separate from <code>read_timeout</code> (default 300 s) for the long-lived connection. Both go to the FastMCP <code>Client</code>; if you pass your own pre-built FastMCP client, set them on that client instead (Pydantic AI raises an error if you pass either together with one). We did not read FastMCP's own timeout message.</td></tr>
+  <tr><td>Open WebUI (v0.13.3)</td><td>Environment variable <code>MCP_INITIALIZE_TIMEOUT</code></td><td><strong>10</strong> seconds</td><td>Passed as the SDK client's <code>read_timeout_seconds</code>, so it bounds the handshake and listing tools. Tool calls use <code>AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER</code> instead (no timeout when unset; <code>utils/mcp/client.py</code>).</td></tr>
+</table>
+<p class="warn">The MCP Python SDK itself has no handshake timeout. When a Python client gives up after 5 or 10 seconds, that number comes from the framework or app on top of it, so that is where to raise it.</p>
+
+<h2 id="fix">What to do</h2>
+<ol>
+  <li><strong>Time the server's start on its own.</strong> Run the exact command from your config in a terminal and see how long it takes to print anything or settle, and whether it fails outright (a missing package, a registry it can't reach, an API key it wants). A server that never starts gives the same timeout as a slow one.</li>
+  <li><strong>Remove the download from the start.</strong> <code>npx -y some-server</code> and <code>uvx some-server</code> may fetch the package on first run or after a cache clean, and that counts against the handshake. Installing it once (<code>npm install -g</code>, <code>uv tool install</code>) and pointing the config at the installed command takes that out.</li>
+  <li><strong>Raise the right setting</strong> from the table, for example <code>client_session_timeout_seconds=30</code> (OpenAI Agents SDK), <code>init_timeout=30</code> (Pydantic AI), <code>MCP_INITIALIZE_TIMEOUT=60</code> (Open WebUI, then restart it). Wrapping the connect in your own <code>asyncio.timeout(60)</code> does not help: an outer timeout can only cut a wait shorter, never extend the session's own read timeout.</li>
+  <li><strong>Watch what the bigger number also changes.</strong> With the Python SDK, the session read timeout is also the default for tool calls. A small value set for the handshake can cut off slow tools; a large one lets a hung tool hold the agent that long. Where the client lets you, give tool calls their own per-call timeout. Pydantic AI and Open WebUI already keep the two apart.</li>
+</ol>
+
+<h2 id="discover">MCP Python SDK 2.x: a fixed 10-second probe before <code>initialize</code></h2>
+<p>From reading mcp v2.3.0: <code>Client</code> defaults to <code>mode=&quot;auto&quot;</code>, which first sends a <code>server/discover</code> probe (for servers on the newer protocol) and falls back to the classic <code>initialize</code> handshake on older servers. In <code>mcp/client/session.py</code> the probe uses a fixed <code>DISCOVER_TIMEOUT_SECONDS = 10.0</code>, not your <code>read_timeout_seconds</code>. In <code>mcp/client/_probe.py</code>, any <code>MCPError</code> from the probe, a timeout included, leads to the fallback, except a -32022 answer whose supported list shares no handshake-era version. So with a slow-starting older server, the first 10 seconds go to a probe you can't configure, and then <code>initialize</code> gets your timeout. The error you finally see names <code>'initialize'</code>. If you need the old single handshake, <code>Client(..., mode=&quot;legacy&quot;)</code> &quot;forces the initialize handshake&quot; (its docstring). We did not check which mode each framework uses.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read these files on GitHub on 12 November 2026. MCP Python SDK v2.3.0: <code>src/mcp/shared/jsonrpc_dispatcher.py</code>, <code>src/mcp/client/session.py</code>, <code>client.py</code> and <code>_probe.py</code>; v1.27.2: <code>src/mcp/shared/session.py</code>. MCP TypeScript SDK v2.4.0: <code>packages/core-internal/src/shared/protocol.ts</code>; 1.32.2: <code>src/shared/protocol.ts</code>, <code>src/types.ts</code> and <code>src/client/index.ts</code>. OpenAI Agents SDK: <code>src/agents/mcp/server.py</code> on main (newest release that day: v0.24.0-alpha.7). Pydantic AI v2.68.0: <code>pydantic_ai_slim/pydantic_ai/mcp.py</code>. Open WebUI v0.13.3: <code>backend/open_webui/utils/mcp/client.py</code>. Nothing was run; the texts in the tables are built by that code, and the class name or prefix in your traceback can differ. Versions between the ones named were not read one by one (the oldest 2.x Python release we checked is v2.3.0). The 1.x Python text was read at v1.27.2; later 1.x releases may differ. Facts from issues are marked with the issue. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> or <a href="ollama.html">Ollama</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 12 November 2026 from <a href="https://github.com/modelcontextprotocol/python-sdk/tree/v2.3.0/src/mcp">mcp v2.3.0</a>, <a href="https://github.com/modelcontextprotocol/python-sdk/tree/v1.27.2/src/mcp">mcp v1.27.2</a>, <a href="https://github.com/modelcontextprotocol/typescript-sdk/tree/v2.4.0">the TypeScript SDK v2.4.0</a> and <a href="https://github.com/modelcontextprotocol/typescript-sdk/tree/1.32.2">1.32.2</a>, <a href="https://github.com/openai/openai-agents-python/blob/main/src/agents/mcp/server.py">the OpenAI Agents SDK</a>, <a href="https://github.com/pydantic/pydantic-ai/tree/v2.68.0">Pydantic AI v2.68.0</a>, <a href="https://github.com/open-webui/open-webui/tree/v0.13.3/backend/open_webui/utils/mcp">Open WebUI v0.13.3</a> and the issue linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
