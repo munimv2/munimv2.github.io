@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP &quot;Session terminated&quot; / 404 &quot;Session not found&quot; after an idle break or a server restart: which servers drop sessions, what each client prints, and the fixes</title>
+<meta name="description" content="Why an MCP client over Streamable HTTP suddenly fails every call with &quot;Session terminated&quot;, &quot;Error POSTing to endpoint: ... Session not found&quot; or &quot;MCP error -32001: Request timed out&quot;. Since 7 September 2026 Python MCP SDK servers (mcp 2.2.0 and 1.30.0) close a session after 30 idle minutes; the Rust SDK closes one after 5; every restart drops them all. What each SDK sends and prints, which clients re-initialize, and the fixes. From the source, 12 November 2026. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/mcp-session-terminated-session-not-found.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <a href="openwebui-failed-to-connect-to-mcp-server.html">Failed to connect to MCP server</a> · <a href="mcp-request-initialize-timed-out.html">MCP initialize timed out</a> · <strong>MCP Session terminated</strong></nav>
+<h1>MCP &quot;Session terminated&quot; / 404 &quot;Session not found&quot; after an idle break or a server restart</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 12 November 2026 from the source of the MCP Python SDK (v1.29.1, v1.30.0, v2.0.0 to v2.3.0), the TypeScript SDK (1.32.2 and <code>main</code>), the Rust SDK (<code>main</code>), Open WebUI v0.13.3 and the issues linked below. <strong>Read from the source, not run.</strong> See the <a href="#limits">limits</a>.</p>
+
+<p>An MCP client on the Streamable HTTP transport works, then every call fails with one of these:</p>
+<pre>mcp.shared.exceptions.McpError: Session terminated
+Streamable HTTP error: Error POSTing to endpoint: {... "Session not found" ...}
+MCP error -32001: Request timed out
+HTTP 404 Not Found: Session not found</pre>
+<p>They are all the same event. The server no longer knows the client's <code>Mcp-Session-Id</code> and answers <strong>HTTP 404</strong>, as the MCP spec tells it to. The spec then says the client <strong>must</strong> start a new session (<a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/transports">2025-11-25 transports, Session Management, rule 4</a>). The official SDKs leave that step to the application, and many applications don't take it, so the old session ID is sent again and every call fails until the client is restarted.</p>
+
+<h2 id="why">Why the server forgot the session</h2>
+<table>
+  <tr><th>Cause</th><th>How to recognise it</th></tr>
+  <tr><td><strong>Idle expiry, new default since 7 September 2026.</strong> Python MCP SDK servers on <code>mcp</code> <strong>2.2.0+ or 1.30.0+</strong> close a stateful session that has had nothing in flight for <strong>30 minutes</strong> (<code>DEFAULT_SESSION_IDLE_TIMEOUT: Final = 30 * 60</code>). Up to v2.1.1 and v1.29.1 the default was <code>None</code>, no expiry. Per the <a href="https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.2.0">v2.2.0 release notes</a> (PR #3395; #3426 on 1.x), clients that keep the GET stream open, such as the SDK's own <code>Client</code>, aren't affected.</td><td>The first call after a gap of 30 minutes or more fails, and the reconnect or retry works. On v2.3.0 the server logs <code>Session &lt;id&gt; idle timeout</code>, then <code>Rejected request with unknown or expired session ID: &lt;id&gt;</code> (INFO).</td></tr>
+  <tr><td><strong>Idle expiry in the Rust SDK (rmcp).</strong> <code>LocalSessionManager</code>'s <code>SessionConfig::keep_alive</code> &quot;Defaults to 5 minutes&quot; (<code>DEFAULT_KEEP_ALIVE = Duration::from_secs(300)</code> on <code>main</code>, 12 November 2026). Per <a href="https://github.com/modelcontextprotocol/rust-sdk/issues/689">rust-sdk#689</a>, older rmcp answered an unknown session with 401 instead of 404.</td><td>Same pattern, after a 5-minute gap. This is the case in <a href="https://github.com/anthropics/claude-code/issues/83404">claude-code#83404</a> (rmcp 2.2.0 server).</td></tr>
+  <tr><td><strong>Server restart or redeploy.</strong> The Python and TypeScript SDKs keep sessions in memory, so a restart forgets all of them.</td><td>Every client fails at once, right after a deploy, a container restart or a crash.</td></tr>
+  <tr><td><strong>Several replicas behind a load balancer.</strong> The session lives on one replica, and the next request lands on another (per <a href="https://github.com/higress-group/higress/issues/4788">higress#4788</a>).</td><td>Intermittent 404s from the first minutes of a session, with no idle gap.</td></tr>
+  <tr><td><strong>The session was deleted</strong> (the client or a proxy sent <code>DELETE</code>).</td><td>Fails after a tab, chat or proxy connection was closed.</td></tr>
+</table>
+<p>The TypeScript SDK server (1.32.2) has <strong>no</strong> idle timeout. Its sessions end only on <code>DELETE</code> or <code>close()</code>. If you see this error against a TypeScript server, look at restarts and load balancing first.</p>
+<p class="warn"><strong>Not this error:</strong> a 404 on the <em>first</em> request, before any session exists, means a wrong URL (often <code>/mcp</code> vs <code>/mcp/</code>, or a missing path). The Python client then says <code>Not Found</code>, not <code>Session terminated</code>: it only uses &quot;Session terminated&quot; when it already holds a session ID.</p>
+
+<h2 id="server-says">What each server sends</h2>
+<table>
+  <tr><th>Server</th><th>Unknown or expired session</th><th>Idle default</th><th>Session cap</th></tr>
+  <tr><td>Python <code>mcp</code> 2.2.0 to 2.3.0, 1.30.0</td><td>404, JSON-RPC error (no id), code <code>INVALID_REQUEST</code>, message <code>Session not found</code>. A known session presented with a different credential gets the same answer.</td><td>30 min (<code>session_idle_timeout</code>)</td><td>10,000 (<code>max_sessions</code>); per the release notes, new sessions beyond it get 503</td></tr>
+  <tr><td>Python <code>mcp</code> 2.0.0 to 2.1.1, 1.29.1</td><td>same 404 <code>Session not found</code> (message checked on 2.0.0)</td><td>none (<code>None</code>; the docstring recommends 1800)</td><td>none</td></tr>
+  <tr><td>TypeScript SDK 1.32.2</td><td>404, code <code>-32001</code>, <code>Session not found</code></td><td>none</td><td>none</td></tr>
+  <tr><td>Rust SDK (rmcp), <code>main</code></td><td>404 <code>Session not found</code> (per claude-code#83404 for 2.2.0)</td><td>5 min (<code>keep_alive</code>)</td><td>not checked</td></tr>
+  <tr><td>FastMCP 4.0.5 on <code>mcp</code> 2.2.0</td><td>(uses the Python SDK)</td><td><code>None</code> unless you set it, per <a href="https://github.com/PrefectHQ/fastmcp/issues/5210">fastmcp#5210</a></td><td>the SDK's 10,000. With no expiry, abandoned sessions fill it and new clients get <code>HTTP 503 {"error":{"code":-32603,"message":"Too many open sessions"}}</code> (#5210, closed 5 October 2026)</td></tr>
+</table>
+
+<h2 id="client-says">What each client prints, and whether it recovers</h2>
+<table>
+  <tr><th>Client</th><th>What you see</th><th>Re-initializes by itself?</th></tr>
+  <tr><td>MCP Python SDK 2.x client (v2.3.0)</td><td>An error with message <code>Session terminated</code>, code <code>INVALID_REQUEST</code>. Per a traceback in <a href="https://github.com/microsoft/agent-framework/issues/10161">agent-framework#10161</a>: <code>MCPError(-32600, 'Session terminated', None)</code>. The server's own body is thrown away.</td><td>No. <code>session_id</code> is never reset after it is set, so every later call gets the same 404. <a href="https://github.com/modelcontextprotocol/python-sdk/issues/3799">python-sdk#3799</a> asks for a distinct error type.</td></tr>
+  <tr><td>MCP Python SDK 1.30.0 client</td><td><code>McpError: Session terminated</code>, with code <code>32600</code>: a <strong>positive</strong> literal in the source, not <code>-32600</code>. Match on the message, not the code.</td><td>No.</td></tr>
+  <tr><td>TypeScript SDK 1.32.2 client</td><td><code>StreamableHTTPError</code>, <code>code</code> 404, message <code>Streamable HTTP error: Error POSTing to endpoint: </code> followed by the server's body (which says <code>Session not found</code>).</td><td>No. <code>_sessionId</code> is only cleared by <code>terminateSession()</code>.</td></tr>
+  <tr><td>TypeScript SDK <code>main</code> (12 November 2026, after v2.4.0)</td><td><code>SdkHttpError</code> with <code>Error POSTing to endpoint: …</code>, status in the details.</td><td>No automatic retry. A new <code>initialize</code> strips the old ID and a sessionless handshake clears it, so reconnecting is enough.</td></tr>
+  <tr><td>Claude Code</td><td>On 2.1.220: <code>MCP error -32001: Request timed out</code>, and the call was never run (<a href="https://github.com/anthropics/claude-code/issues/83404">#83404</a>).</td><td>Per the maintainer's reply, the client re-initializes and replays the call on v2.1.233; it couldn't be reproduced there (closed 25 August 2026). Update.</td></tr>
+  <tr><td>Hermes Agent</td><td><code>Session terminated</code></td><td>Yes, since <a href="https://github.com/NousResearch/hermes-agent/pull/19380">PR #19380</a> (merged 3 May 2026).</td></tr>
+  <tr><td>mcp-proxy (sparfenyuk)</td><td>Old session reused after a backend restart (<a href="https://github.com/sparfenyuk/mcp-proxy/issues/149">#149</a>)</td><td>Fixed on its main branch by <a href="https://github.com/sparfenyuk/mcp-proxy/pull/241">PR #241</a> (merged 2 November 2026), &quot;recover lost upstream sessions without replaying operations&quot;. We didn't check which release includes it.</td></tr>
+  <tr><td>mcpo (Open WebUI's MCP-to-OpenAPI proxy)</td><td><code>mcp.shared.exceptions.McpError: Session terminated</code>, returned to the caller as HTTP 500</td><td>No. The fix, <a href="https://github.com/open-webui/mcpo/pull/310">PR #310</a>, has been open since 4 September 2026. Restart mcpo.</td></tr>
+  <tr><td>Microsoft Agent Framework (Python)</td><td><code>ToolExecutionException: ('Session terminated', MCPError(-32600, 'Session terminated', None))</code></td><td>Tool calls do; <code>get_prompt</code> and tool/prompt discovery don't (<a href="https://github.com/microsoft/agent-framework/issues/10161">#10161</a>, open).</td></tr>
+  <tr><td>BeeAI Framework</td><td><code>Session terminated</code> on every call after a server restart</td><td>No (<a href="https://github.com/i-am-bee/beeai-framework/issues/1889">#1889</a>, open).</td></tr>
+  <tr><td>Open WebUI v0.13.3 (native MCP tool servers)</td><td>—</td><td>Builds new MCP connections for each chat request (<code>mcp_clients = {}</code> in <code>utils/middleware.py</code>), so a session that went idle between messages isn't reused. A session lost in the middle of a request is logged as <code>Lost connection to MCP server '…'</code> with no retry. Read from the source, not tested.</td></tr>
+</table>
+<p class="warn"><strong>&quot;-32001: Request timed out&quot; can hide a 404.</strong> In the TypeScript SDK, <code>-32001</code> is <code>ErrorCode.RequestTimeout</code>, and it is also the code the TypeScript SDK server puts on its own <code>Session not found</code> answer. If a &quot;timeout&quot; comes back in milliseconds, and always after an idle gap, check the server log for a 404 before raising any timeout (see <a href="mcp-request-initialize-timed-out.html">the initialize-timeout page</a> for real timeouts).</p>
+
+<h2 id="fix-server">Fixes on the server</h2>
+<ol>
+  <li><strong>Make the idle window longer than your users' gaps.</strong> Python <code>mcp</code> 2.2.0+: <code>mcp.run(transport="streamable-http", session_idle_timeout=4 * 3600)</code> (also on <code>streamable_http_app()</code> and <code>run_streamable_http_async()</code>). <code>mcp</code> 1.30.0: <code>FastMCP(..., session_idle_timeout=...)</code>. rmcp: set <code>keep_alive</code> on the <code>SessionConfig</code> of your <code>LocalSessionManager</code>.</li>
+  <li><strong>Turning expiry off</strong> (<code>session_idle_timeout=None</code>) brings back the old behaviour, but sessions that are abandoned without a <code>DELETE</code> then stay until restart. With the SDK's 10,000-session cap still on, that ends in the 503 <code>Too many open sessions</code> of fastmcp#5210. Set both or neither: the release notes' way to turn both off is <code>session_idle_timeout=None, max_sessions=None</code>. A long timeout is usually the better choice.</li>
+  <li><strong>Go stateless</strong> if the server never needs to send requests to the client (sampling, elicitation). A stateless server issues no session ID, so there is nothing to expire, lose on restart or route to the wrong replica. In the Python SDK's stateless mode, server-to-client requests raise <code>NoBackChannelError</code>; notifications still work. In rmcp, one project did it with <code>NeverSessionManager</code> and <code>stateful_mode = false</code> (<a href="https://github.com/openabdev/openab/pull/1578">openab#1578</a>).</li>
+  <li><strong>Several replicas:</strong> route by the <code>Mcp-Session-Id</code> header (sticky sessions), or go stateless.</li>
+  <li><strong>Restarts</strong> always drop in-memory sessions. Only clients that re-initialize recover, so check the table above for the clients your users run.</li>
+</ol>
+
+<h2 id="fix-client">Fixes in a client you write</h2>
+<p>Do what the spec says: on a 404 to a request that carried a session ID, drop the session, send a fresh <code>initialize</code> without the old ID, and then decide whether to retry.</p>
+<ul>
+  <li><strong>Python SDK:</strong> catch the error whose message is <code>Session terminated</code> (the code is <code>-32600</code> on 2.x and <code>32600</code> on 1.30.0), then close the whole client and transport and open a new one. Reusing the transport resends the stale ID, because it never clears <code>session_id</code>.</li>
+  <li><strong>TypeScript SDK 1.x:</strong> catch <code>StreamableHTTPError</code> with <code>code === 404</code> after a session exists, then create a new transport and client and connect again.</li>
+  <li><strong>Retry once at most.</strong> Under the spec, the server answers 404 instead of running the request, so the call wasn't carried out (claude-code#83404: the write &quot;was in fact never executed&quot;). Hermes and Claude Code retry the call; mcp-proxy chose to recover the session &quot;without replaying operations&quot;. If a 404 might come from something other than the MCP server (a proxy or gateway), don't blindly replay writes.</li>
+  <li><strong>Avoid the idle window:</strong> per the v2.2.0 release notes, a client that keeps the GET stream open isn't expired by Python servers. That doesn't help with restarts.</li>
+</ul>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read the files named above at the tags named above (<code>mcp/client/streamable_http.py</code>, <code>mcp/server/streamable_http_manager.py</code>, the TypeScript SDK's <code>streamableHttp.ts</code>, <code>webStandardStreamableHttp.ts</code> and <code>types.ts</code>, rmcp's <code>session/local.rs</code>, Open WebUI's <code>utils/mcp/client.py</code> and <code>utils/middleware.py</code>), plus the release notes and issues linked above, on 12 November 2026. Limits:</p>
+<ul>
+  <li>Nothing here was run. The exact wording you see also depends on how your client wraps the SDK's error.</li>
+  <li>The JSON field order in the bodies above isn't shown, because we didn't capture a real response.</li>
+  <li>Client statuses (open or merged pull requests, fixed versions) are as of 12 November 2026. The Claude Code fix rests on the maintainer's reply; the reporter didn't confirm it.</li>
+  <li>The rmcp and TypeScript <code>main</code> rows describe unreleased branches on that date; released versions may differ. We didn't check the Go SDKs.</li>
+</ul>
+<p>Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="openwebui-failed-to-connect-to-mcp-server.html">Open WebUI &quot;Failed to connect to MCP server&quot;: ten causes</a></li>
+  <li><a href="mcp-request-initialize-timed-out.html">MCP &quot;Request 'initialize' timed out&quot;: which timeout in which client</a></li>
+  <li><a href="mcp-sse-event-exceeded-1048576-byte-limit.html">MCP &quot;Server-sent event exceeded the 1048576 byte limit&quot;</a></li>
+  <li><a href="mcp-redirect-not-followed.html">MCP &quot;Redirect to … not followed&quot;</a></li>
+</ul>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> or <a href="ollama.html">Ollama</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 12 November 2026 from the source of the <a href="https://github.com/modelcontextprotocol/python-sdk">MCP Python SDK</a>, <a href="https://github.com/modelcontextprotocol/typescript-sdk">TypeScript SDK</a> and <a href="https://github.com/modelcontextprotocol/rust-sdk">Rust SDK</a>, <a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.3">Open WebUI v0.13.3</a>, and the issues linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
