@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP &quot;Request body too large&quot; / HTTP 413 &quot;Payload Too Large&quot;: the 4 MiB and 100 KB limits, which layer sent it, what each client prints, and how to raise it</title>
+<meta name="description" content="Why a big MCP tool call (a file, a base64 image, a long document) fails with HTTP 413, &quot;Request body too large&quot;, &quot;Payload Too Large: Request body must not exceed 4194304 bytes&quot;, &quot;PayloadTooLargeError: request entity too large&quot; or just &quot;Server returned an error response&quot;. Python MCP SDK servers cap request bodies at 4 MiB since mcp 1.29.0 and 2.0.0 (28 July 2026), TypeScript SDK servers since 1.30.1, and the TypeScript SDK's createMcpExpressApp at Express's 100 KB. How to tell them apart and the exact setting for each. From the source, 12 November 2026. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/mcp-request-body-too-large-413.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <a href="mcp-session-terminated-session-not-found.html">MCP Session terminated</a> · <a href="mcp-sse-event-exceeded-1048576-byte-limit.html">MCP 1 MiB event limit</a> · <strong>MCP 413 Request body too large</strong></nav>
+<h1>MCP &quot;Request body too large&quot; / HTTP 413 &quot;Payload Too Large&quot;: the 4 MiB and 100 KB limits</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 12 November 2026 from the source of the MCP Python SDK (v1.30.0, v2.1.1, v2.2.0, v2.3.0), the MCP TypeScript SDK (1.30.0, 1.30.1, 1.32.2), the Python SDK's security advisory and release notes, and the issues linked below. <strong>Read from the source, not run.</strong> See the <a href="#limits">limits</a>.</p>
+
+<p>Small MCP tool calls work. A big one fails: a tool that takes a file's contents, a base64 image, a long document or a large JSON argument. You see one of these:</p>
+<pre>HTTP 413  Request body too large
+Payload Too Large: Request body must not exceed 4194304 bytes
+PayloadTooLargeError: request entity too large
+413 Request Entity Too Large
+Server returned an error response
+Streamable HTTP error: Error POSTing to endpoint: ...</pre>
+<p>They all mean the same thing: something between the client and your tool refused the HTTP POST body because it was over a byte limit, so the tool never ran. There are at least four layers that do this, with different limits, and the client often hides which one it was. The quickest clue is the size at which calls start failing.</p>
+
+<h2 id="which-layer">Which layer sent the 413</h2>
+<table>
+  <tr><th>Fails above about</th><th>Body of the 413</th><th>Who sent it</th></tr>
+  <tr><td><strong>4 MiB</strong> (4,194,304 bytes)</td><td>Plain text <code>Request body too large</code>, no JSON-RPC error</td><td><strong>MCP Python SDK server</strong>, <code>mcp</code> 1.29.0+ or 2.0.0+ (<code>RequestBodyLimitMiddleware</code>, <code>DEFAULT_MAX_REQUEST_BODY_SIZE: Final = 4 * 1024 * 1024</code>). It applies to any server that serves HTTP through the SDK's <code>StreamableHTTPSessionManager</code>.</td></tr>
+  <tr><td><strong>4 MiB</strong></td><td>JSON <code>{"jsonrpc":"2.0","error":{"code":-32000,"message":"Payload Too Large: Request body must not exceed 4194304 bytes"},"id":null}</code></td><td><strong>MCP TypeScript SDK server</strong> 1.30.1+, when the transport reads the body itself (<code>readRequestBody</code> in <code>src/server/requestBody.ts</code>; the file is absent at 1.30.0). The number in the message is your configured limit.</td></tr>
+  <tr><td><strong>100 KB</strong> (102,400 bytes)</td><td>An HTML error page, <code>PayloadTooLargeError: request entity too large</code></td><td><strong>Express's JSON parser</strong>: a TypeScript server built with the SDK's <code>createMcpExpressApp()</code> (1.32.2 calls <code>app.use(express.json())</code> with no options), or any Express app with a bare <code>express.json()</code>. See <a href="#express">the 100 KB trap</a>.</td></tr>
+  <tr><td><strong>1 MB</strong></td><td>HTML <code>413 Request Entity Too Large</code> with <code>nginx</code> at the bottom</td><td><strong>nginx</strong> in front of the server (its <code>client_max_body_size</code> default is 1m). Other proxies, gateways and hosting platforms have their own limits.</td></tr>
+</table>
+<p>To see the raw answer without a client in the way, send one oversized request with curl. This builds a 5 MB <code>ping</code>; adjust the URL and the size:</p>
+<pre>python3 -c "import json; print(json.dumps({'jsonrpc':'2.0','id':1,'method':'ping','params':{'pad':'x'*5_000_000}}))" &gt; big.json
+curl -sS -i -X POST http://localhost:8000/mcp \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  --data-binary @big.json | head -n 20</pre>
+<p>The Python SDK checks the size before it parses the body or looks at the session, so a 413 comes back even without a session. On other servers, a <code>400</code> or <code>404</code> about the session means the size was accepted. Try 150 KB (<code>'x'*150_000</code>) as well, to catch the 100 KB Express limit.</p>
+
+<h2 id="client-says">What each client shows for a 413</h2>
+<table>
+  <tr><th>Client</th><th>What you see</th></tr>
+  <tr><td>MCP Python SDK 2.x client (v2.3.0), and apps built on it (Open WebUI v0.13.3 bundles <code>mcp</code> 2.3.0)</td><td>If the 413 has a JSON-RPC error body (TypeScript SDK server), that error is passed through: <code>Payload Too Large: Request body must not exceed 4194304 bytes</code>, code <code>-32000</code>. For anything else, including the Python SDK's own plain-text 413, Express's HTML page and nginx's page, you get only <code>Server returned an error response</code>, code <code>-32603</code> (<code>INTERNAL_ERROR</code>). The status and the body are thrown away. <strong>So a Python client talking to a Python server never says &quot;413&quot;.</strong></td></tr>
+  <tr><td>MCP Python SDK 1.30.0 client</td><td>The transport calls <code>response.raise_for_status()</code>, so you get httpx's <code>HTTPStatusError</code> (<code>Client error '413 …' for url '…'</code>), not a JSON-RPC error for that call. The v2 migration guide says v1 let it escape as an <code>ExceptionGroup</code>.</td></tr>
+  <tr><td>MCP TypeScript SDK 1.32.2 client</td><td><code>StreamableHTTPError</code> with <code>code</code> 413 and the message <code>Streamable HTTP error: Error POSTing to endpoint: </code> followed by the server's body: <code>Request body too large</code> (Python server), the JSON above (TypeScript server), or the HTML page (Express, nginx).</td></tr>
+</table>
+<p class="warn"><strong>&quot;Server returned an error response&quot; is not only a 413.</strong> The Python 2.x client uses the same words for every non-JSON 4xx or 5xx except 404, for example 421 <code>Invalid Host header</code> and 401/403 auth failures (the SDK's <a href="https://py.sdk.modelcontextprotocol.io/troubleshooting/">troubleshooting page</a> covers the 421). If small calls work and big ones fail, it's a size limit; if every call fails, it isn't.</p>
+
+<h2 id="versions">When the limits arrived</h2>
+<table>
+  <tr><th>Package</th><th>Versions</th><th>Request body limit</th></tr>
+  <tr><td>Python <code>mcp</code></td><td>1.29.0 and 2.0.0 (28 July 2026; 2.0.0rc1 on 27 July)</td><td>4 MiB on the Streamable HTTP endpoint (<a href="https://github.com/modelcontextprotocol/python-sdk/pull/3095">#3095</a>, <a href="https://github.com/modelcontextprotocol/python-sdk/pull/3101">#3101</a> on 1.x). The v2.0.0rc1 notes: &quot;raise <code>max_request_body_size</code> if you accept larger messages&quot;.</td></tr>
+  <tr><td>Python <code>mcp</code></td><td>1.29.1 (24 August 2026) and 2.1.0 (24 August 2026) onward, including 1.30.0 and 2.3.0</td><td>The same 4 MiB also on the SSE transport's message endpoint and the OAuth routes <code>/token</code>, <code>/register</code>, <code>/revoke</code>, <code>/authorize</code> (<a href="https://github.com/modelcontextprotocol/python-sdk/pull/3336">#3336</a>, #3344 on 1.x)</td></tr>
+  <tr><td>Python <code>mcp</code></td><td>Before those</td><td>Per advisory <a href="https://github.com/modelcontextprotocol/python-sdk/security/advisories/GHSA-fmmv-w9g8-j3gc">GHSA-fmmv-w9g8-j3gc</a> (CVE-2026-109527, high, published 30 September 2026), bodies were read with no size limit; affected are 1.x before 1.29.1 and 2.0.0/2.0.1. Much older 2025 releases had a fixed 4 MB <code>MAXIMUM_MESSAGE_SIZE</code> in <code>streamable_http.py</code> that answered 413 (<a href="https://github.com/modelcontextprotocol/python-sdk/issues/1012">#1012</a>, closed October 2025). We didn't check which releases had which.</td></tr>
+  <tr><td>TypeScript <code>@modelcontextprotocol/sdk</code></td><td>1.30.1 (23 September 2026) onward, including 1.32.2</td><td>4 MiB in the transport (<code>maxRequestBodySize</code>), but only when the transport reads the body. Not applied when you pass a pre-parsed body, which is what the Express setup does.</td></tr>
+</table>
+<p>So a server that handled 10 MB tool calls in July can start refusing them after a routine dependency update, with no change to your code.</p>
+
+<h2 id="express">The 100 KB trap in TypeScript servers</h2>
+<p>The TypeScript SDK's usual Express setup is <code>const app = createMcpExpressApp()</code> and then <code>transport.handleRequest(req, res, req.body)</code>. In 1.32.2, <code>createMcpExpressApp()</code> adds <code>express.json()</code> with no options, so Express (5.x, body-parser) refuses any body over 100 KB with its own 413 before your handler runs. Because the body arrives pre-parsed, the transport's <code>maxRequestBodySize</code> is never used, so raising it changes nothing. Imran Siddique measured this in <a href="https://dev.to/mosiddi/two-caps-two-enforcement-points-355n">&quot;Two caps, two enforcement points&quot;</a> (25 September 2026): with <code>maxRequestBodySize</code> set to 20 MB, a 110 KB request still got Express's HTML 413. It has been hit in <a href="https://github.com/penpot/penpot/issues/12080">penpot#12080</a>, <a href="https://github.com/supercorp-ai/supergateway/issues/163">supergateway#163</a>, <a href="https://github.com/structured-world/gitlab-mcp/issues/683">gitlab-mcp#683</a> and <a href="https://github.com/bloknayrb/tandem/issues/1981">tandem#1981</a>, and asked about upstream in <a href="https://github.com/modelcontextprotocol/typescript-sdk/issues/1354">typescript-sdk#1354</a>.</p>
+
+<h2 id="fix">How to raise the limit</h2>
+<table>
+  <tr><th>Server</th><th>Setting</th></tr>
+  <tr><td>Python <code>mcp</code> 2.x</td><td><code>mcp.run(transport="streamable-http", max_request_body_size=16 * 1024 * 1024)</code>. The same keyword works on <code>streamable_http_app()</code> and <code>sse_app()</code>, and on <code>StreamableHTTPSessionManager(...)</code> / <code>SseServerTransport(...)</code> if you build them yourself (all per the advisory).</td></tr>
+  <tr><td>Python <code>mcp</code> 1.29+ / 1.30</td><td><code>FastMCP("name", max_request_body_size=16 * 1024 * 1024)</code></td></tr>
+  <tr><td>Python, driving <code>StreamableHTTPServerTransport</code> directly</td><td>No SDK limit at all: the advisory says this path &quot;does not get the limit&quot;, so add your own cap.</td></tr>
+  <tr><td>TypeScript 1.30.1+ (transport reads the body)</td><td>Pass <code>maxRequestBodySize: 16 * 1024 * 1024</code> in the transport options and call <code>transport.handleRequest(req, res)</code> <strong>without</strong> a pre-parsed body.</td></tr>
+  <tr><td>TypeScript with Express</td><td>Don't use <code>createMcpExpressApp()</code> for large bodies. Build the app yourself: <code>express()</code>, then the SDK's exported <code>localhostHostValidation()</code> or <code>hostHeaderValidation([...])</code> (from <code>server/middleware/hostHeaderValidation.js</code>; keep it, it is the DNS-rebinding protection), then <code>express.json({ limit: '16mb' })</code>. Add an error handler that answers in JSON-RPC, so clients see a readable message instead of HTML.</td></tr>
+  <tr><td>nginx in front</td><td><code>client_max_body_size 16m;</code> in the <code>location</code> for <code>/mcp</code>. Raise every layer: the smallest one wins.</td></tr>
+</table>
+<ul>
+  <li><strong>Raise it only as far as you need.</strong> The Python limit was added as a fix for a high-severity advisory: an unbounded body lets anyone who can reach the endpoint make the server buffer it in memory. Keep authentication on, and keep the limit finite.</li>
+  <li><strong>Or don't send big data inline.</strong> Base64 makes a file about a third bigger (a 3.2 MB image is over 4 MiB as base64). Passing a path, a URL or a resource reference and letting the server fetch it avoids every one of these limits. Splitting a write into chunks works too (per <a href="https://github.com/Naveax/Nexowire/issues/588">Nexowire#588</a>, four calls of about 64 KiB got through where one 230 KiB call failed).</li>
+  <li><strong>Big answers are a different limit.</strong> This page is about what the client sends. A large tool <em>result</em> coming back over SSE over SSE hits the MCP Python SDK 2.x client's 1 MiB event limit instead: see <a href="mcp-sse-event-exceeded-1048576-byte-limit.html">MCP &quot;Server-sent event exceeded the 1048576 byte limit&quot;</a>.</li>
+</ul>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read, on 12 November 2026: the Python SDK's <code>mcp/server/transport_security.py</code> (v2.1.1, v2.2.0, v2.3.0, v1.30.0), <code>streamable_http_manager.py</code>, <code>streamable_http.py</code> and <code>_streamable_http_modern.py</code> (v2.3.0), and <code>mcp/client/streamable_http.py</code> (v2.3.0, v1.30.0); commits 03aaebd (#3095) and 57394b0 (#3336); the release notes and advisory GHSA-fmmv-w9g8-j3gc; and the TypeScript SDK's <code>src/server/requestBody.ts</code> (1.30.0, 1.30.1, 1.32.2), <code>webStandardStreamableHttp.ts</code>, <code>streamableHttp.ts</code>, <code>express.ts</code>, <code>middleware/hostHeaderValidation.ts</code>, <code>src/client/streamableHttp.ts</code> and <code>package.json</code> (1.32.2). Limits:</p>
+<ul>
+  <li>Nothing here was run. The client rows are what the source does; what you finally see also depends on how your app wraps the SDK's error.</li>
+  <li>The exact Express HTML (stack trace or not depends on <code>NODE_ENV</code>), nginx's page and httpx's reason phrase for 413 aren't quoted from a real response.</li>
+  <li>We didn't check the TypeScript v2 packages (<code>@modelcontextprotocol/node</code>, <code>@modelcontextprotocol/express</code>), FastMCP's own HTTP entry points, the Go, Rust, Java or C# SDKs, or individual desktop clients.</li>
+</ul>
+<p>Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="mcp-sse-event-exceeded-1048576-byte-limit.html">MCP &quot;Server-sent event exceeded the 1048576 byte limit&quot;</a> (big results)</li>
+  <li><a href="mcp-session-terminated-session-not-found.html">MCP &quot;Session terminated&quot; / 404 &quot;Session not found&quot;</a></li>
+  <li><a href="openwebui-failed-to-connect-to-mcp-server.html">Open WebUI &quot;Failed to connect to MCP server&quot;: ten causes</a></li>
+  <li><a href="mcp-request-initialize-timed-out.html">MCP &quot;Request 'initialize' timed out&quot;</a></li>
+  <li><a href="mcp-redirect-not-followed.html">MCP &quot;Redirect to … not followed&quot;</a></li>
+</ul>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> or <a href="ollama.html">Ollama</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 12 November 2026 from the source of the <a href="https://github.com/modelcontextprotocol/python-sdk">MCP Python SDK</a> and <a href="https://github.com/modelcontextprotocol/typescript-sdk">MCP TypeScript SDK</a>, advisory <a href="https://github.com/modelcontextprotocol/python-sdk/security/advisories/GHSA-fmmv-w9g8-j3gc">GHSA-fmmv-w9g8-j3gc</a>, and the issues linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
