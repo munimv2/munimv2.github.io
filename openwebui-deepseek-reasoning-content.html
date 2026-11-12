@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Open WebUI + DeepSeek: &quot;The reasoning_content in the thinking mode must be passed back to the API&quot; (400): fix by version and Provider</title>
-<meta name="description" content="Open WebUI chats with DeepSeek in thinking mode fail with HTTP 400 'The reasoning_content in the thinking mode must be passed back to the API'. Why the connection's Provider setting decides it, why chats with skills, knowledge or memories fail on 0.13.2 even with Provider llama.cpp, and the fix: Provider llama.cpp plus Open WebUI 0.13.3. Built from Open WebUI's own code at four versions. By MV2 of Munim, Inc., with AI agents.">
+<meta name="description" content="Open WebUI chats with DeepSeek in thinking mode fail with HTTP 400 'The reasoning_content in the thinking mode must be passed back to the API'. Why the connection's Provider setting decides it, why chats with skills, knowledge or memories fail on 0.13.2 even with Provider llama.cpp, why the DeepSeek route through OpenRouter still fails on 0.13.3, and the fixes. Built from Open WebUI's own code at four versions. By MV2 of Munim, Inc., with AI agents.">
 <link rel="canonical" href="https://munimv2.github.io/openwebui-deepseek-reasoning-content.html">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
@@ -19,18 +19,38 @@
   th { background: #f6f6f6; }
   nav, .by { color: #555; }
   .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  .update { border-left: 4px solid #1a5fb4; padding: 0.4em 1em; margin: 1em 0; background: #f3f7fd; }
   footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
 </style>
 </head>
 <body>
 <nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>DeepSeek reasoning_content</strong> · <a href="openwebui-crypto-randomuuid-http.html">crypto.randomUUID over HTTP</a> · <a href="openwebui-alembic-cant-locate-revision.html">&quot;Can't locate revision&quot;</a> · <a href="openwebui-env-ignored.html">Settings &quot;cannot be edited here&quot;</a> · <a href="openwebui-reverse-proxy.html">Reverse proxy</a></nav>
 <h1>Open WebUI + DeepSeek: &quot;The reasoning_content in the thinking mode must be passed back to the API&quot;</h1>
-<p class="by">By MV2 of Munim, Inc., with AI agents. Built on 9 November 2026 from Open WebUI's own code at v0.12.5, v0.13.2, v0.13.3 and the fix commit; v0.13.3 was still Open WebUI's newest release on 10 November 2026.</p>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Built on 9 November 2026 from Open WebUI's own code at v0.12.5, v0.13.2, v0.13.3 and the fix commit. Updated 12 November 2026 with the OpenRouter case (<a href="#openrouter">below</a>); v0.13.3 was still Open WebUI's newest release on 12 November 2026.</p>
 
 <p>You use a DeepSeek model with thinking mode on through an OpenAI-compatible connection in Open WebUI, and a chat stops with an HTTP 400 error like this one:</p>
 <pre>400 The reasoning_content in the thinking mode must be passed back to the API.</pre>
 
-<p><strong>Short answer:</strong> edit your DeepSeek connection in Open WebUI and set its <strong>Provider</strong> to <code>llama.cpp</code>, and if your chats use skills, attached knowledge or memories, also run <strong>Open WebUI 0.13.3 or newer</strong>. With the Provider left on <em>Default</em>, Open WebUI does not send DeepSeek's reasoning back, so thinking-mode chats that send tools fail on every version we checked, 0.13.3 included.</p>
+<p><strong>Short answer:</strong> edit your DeepSeek connection in Open WebUI and set its <strong>Provider</strong> to <code>llama.cpp</code>, and if your chats use skills, attached knowledge or memories, also run <strong>Open WebUI 0.13.3 or newer</strong>. With the Provider left on <em>Default</em>, Open WebUI does not send DeepSeek's reasoning back, so thinking-mode chats that send tools fail on every version we checked, 0.13.3 included. <strong>If you reach DeepSeek through OpenRouter</strong>, chats with skills, knowledge or memories can still fail on 0.13.3 with Provider <code>llama.cpp</code>; see <a href="#openrouter">the OpenRouter case</a>.</p>
+
+<div class="update" id="openrouter">
+<h2>Update, 12 November 2026: DeepSeek through OpenRouter</h2>
+<p>On 11 November 2026 a user reported in <a href="https://github.com/open-webui/open-webui/issues/34177">open-webui/open-webui#34177</a> that on v0.13.3, with an OpenRouter connection whose Provider is <code>llama.cpp</code> and a DeepSeek model with thinking on, the first message of a chat that uses attached knowledge, skills or memories still fails with the same error. That is the hidden tool turn described below: since PR #33950, Open WebUI gives it <code>&quot;reasoning_content&quot;: &quot;&quot;</code> (an empty string). Per the reporter's own tests of the value sent on that turn, through OpenRouter:</p>
+<table>
+  <tr><th><code>reasoning_content</code> on the hidden tool-call turn</th><th>Result reported in #34177</th></tr>
+  <tr><td>absent</td><td>400</td></tr>
+  <tr><td><code>&quot;&quot;</code> (what 0.13.3 sends)</td><td>400</td></tr>
+  <tr><td><code>&quot; &quot;</code> (a single space)</td><td>200</td></tr>
+  <tr><td><code>&quot;(reasoning not stored)&quot;</code></td><td>200</td></tr>
+</table>
+<p>The reporter also found that the same request passes with thinking turned off, and that a direct connection to DeepSeek accepts the empty string. A maintainer closed the issue as not planned the same day: <code>reasoning_content</code> is not part of the OpenAI Chat Completions format, every backend treats it its own way, and sending a placeholder instead of an empty string would change what real llama.cpp servers receive. We have not tested this ourselves; the table above is the reporter's, not ours.</p>
+<p><strong>What to do, per the maintainer's reply in #34177:</strong></p>
+<ol>
+  <li><strong>Keep thinking on:</strong> connect to DeepSeek's own API directly (not through OpenRouter) and set that connection's Provider to <code>llama.cpp</code>.</li>
+  <li><strong>Keep OpenRouter:</strong> set <strong>Reasoning Effort</strong> to <code>none</code> in the model's Advanced Params. This turns thinking off for that model.</li>
+</ol>
+<p>The reporter also lists turning off the hidden knowledge injection for the model, at the cost of losing the automatic knowledge and skill lists. The reporter pinned the OpenRouter route to DeepSeek as the provider with fallbacks off; other routes were not reported.</p>
+</div>
 
 <h2 id="why">Why it happens</h2>
 <p>DeepSeek's <a href="https://api-docs.deepseek.com/guides/thinking_mode">thinking-mode guide</a> says whether the model's earlier reasoning must be sent back depends on whether the request carries tools:</p>
@@ -40,11 +60,11 @@
 <ol>
   <li><strong>Tools are usually sent.</strong> Open WebUI's built-in tools are on by default: in v0.13.3's <code>backend/open_webui/utils/middleware.py</code>, a model's <code>builtin_tools</code> capability defaults to on unless its Function Calling setting is Legacy. So ordinary chats in the web interface normally carry the tools parameter.</li>
   <li><strong>The connection's Provider decides whether reasoning is sent back.</strong> Open WebUI's <code>get_reasoning_format()</code> returns <code>reasoning_content</code> for a connection whose Provider is <code>llama.cpp</code>, and nothing for <em>Default</em>. With <code>llama.cpp</code>, each earlier answer goes back to DeepSeek with its reasoning in a <code>reasoning_content</code> field. With <em>Default</em>, it goes back without one.</li>
-  <li><strong>Since 0.13.1, skills, attached knowledge and memories arrive as a hidden tool call.</strong> Open WebUI adds them to the request as a tool call the chat doesn't show (<code>list_available_skills</code>, <code>list_attached_knowledge</code>, <code>recall_memories</code>, built by <code>hidden_tool_result()</code>). v0.12.5 has no such function. In v0.13.2 that hidden turn carries no <code>reasoning_content</code> even on a <code>llama.cpp</code> connection, so DeepSeek rejects the request. v0.13.3 includes <a href="https://github.com/open-webui/open-webui/pull/33950">PR #33950</a> (merged 8 November 2026 as commit <code>9743675</code>), which gives that hidden turn an empty <code>reasoning_content</code> on <code>llama.cpp</code> connections. The pull request dates the problem to 0.13.1 and says it fixes <a href="https://github.com/open-webui/open-webui/issues/33940">issue #33940</a>.</li>
+  <li><strong>Since 0.13.1, skills, attached knowledge and memories arrive as a hidden tool call.</strong> Open WebUI adds them to the request as a tool call the chat doesn't show (<code>list_available_skills</code>, <code>list_attached_knowledge</code>, <code>recall_memories</code>, built by <code>hidden_tool_result()</code>). v0.12.5 has no such function. In v0.13.2 that hidden turn carries no <code>reasoning_content</code> even on a <code>llama.cpp</code> connection, so DeepSeek rejects the request. v0.13.3 includes <a href="https://github.com/open-webui/open-webui/pull/33950">PR #33950</a> (merged 8 November 2026 as commit <code>9743675</code>), which gives that hidden turn an empty <code>reasoning_content</code> on <code>llama.cpp</code> connections. The pull request dates the problem to 0.13.1 and says it fixes <a href="https://github.com/open-webui/open-webui/issues/33940">issue #33940</a>. DeepSeek's own API accepts the empty value; the DeepSeek route through OpenRouter does not, per <a href="#openrouter">#34177</a>.</li>
 </ol>
 
 <h2 id="table">Which versions and settings fail</h2>
-<p>For each version we built the messages Open WebUI sends, using its own message-conversion code, and checked them against DeepSeek's rule above, with tools sent.</p>
+<p>For each version we built the messages Open WebUI sends, using its own message-conversion code, and checked them against DeepSeek's rule above, with tools sent. This table models DeepSeek's own API; for OpenRouter, see <a href="#openrouter">the update above</a>.</p>
 <table>
   <tr><th>Open WebUI</th><th>Provider</th><th>First message, chat uses skills, knowledge or memories</th><th>Later message, plain chat</th><th>Later message, chat uses skills, knowledge or memories</th></tr>
   <tr><td>v0.12.5</td><td>Default</td><td>OK</td><td>Fails*</td><td>Fails*</td></tr>
@@ -60,6 +80,7 @@
 <ol>
   <li><strong>Set the connection's Provider to <code>llama.cpp</code>.</strong> In <em>Admin Panel › Settings › Connections</em>, edit the OpenAI-compatible connection that points at DeepSeek and set its Provider to <code>llama.cpp</code> (the workaround given in <a href="https://github.com/open-webui/open-webui/issues/33940">#33940</a>). The setting belongs to the connection, so change every connection you use for DeepSeek.</li>
   <li><strong>Update to Open WebUI 0.13.3 or newer</strong> if your chats use skills, attached knowledge or memories. Docker: <code>docker pull ghcr.io/open-webui/open-webui:v0.13.3</code> (or your usual tag), then recreate the container with the same volume. pip: <code>pip install -U open-webui</code>. Back up the data volume first: Open WebUI can't go back to an older release on the same database (see <a href="openwebui-alembic-cant-locate-revision.html">&quot;Can't locate revision&quot;</a>).</li>
+  <li><strong>Through OpenRouter?</strong> If it still fails on 0.13.3 with Provider <code>llama.cpp</code>, connect to DeepSeek directly, or set Reasoning Effort to <code>none</code> (thinking off), as in <a href="#openrouter">the update above</a>.</li>
   <li><strong>Check your version</strong> in <em>Settings › About</em>, or open <code>/api/version</code> on your Open WebUI address.</li>
 </ol>
 <p class="warn">0.13.3 is also the release the <a href="openwebui.html">Open WebUI advisory page</a> recommends: the notes of 0.13.1 say it contains security fixes.</p>
@@ -68,7 +89,7 @@
 <p>Other tools that talk to DeepSeek in thinking mode have hit the same 400, for example OpenCode (<a href="https://github.com/anomalyco/opencode/issues/24104">#24104</a>), Qwen Code (<a href="https://github.com/QwenLM/qwen-code/issues/3658">#3658</a>), Hermes Agent (<a href="https://github.com/NousResearch/hermes-agent/issues/15717">#15717</a>) and n8n's AI Agent (<a href="https://community.n8n.io/t/deepseek-ai-agent-fails-with-400-reasoning-content-must-be-passed-back-when-using-tools/299166">community thread</a>). The cause is the same rule, but the fix is in each tool's own settings or code. This page covers Open WebUI only.</p>
 
 <h2 id="limits">How this was made, and its limits</h2>
-<p>AI agents working for MV2 of Munim, Inc. downloaded <code>backend/open_webui/utils/misc.py</code> and <code>middleware.py</code> from <a href="https://github.com/open-webui/open-webui">open-webui/open-webui</a> at v0.12.5, v0.13.2, v0.13.3 and commit <code>9743675</code>, ran Open WebUI's own <code>convert_output_to_messages()</code>, <code>get_reasoning_format()</code> and <code>hidden_tool_result()</code> (other imports stubbed), and checked the resulting messages against a local model of DeepSeek's documented rule. This is not DeepSeek's API: we sent nothing to DeepSeek, and DeepSeek's server may check more or less than its documentation says, which is why the table marks the two readings. The scenarios are simplified (one earlier answer, one hidden skills turn). Self-checks that passed: v0.13.2 with <code>llama.cpp</code> fails on a first message with skills (the bug in #33940), v0.13.3 and the fix commit pass it, and v0.13.3 was GitHub's latest release and PyPI's version when the code was read. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+<p>AI agents working for MV2 of Munim, Inc. downloaded <code>backend/open_webui/utils/misc.py</code> and <code>middleware.py</code> from <a href="https://github.com/open-webui/open-webui">open-webui/open-webui</a> at v0.12.5, v0.13.2, v0.13.3 and commit <code>9743675</code>, ran Open WebUI's own <code>convert_output_to_messages()</code>, <code>get_reasoning_format()</code> and <code>hidden_tool_result()</code> (other imports stubbed), and checked the resulting messages against a local model of DeepSeek's documented rule. This is not DeepSeek's API: we sent nothing to DeepSeek, and DeepSeek's server may check more or less than its documentation says, which is why the table marks the two readings. The scenarios are simplified (one earlier answer, one hidden skills turn). Self-checks that passed: v0.13.2 with <code>llama.cpp</code> fails on a first message with skills (the bug in #33940), v0.13.3 and the fix commit pass it, and v0.13.3 was GitHub's latest release and PyPI's version when the code was read. The OpenRouter section (added 12 November 2026) reports the measurements and replies in <a href="https://github.com/open-webui/open-webui/issues/34177">#34177</a>; we did not repeat them. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
 
 <h2>Check the rest of your setup</h2>
 <p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach, and the <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI version</a>. Both are read-only and send nothing off the machine.</p>
@@ -77,7 +98,7 @@
 <p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
 
 <footer>
-  <p>General technical information, not professional advice. Built on 9 November 2026 from Open WebUI v0.12.5, v0.13.2, v0.13.3 and commit 9743675 (<a href="https://github.com/open-webui/open-webui/blob/v0.13.3/backend/open_webui/utils/middleware.py">middleware.py at v0.13.3</a>), and DeepSeek's thinking-mode guide as fetched that day.</p>
+  <p>General technical information, not professional advice. Built on 9 November 2026 from Open WebUI v0.12.5, v0.13.2, v0.13.3 and commit 9743675 (<a href="https://github.com/open-webui/open-webui/blob/v0.13.3/backend/open_webui/utils/middleware.py">middleware.py at v0.13.3</a>), and DeepSeek's thinking-mode guide as fetched that day. Updated 12 November 2026 from <a href="https://github.com/open-webui/open-webui/issues/34177">open-webui/open-webui#34177</a>.</p>
   <p>Made by MV2 of Munim, Inc., with AI agents.</p>
 </footer>
 </body>
