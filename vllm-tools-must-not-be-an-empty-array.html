@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vLLM 400: &quot;`tools` must not be an empty array&quot;: which vLLM versions, why Open WebUI 0.13.x hits it, and the fixes</title>
+<meta name="description" content="vLLM answers HTTP 400 '`tools` must not be an empty array. Either provide at least one tool or omit the field entirely.' Which vLLM releases reject tools: [] (v0.20.0 through v0.33.0), which build accepts it again, why Open WebUI 0.13.1 to 0.13.3 sends it after a stopped tool loop, a one-line curl test, and the fixes. From the source of both projects. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/vllm-tools-must-not-be-an-empty-array.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  blockquote { margin: 0.8rem 0; padding: 0.2rem 1rem; border-left: 4px solid #ccc; color: #333; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="vllm.html">vLLM</a> · <a href="openwebui.html">Open WebUI</a> · <strong>&quot;`tools` must not be an empty array&quot;</strong> · <a href="vllm-api-key.html">vLLM API key</a> · <a href="openwebui-deepseek-reasoning-content.html">DeepSeek reasoning_content</a></nav>
+<h1>vLLM 400: &quot;`tools` must not be an empty array&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 12 November 2026 from vLLM's source at v0.33.0 and its pull requests, and Open WebUI's source at v0.13.0, v0.13.1 and v0.13.3. On 12 November 2026, vLLM's newest stable release was v0.33.0 and Open WebUI's newest release was v0.13.3.</p>
+
+<p>A client sends a chat request to vLLM's OpenAI-compatible server and gets this back:</p>
+<pre>400: `tools` must not be an empty array. Either provide at least one tool or omit the field entirely. (parameter=tools)</pre>
+
+<p><strong>Short answer:</strong> the client sent <code>&quot;tools&quot;: []</code>. vLLM's OpenAI-compatible server has rejected an empty <code>tools</code> list since v0.20.0, and v0.33.0 still does. The check was removed on vLLM's main branch on 4 November 2026 (<a href="https://github.com/vllm-project/vllm/pull/65547">PR #65547</a>). That change is in the v0.34.0 release candidates but not in any stable release yet. Until v0.34.0 is out, either run a vLLM build that includes it, or stop the client from sending an empty list. <strong>Open WebUI 0.13.1 to 0.13.3</strong> send one in a single situation, the final answer after a tool loop was stopped (<a href="#openwebui">below</a>).</p>
+
+<h2 id="test">Test your vLLM server in one command</h2>
+<p>Replace the address and model name with your own (add <code>-H &quot;Authorization: Bearer $VLLM_API_KEY&quot;</code> if your server uses <code>--api-key</code>):</p>
+<pre>curl -s http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "YOUR-MODEL", "messages": [{"role": "user", "content": "Say hi"}],
+       "tools": [], "tool_choice": "none", "max_tokens": 8}'</pre>
+<p>If the answer contains <code>must not be an empty array</code>, your server still has the check. If you get a normal completion, it doesn't. PR #65547's own before/after table shows exactly this request going from 400 to 200.</p>
+
+<h2 id="versions">Which vLLM versions reject it</h2>
+<table>
+  <tr><th>vLLM</th><th><code>&quot;tools&quot;: []</code></th><th>Where this comes from</th></tr>
+  <tr><td>before v0.20.0</td><td>accepted (HTTP 200)</td><td><a href="https://github.com/vllm-project/vllm/pull/39780">PR #39780</a>: &quot;<code>tools: []</code> was silently accepted with HTTP 200&quot;. v0.19.1 does not contain that PR.</td></tr>
+  <tr><td>v0.20.0 to v0.33.0</td><td><strong>400</strong></td><td>PR #39780 (merged 16 April 2026) added the check; v0.20.0 is the first release tag that contains it. In v0.33.0 it is in <code>check_tool_usage()</code> in <code>vllm/entrypoints/openai/chat_completion/protocol.py</code>: <code>if data.get(&quot;tools&quot;) == []:</code> raises the message above with <code>parameter=&quot;tools&quot;</code>.</td></tr>
+  <tr><td>main since 4 Nov 2026; tags v0.34.0rc0 and v0.34.0rc1 (commits dated 8 and 11 Nov)</td><td>accepted again</td><td><a href="https://github.com/vllm-project/vllm/pull/65547">PR #65547</a>, merge commit <code>44d9f92</code>. Both release-candidate tags contain it; v0.33.0 does not.</td></tr>
+</table>
+<p>After PR #65547, per its own table: <code>tools: []</code> with <code>tool_choice</code> left out, <code>&quot;none&quot;</code>, <code>&quot;auto&quot;</code> or <code>&quot;required&quot;</code> returns a normal text answer. <code>tools: []</code> with <code>tool_choice</code> naming a function is still a 400, now about <code>tool_choice</code>. The same PR also removed a workaround in the <code>/tokenize</code> endpoint that used to delete an empty <code>tools</code> list.</p>
+<p><strong>Rust frontend:</strong> vLLM v0.33.0's release notes list under breaking changes that, in the Rust frontend, &quot;an empty <code>tools</code> array returns 400 (#63060)&quot;. <a href="https://github.com/vllm-project/vllm/pull/65854">PR #65854</a> (merged 5 November 2026) gives the Rust frontend the same fallback. We did not check which tags contain it, so if you run the Rust frontend, use the curl test above.</p>
+<p><strong>What does OpenAI do?</strong> The two pull requests disagree. PR #39780 says &quot;OpenAI returns 400 with error code <code>empty_array</code>&quot; for this request; PR #65547 is titled &quot;Accept an empty tools array like OpenAI&quot;. We did not test OpenAI's API, so this page doesn't say which is right.</p>
+
+<h2 id="openwebui">Why Open WebUI 0.13.1 to 0.13.3 send <code>&quot;tools&quot;: []</code></h2>
+<p>Since 0.13.1, when Open WebUI's native tool-calling loop is stopped, it makes one last request so the model can answer with the tool results it already has. That request is built by <code>final_answer_payload()</code> in <code>backend/open_webui/utils/tool_calling.py</code>, which copies the request and sets <code>'tools': []</code> and <code>'tool_choice': 'none'</code>. It also adds a system message telling the model not to call more tools. vLLM v0.20.0 to v0.33.0 reject that request, so the chat ends with the 400 instead of a final answer. The report is <a href="https://github.com/open-webui/open-webui/issues/34169">open-webui/open-webui#34169</a> (opened 11 November 2026, still open on 12 November).</p>
+<table>
+  <tr><th>Open WebUI</th><th>What happens when the tool loop stops</th></tr>
+  <tr><td>v0.13.0</td><td>No final-answer request: <code>tool_calling.py</code> does not exist at that tag, and <code>middleware.py</code> has no <code>final_answer</code> code. When the iteration limit is hit, it reports <code>Tool-call limit reached (N iterations).</code></td></tr>
+  <tr><td>v0.13.1, v0.13.3 (we read both; v0.13.2 sits between them)</td><td><code>final_answer_payload()</code> sends <code>&quot;tools&quot;: []</code> and <code>&quot;tool_choice&quot;: &quot;none&quot;</code>. vLLM v0.20.0 to v0.33.0 answer 400.</td></tr>
+  <tr><td>dev image, commit <code>782f4b7</code> (11 Nov)</td><td>Same, per the reporter of #34169.</td></tr>
+</table>
+<p><strong>When the loop is stopped</strong> (v0.13.3's <code>middleware.py</code>): when a round has an error or a stop reason (a call blocked by <code>tool_repetition_error()</code> as a repeat, or an incomplete call), or when the number of tool rounds reaches the cap. The cap comes from <code>CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS</code> (older name <code>CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES</code>), default 1024, and <code>-1</code> means no cap. Per #34169, the reporter's real case was an MCP server that lost its connection in the middle of an answer (<a href="https://github.com/open-webui/open-webui/issues/34170">#34170</a>). Every later call failed, the model kept retrying, the repeat rule stopped the loop, and the final-answer request got the 400.</p>
+<p>So in Open WebUI the 400 is the <em>second</em> problem. Something first stopped the tool loop, usually failing tool calls. Ordinary chats where tools work don't reach this request.</p>
+<p>Per the reporter's direct tests against vLLM 0.33.0 with the same messages: <code>&quot;tools&quot;: []</code> with <code>&quot;tool_choice&quot;: &quot;none&quot;</code> (what Open WebUI sends) returned 400; the original tools with <code>&quot;tool_choice&quot;: &quot;none&quot;</code> returned 200; leaving out both fields returned 200. We did not repeat these tests.</p>
+
+<h2 id="fix">Fix it</h2>
+<ol>
+  <li><strong>Run a vLLM build that accepts an empty list.</strong> Any build with PR #65547: the v0.34.0 release candidates now, or v0.34.0 once it is released. Release candidates are pre-releases, so test them before you switch a production server. Afterwards, run <a href="#test">the curl test</a>.</li>
+  <li><strong>Find out why the tool loop stopped</strong> (Open WebUI). Look in the chat for the tool errors before the 400: an MCP server that dropped (#34170), a tool that keeps failing, or a model repeating the same call. Fix that, and the final-answer request isn't sent at all.</li>
+  <li><strong>Patch the request in Open WebUI</strong> (unofficial, until #34169 is fixed). The reporter of #34169 runs this change on v0.13.3. In <code>final_answer_payload()</code>, keep the original <code>tools</code> and set only <code>tool_choice</code> to <code>'none'</code>. If the request had no tools, drop both <code>tools</code> and <code>tool_choice</code> instead of sending an empty list. A later commenter notes that <code>backend/open_webui/utils/anthropic.py</code> already does this for the Anthropic path (<code>if anthropic_payload.get('tools'):</code>, the fix for <a href="https://github.com/open-webui/open-webui/issues/31341">#31341</a>). The commenter also notes that keeping the tools keeps the provider's prompt cache valid. A file edited inside a container is lost when the container is recreated. We have not tested this patch.</li>
+  <li><strong>LiteLLM between the client and vLLM?</strong> <a href="https://github.com/BerriAI/litellm/pull/50812">LiteLLM PR #50812</a> makes the <code>hosted_vllm/</code> provider drop an empty <code>tools</code> list, along with <code>tool_choice</code> and <code>parallel_tool_calls</code>. It was merged to main on 10 November 2026. Its merge commit was not an ancestor of the release tags we checked on 12 November (v1.109.1, v1.110.0-rc.1); a backport could carry it under another commit, so check your release's notes.</li>
+</ol>
+<p class="warn">If you update vLLM anyway, check the <a href="vllm.html">vLLM advisory page</a> for the security fixes that matter to your version.</p>
+
+<h2 id="other-clients">Other clients that hit the same 400</h2>
+<p>The same message has been reported from JetBrains AI Assistant (<a href="https://youtrack.jetbrains.com/projects/LLM/issues/LLM-27045">LLM-27045</a>), LangChain's <code>create_agent</code> with ProviderStrategy (<a href="https://github.com/langchain-ai/langchain/issues/37184">#37184</a>), a Strands summarization step (<a href="https://github.com/aarora79/agentic-coding-harness-benchmarks/issues/198">agentic-coding-harness-benchmarks#198</a>) and MiniMax Code's automatic compaction (<a href="https://github.com/MiniMax-AI/minimax-code/issues/194">#194</a>). The server-side fix is the same (a vLLM build with PR #65547). Each client's own fix is to leave <code>tools</code> out, along with any <code>tool_choice</code>, when the list is empty.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read the files and pull requests named above on GitHub on 12 November 2026: vLLM's <code>protocol.py</code> at v0.33.0, PRs #39780, #65547 and #65854, and GitHub's compare view between each fix commit and the release tags. On the Open WebUI side they read <code>tool_calling.py</code> at v0.13.1 and v0.13.3, <code>middleware.py</code> at v0.13.0 and v0.13.3, and <code>env.py</code> at v0.13.3. Nothing was run. We did not start a vLLM server or Open WebUI. The 200/400 results are from PR #65547's table and the reporter of #34169, and the curl test is the request from that table. &quot;First release that contains it&quot; means the first tag whose history includes the merge commit. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="vllm.html">vLLM</a> or <a href="openwebui.html">Open WebUI</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared vLLM, Ollama or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 12 November 2026 from <a href="https://github.com/vllm-project/vllm/blob/v0.33.0/vllm/entrypoints/openai/chat_completion/protocol.py">vLLM v0.33.0 protocol.py</a>, vLLM PRs #39780, #65547 and #65854, Open WebUI v0.13.0, v0.13.1 and v0.13.3 (<a href="https://github.com/open-webui/open-webui/blob/v0.13.3/backend/open_webui/utils/tool_calling.py">tool_calling.py at v0.13.3</a>), and <a href="https://github.com/open-webui/open-webui/issues/34169">open-webui/open-webui#34169</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
