@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP: &quot;Server-sent event exceeded the 1048576 byte limit&quot;: why big MCP tool lists stopped connecting, which versions, and the fixes</title>
+<meta name="description" content="MCP clients built on the Python mcp SDK 2.x fail with 'SSE stream failed: Server-sent event exceeded the 1048576 byte limit.' (or 'SSE stream ended without a response') when one tools/list answer or tool result is over 1 MiB. Which mcp and httpx2 versions cap it, why Open WebUI 0.12.4 to 0.13.3 has no setting for it, and the fixes. From the source. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/mcp-sse-event-exceeded-1048576-byte-limit.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  blockquote { margin: 0.8rem 0; padding: 0.2rem 1rem; border-left: 4px solid #ccc; color: #333; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>MCP 1 MiB event limit</strong> · <a href="vllm-tools-must-not-be-an-empty-array.html">vLLM empty tools</a> · <a href="openwebui-deepseek-reasoning-content.html">DeepSeek reasoning_content</a></nav>
+<h1>MCP: &quot;Server-sent event exceeded the 1048576 byte limit&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 12 November 2026 from the source of the MCP Python SDK (<code>mcp</code> v1.30.0, v2.2.0 and v2.3.0), httpx2 v2.16.0 and Open WebUI v0.12.3, v0.12.4 and v0.13.3. On 12 November 2026 the newest releases were <code>mcp</code> v2.3.0, httpx2 v2.16.0 and Open WebUI v0.13.3.</p>
+
+<p>An MCP server that used to work stops connecting, or one of its tools stops returning, and somewhere in the logs is:</p>
+<pre>SSE stream failed: Server-sent event exceeded the 1048576 byte limit.</pre>
+
+<p><strong>Short answer:</strong> one answer from the server was bigger than 1 MiB (1,048,576 bytes). Usually that is the <code>tools/list</code> answer of a server with many or long tool descriptions, sometimes one large tool result (a file, a screenshot in base64). Version 2 of the Python <code>mcp</code> SDK reads Streamable HTTP answers through httpx2, which since httpx2 2.10.0 refuses any single server-sent event over 1 MiB. The 1.x SDK had no such limit, so the server worked before the client upgraded. If you write the client, pass <code>max_sse_event_size</code> (<code>mcp</code> 2.3.0 or later). If you use an app built on it, such as <strong>Open WebUI 0.12.4 to 0.13.3</strong>, there is no setting yet (<a href="#openwebui">below</a>).</p>
+
+<h2 id="messages">The same cause, different messages</h2>
+<table>
+  <tr><th>What you see</th><th>Where it comes from</th></tr>
+  <tr><td><code>SSE stream failed: Server-sent event exceeded the 1048576 byte limit.</code></td><td><code>mcp</code> 2.3.0, Streamable HTTP. <code>_handle_sse_response()</code> catches <code>httpx2.SSEError</code> and fails the request with <code>f&quot;SSE stream failed: {exc}&quot;</code>.</td></tr>
+  <tr><td><code>SSE stream ended without a response</code></td><td><code>mcp</code> 2.0.0 to 2.2.0, Streamable HTTP, with httpx2 2.10.0 or later installed. In v2.2.0 the size error falls into a general <code>except</code> that only logs <code>&quot;SSE stream ended&quot;</code> at debug level, then the request fails with this message, which doesn't mention size. Per <a href="https://github.com/modelcontextprotocol/python-sdk/issues/3803">python-sdk#3803</a> and <a href="https://github.com/NousResearch/hermes-agent/issues/138329">hermes-agent#138329</a>.</td></tr>
+  <tr><td><code>Connection closed</code>, then the whole session is gone</td><td>The older SSE transport (<code>sse_client</code>), per python-sdk#3803: the call fails, then the transport's task group dies with the <code>SSEError</code>.</td></tr>
+  <tr><td><code>Failed to connect to MCP server '&lt;name&gt;'</code> (toast and backend log), no tools from that server</td><td>Open WebUI 0.12.4 to 0.13.3, per <a href="https://github.com/open-webui/open-webui/issues/34201">open-webui#34201</a>. The underlying error is the first line of this table.</td></tr>
+  <tr><td><code>✗ Connection failed: SSE stream failed: Server-sent event exceeded the 1048576 byte limit.</code></td><td>Hermes Agent, per <a href="https://github.com/NousResearch/hermes-agent/issues/141136">hermes-agent#141136</a>.</td></tr>
+</table>
+<p>The HTTP request itself succeeds (<code>200 OK</code>): the client receives the event and then refuses it. So the server's own logs look normal, and authentication is not the problem. On 12 November 2026 GitHub's issue search found 142 issues and pull requests quoting the &quot;exceeded the 1048576 byte limit&quot; text.</p>
+
+<h2 id="versions">Which versions have the limit</h2>
+<table>
+  <tr><th>Python <code>mcp</code> SDK</th><th>Limit on one event</th><th>Can you change it?</th></tr>
+  <tr><td>1.x (we read v1.30.0)</td><td>None. The Streamable HTTP client uses <code>httpx</code> and <code>httpx_sse</code>, with no size check.</td><td>Not needed.</td></tr>
+  <tr><td>2.0.0 to 2.2.0 (we read v2.2.0)</td><td>Whatever httpx2's default is. The client calls <code>EventSource(response)</code> with no size argument. httpx2 up to 2.9.1 has no limit; <strong>httpx2 2.10.0 (released 9 August 2026) and later default to 1 MiB</strong>. Per the v2.3.0 release notes, the requirement before 2.3.0 was httpx2 2.5.0 or later, so a fresh install gets the limit.</td><td>No parameter on <code>streamable_http_client</code> or <code>sse_client</code>.</td></tr>
+  <tr><td>2.3.0 (released 2 October 2026)</td><td>1 MiB by default: <code>DEFAULT_MAX_SSE_EVENT_SIZE = 1024 * 1024</code>, passed to httpx2 on every event stream it opens.</td><td><strong>Yes, on Streamable HTTP:</strong> <code>streamable_http_client(..., max_sse_event_size=...)</code>; an integer sets a new limit, <code>None</code> removes it (<a href="https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.3.0">release notes</a>, PR #3600). <strong>Not on the older SSE transport:</strong> <code>sse_client</code> at v2.3.0 has no such parameter.</td></tr>
+</table>
+<p>The check itself is in httpx2 (<code>src/httpx2/httpx2/_sse.py</code> at v2.16.0): <code>raise SSEError(f&quot;Server-sent event exceeded the {self._max_event_size} byte limit.&quot;)</code>, with the default <code>DEFAULT_MAX_EVENT_SIZE_BYTES</code> from <code>_config.py</code>. <code>SSEError</code> is a subclass of <code>TransportError</code>, so retry code that treats transport errors as network trouble may retry an answer that will never fit (<a href="https://github.com/pydantic/httpx2/issues/1259">httpx2#1259</a>, open on 12 November 2026, asks for a larger default).</p>
+
+<h2 id="fix-sdk">Fix it in your own Python client</h2>
+<p>With <code>mcp</code> 2.3.0 or later, pass the limit where you open the transport:</p>
+<pre>from mcp.client.streamable_http import streamable_http_client
+
+# 16 MiB; None removes the limit entirely
+transport = streamable_http_client(url, http_client=http_client,
+                                   max_sse_event_size=16 * 1024 * 1024)</pre>
+<p>A finite limit larger than your biggest answer is safer than <code>None</code>: the limit exists so one event can't use unbounded memory. With <code>mcp</code> 2.0 to 2.2 there is no parameter: upgrade to 2.3.0 (it requires httpx2 2.10.0 or later). Some projects subclassed <code>EventSource</code> instead (hermes-agent#141136); we have not tested that. If you control the server, keeping each answer under 1 MiB (fewer tools per server, shorter descriptions, paginated or smaller tool results) works with every client.</p>
+<p><strong>Frameworks that added a setting</strong> (we did not check which of their releases contain it): AG2 added <code>max_sse_event_size: int | None = 1_048_576</code> to <code>MCPServerConfig</code> (<a href="https://github.com/ag2ai/ag2/pull/3559">ag2#3559</a>, merged 1 November 2026). FastMCP's issue <a href="https://github.com/PrefectHQ/fastmcp/issues/5755">#5755</a> (the setting wasn't forwarded from its HTTP transports) was closed as completed on 26 October 2026. Hermes Agent's #141136 was closed as completed on 24 October 2026.</p>
+
+<h2 id="openwebui">Open WebUI: 0.12.4 to 0.13.3 have the limit and no setting</h2>
+<table>
+  <tr><th>Open WebUI</th><th>Bundled packages</th><th>Result</th></tr>
+  <tr><td>v0.12.3</td><td><code>mcp==1.27.2</code>, no httpx2</td><td>No limit.</td></tr>
+  <tr><td>v0.12.4 and v0.13.3 (we read both)</td><td><code>mcp==2.3.0</code>, <code>httpx2==2.16.0</code></td><td>1 MiB. <code>backend/open_webui/utils/mcp/client.py</code> calls <code>streamable_http_client(url, http_client=http_client)</code> without <code>max_sse_event_size</code>, and no environment variable reaches it.</td></tr>
+  <tr><td>dev, commit <code>782f4b7</code> (11 Nov)</td><td>same</td><td>Unchanged, per the reporter of #34201.</td></tr>
+</table>
+<p>Per <a href="https://github.com/open-webui/open-webui/issues/34201">#34201</a> (opened 12 November 2026, open): Hunter's MCP server (112 tools in 1,209,320 bytes) worked on 0.12.3 and broke after the upgrade, and an SDK-only test with the same packages fails with the default and returns all 120 tools of a 1,247,662-byte test server with <code>max_sse_event_size=None</code>. Open WebUI's Tool Search and function filters can't help, because they only run after the list has arrived. The issue asks for a setting like the existing <code>MCP_INITIALIZE_TIMEOUT</code>.</p>
+<p><strong>What you can do now in Open WebUI:</strong></p>
+<ol>
+  <li><strong>Make the server's answer smaller.</strong> If the MCP server lets you choose which tools or toolsets it exposes, expose fewer. This is the only fix that needs no code change.</li>
+  <li><strong>Patch the one call</strong> (unofficial, until #34201 is fixed): in <code>backend/open_webui/utils/mcp/client.py</code>, add <code>max_sse_event_size=16 * 1024 * 1024</code> (or <code>None</code>) to the <code>streamable_http_client(...)</code> call. This is the change #34201 proposes. A file edited inside a container is lost when the container is recreated. We have not tested it in Open WebUI.</li>
+  <li><strong>Don't downgrade to 0.12.3</strong> to get around it without checking what that gives up: see the <a href="openwebui.html">Open WebUI advisory page</a>.</li>
+</ol>
+<p class="warn">A related Open WebUI bug: when an MCP connection drops in the middle of an answer, every later call to that server in the same answer fails with <code>MCP client is not connected.</code> (<a href="https://github.com/open-webui/open-webui/issues/34170">#34170</a>), and the stopped tool loop can then end in a vLLM 400 (<a href="vllm-tools-must-not-be-an-empty-array.html">&quot;`tools` must not be an empty array&quot;</a>).</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read these files on GitHub on 12 November 2026: <code>src/mcp/client/streamable_http.py</code> at <code>mcp</code> v1.30.0, v2.2.0 and v2.3.0, <code>src/mcp/client/sse.py</code> at v2.3.0, httpx2's <code>_sse.py</code> at v2.16.0 and the release notes of both projects, and in Open WebUI <code>backend/requirements.txt</code> at v0.12.3, v0.12.4 and v0.13.3 and <code>utils/mcp/client.py</code> at v0.12.4 and v0.13.3. Nothing was run: the byte counts and the before/after results come from the issues named above and are labelled that way. We did not read <code>mcp</code> 2.0.x or 2.1.x separately; the 2.0 to 2.2 row is from v2.2.0's source, python-sdk#3803 (reported on 2.0.0) and the v2.3.0 release notes. Open WebUI releases between 0.12.4 and 0.13.3 were not read one by one. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 12 November 2026 from <a href="https://github.com/modelcontextprotocol/python-sdk/blob/v2.3.0/src/mcp/client/streamable_http.py">mcp v2.3.0 streamable_http.py</a>, mcp v2.2.0 and v1.30.0, <a href="https://github.com/pydantic/httpx2/blob/v2.16.0/src/httpx2/httpx2/_sse.py">httpx2 v2.16.0 _sse.py</a>, <a href="https://github.com/open-webui/open-webui/blob/v0.13.3/backend/open_webui/utils/mcp/client.py">Open WebUI v0.13.3 utils/mcp/client.py</a>, and <a href="https://github.com/open-webui/open-webui/issues/34201">open-webui/open-webui#34201</a>.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
