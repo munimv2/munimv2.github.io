@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open WebUI: &quot;Failed to connect to MCP server&quot;: read the line under it, then match it to the cause (v0.13.3)</title>
+<meta name="description" content="Open WebUI shows 'Failed to connect to MCP server' for at least ten different causes. The real one is in the traceback logged under it. A table of the exact underlying messages in Open WebUI 0.12.4 to 0.13.3 (mcp 2.3.0, httpx2 2.16.0): timeouts, redirects that are not followed (including every 301 and 302), the 1 MiB event limit, 401s, TLS, Docker networking, user-name headers. From the source. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/openwebui-failed-to-connect-to-mcp-server.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <strong>Failed to connect to MCP server</strong> · <a href="mcp-sse-event-exceeded-1048576-byte-limit.html">MCP 1 MiB event limit</a> · <a href="vllm-tools-must-not-be-an-empty-array.html">vLLM empty tools</a></nav>
+<h1>Open WebUI: &quot;Failed to connect to MCP server&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 12 November 2026 from the source of Open WebUI v0.13.3 (the newest release that day), the MCP Python SDK (<code>mcp</code>) v2.3.0 that it bundles, and httpx2. Nothing was run; see <a href="#limits">limits</a>.</p>
+
+<p>You turn on an MCP tool server in a chat and get a red status line or toast:</p>
+<pre>Failed to connect to MCP server '&lt;server id&gt;'</pre>
+<p>The chat still answers, just without that server's tools. Open WebUI catches the error, shows this one message whatever went wrong, and moves on to the next tool (<code>backend/open_webui/utils/middleware.py</code> at v0.13.3: <code>except Exception:</code>, <code>log.exception(...)</code>, then <code>continue</code>).</p>
+
+<p><strong>Short answer:</strong> the message names no cause, but the backend log does. At v0.13.3 the same text is logged at ERROR level <em>with a traceback</em>; the cause is the last line of that traceback. Run <code>docker logs open-webui 2&gt;&amp;1 | grep -A40 &quot;Failed to connect to MCP server&quot;</code> (use your container's name) and match the last line to the <a href="#table">table below</a>. The official <a href="https://docs.openwebui.com/features/extensibility/mcp/">MCP docs</a> cover four causes (empty Bearer, function filter list, OAuth 2.1 default tools, slow handshake); this page adds the others we found in the code and the issue tracker.</p>
+
+<p class="warn">If there is no traceback under the message, your build is older than <a href="https://github.com/open-webui/open-webui/pull/32229">PR #32229</a> (merged into dev on 11 October 2026). Before it, the reason was logged only at DEBUG level (<a href="https://github.com/open-webui/open-webui/issues/32213">#32213</a>, reported on v0.11.x and v0.12.0). Set <code>GLOBAL_LOG_LEVEL=DEBUG</code>, reproduce once, then set it back.</p>
+
+<h2 id="table">The line under the error, and what it means</h2>
+<p>For Open WebUI 0.12.4 to 0.13.3, which bundle <code>mcp==2.3.0</code> and <code>httpx2==2.16.0</code>. The texts in the first column are built by that code; the class name in front of them can differ in your traceback.</p>
+<table>
+  <tr><th>Last line of the traceback</th><th>Cause</th><th>Fix</th></tr>
+  <tr><td><code>Request 'initialize' timed out</code> (or another method name in the quotes, such as <code>'tools/list'</code>)</td><td>The server did not answer within <code>MCP_INITIALIZE_TIMEOUT</code> seconds (default <code>10</code>). This timeout covers the handshake, listing tools and reading resources, not tool calls. Typical: cold starts, servers that build a big tool list on demand, a slow proxy. The SDK builds this text as <code>f&quot;Request {method!r} timed out&quot;</code> in <code>mcp/shared/jsonrpc_dispatcher.py</code>.</td><td>Set <code>MCP_INITIALIZE_TIMEOUT=60</code> (or what your server needs) on the Open WebUI container and restart it. Tool calls use <code>AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER</code> instead.</td></tr>
+  <tr><td><code>Redirect to https://… not followed; use that URL as the endpoint if it is the intended server</code></td><td>The URL you entered answers with a redirect the SDK will not follow. See <a href="#redirects">which redirects are followed</a>: only 307 and 308, only to the same scheme, host and port, plus <code>http://</code> to <code>https://</code> on the default ports. A 301 or 302 is never followed, not even to the same host.</td><td>Put the final URL from the message into the connection, including any trailing slash. There is no setting to follow other redirects (<code>mcp</code> v2.2.0 release notes).</td></tr>
+  <tr><td><code>Redirect to http://… not followed: it would downgrade this HTTPS endpoint to plain HTTP.</code></td><td>The server sits behind a TLS-terminating proxy and doesn't know it, so its own redirects (often <code>/mcp</code> to <code>/mcp/</code>) point at <code>http://</code>.</td><td>Use the exact <code>https://…/</code> URL so no redirect happens, or make the server trust the proxy's forwarded headers (the SDK's <a href="https://py.sdk.modelcontextprotocol.io/client/transports/">transport docs</a> give the same two fixes).</td></tr>
+  <tr><td><code>SSE stream failed: Server-sent event exceeded the 1048576 byte limit.</code></td><td>One answer from the server, usually <code>tools/list</code>, is over 1 MiB. Open WebUI 0.12.4 to 0.13.3 has no setting for it (<a href="https://github.com/open-webui/open-webui/issues/34201">#34201</a>, open).</td><td>Expose fewer tools on the server. Details: <a href="mcp-sse-event-exceeded-1048576-byte-limit.html">MCP 1 MiB event limit</a>.</td></tr>
+  <tr><td><code>Server returned an error response</code></td><td>The server answered 4xx or 5xx without a JSON-RPC error body (<code>mcp/client/streamable_http.py</code> at v2.3.0, used for every status except 404). There is no separate text for 401, so a rejected or missing token looks like this. So can a POST to an endpoint that isn't Streamable HTTP (for example an old SSE-only URL ending in <code>/sse</code>). Look at the server's access log for the status code.</td><td>401/403: check the auth type and token (<a href="#auth">below</a>). 405 or 400: Open WebUI connects with Streamable HTTP only (<code>streamable_http_client</code> in <code>utils/mcp/client.py</code>), so point it at the server's Streamable HTTP endpoint (often <code>/mcp</code>), or put an SSE-only or stdio server behind a bridge such as <a href="https://github.com/open-webui/mcpo">mcpo</a> and add it as an OpenAPI server instead.</td></tr>
+  <tr><td><code>Not Found</code></td><td>The server answered 404 to the first request: the path is wrong. The SDK replaces a plain 404 with this text.</td><td>Check the path (<code>/mcp</code>, <code>/mcp/</code>, or a prefix your proxy adds).</td></tr>
+  <tr><td>A <code>ConnectError</code>, such as <code>All connection attempts failed</code> or <code>Name or service not known</code></td><td>Open WebUI's backend can't reach the address at all. The usual case: the URL says <code>localhost</code> or <code>127.0.0.1</code>, which inside the Open WebUI container is the container itself, not your machine. Your browser reaching the URL proves nothing, because the connection is made by the backend.</td><td>Use <code>http://host.docker.internal:&lt;port&gt;/mcp</code> (Docker Desktop, or Linux with <code>--add-host=host.docker.internal:host-gateway</code>), or the service name if both run in one Compose project.</td></tr>
+  <tr><td><code>[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: …</code></td><td>The server's certificate is self-signed or from a private CA. Open WebUI verifies it by default: <code>AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL</code> defaults to <code>True</code> (<code>env.py</code> at v0.13.3).</td><td>Set <code>AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL</code> to the path of your CA bundle inside the container (the variable accepts <code>true</code>, <code>false</code> or a path). <code>false</code> also works but turns off certificate checks for these connections.</td></tr>
+  <tr><td><code>Illegal header value</code> or <code>'ascii' codec can't encode character …</code>, and only for some users</td><td>With <code>ENABLE_FORWARD_USER_INFO_HEADERS</code> on (or a custom header that uses the user's name), the user's display name goes into a request header. A name with a leading or trailing space (<a href="https://github.com/open-webui/open-webui/issues/26181">#26181</a>, closed 29 June 2026) or a non-ASCII letter such as <code>Fábian</code> (<a href="https://github.com/open-webui/open-webui/issues/29907">#29907</a>, reported on v0.11.3, closed 17 September 2026) broke the request.</td><td>Update. At v0.13.3 the forwarded name is trimmed and percent-encoded (<code>quote(user.name.strip(), safe=' ')</code> in <code>utils/headers.py</code>). We did not check names used in your own custom header templates.</td></tr>
+  <tr><td><code>Error getting OAuth token: …</code> logged just before it, or <code>No OAuth session found for user …</code></td><td>An OAuth 2.1 server with no usable token for this user. Two known cases: the tool is a model default and the user never signed in to it (a known limitation per the docs, <a href="https://github.com/open-webui/open-webui/issues/20847">#20847</a>), and, before v0.13.1, a 502/503 from the provider during token refresh deleted a valid session (<a href="https://github.com/open-webui/open-webui/issues/33803">#33803</a>, fixed in v0.13.1 per its release notes).</td><td>Enable the tool in the chat to sign in again; don't make OAuth 2.1 tools model defaults; update to v0.13.1 or later.</td></tr>
+</table>
+
+<h2 id="redirects">Which redirects are followed (Open WebUI 0.12.4 to 0.13.3)</h2>
+<p>Open WebUI leaves redirects to the SDK (<code>create_httpx_client()</code> at v0.13.3: &quot;the MCP SDK follows same-origin redirects itself and ignores the client's follow_redirects setting&quot;). In <code>mcp</code> 2.3.0, <code>next_request_within_origin()</code> in <code>mcp/shared/_httpx_utils.py</code> follows a redirect only if all three hold:</p>
+<ol>
+  <li><strong>The method stays the same.</strong> MCP requests are POSTs. httpx2 turns a POST into a GET on 301, 302 and 303 (<code>_redirect_method()</code>, the same rule httpx has always had), so those are refused. Only 307 and 308 keep the POST. This is why a reverse proxy rule like <code>return 301 …/mcp/</code>, or a redirect directive that defaults to 302, breaks the connection while a framework's own trailing-slash redirect (Starlette sends 307) works.</li>
+  <li><strong>The origin stays the same:</strong> same scheme, host and port. The one exception is <code>http://host/</code> to <code>https://host/</code> when <em>both</em> use the default port, so <code>http://host:8000</code> to <code>https://host:8443</code> is refused.</li>
+  <li><strong>No new user-info</strong> (<code>user:pass@</code>) appears in the target URL.</li>
+</ol>
+<p>The rule came in <code>mcp</code> v2.2.0 (PR #3397; backported to v1.30.0 as PR #3448) because following redirects to another host sent the configured headers, and on 307/308 the request body, to that host. Open WebUI v0.12.3 bundled <code>mcp</code> 1.27.2, from before the change; we did not check how v0.12.3 itself handled redirects. Per <a href="https://github.com/modelcontextprotocol/python-sdk/issues/3504">python-sdk#3504</a> (open), people behind reverse proxies are asking for an opt-out; there is none in v2.3.0.</p>
+
+<h2 id="auth">&quot;Verify Connection&quot; works, but chats fail</h2>
+<ul>
+  <li><strong>Bearer with an empty key.</strong> In older versions this sent an empty <code>Authorization</code> header that some servers reject (<a href="https://github.com/open-webui/open-webui/discussions/19821">discussion #19821</a>, <a href="https://github.com/open-webui/open-webui/discussions/24259">#24259</a>). At v0.13.3 an empty or blank key sends no header at all (<code>bearer_auth_header()</code> returns <code>{}</code> for an empty token), so on v0.13.3 a 401 means the server really wants a token. Choosing <strong>None</strong> when no token is needed is still the clean setting.</li>
+  <li><strong>OAuth 2.1:</strong> the verify button only checks that the discovery document can be read (per the docs), not that this user has a token.</li>
+  <li><strong>Different network path:</strong> chats connect from the backend at chat time, with the user's headers, so a server that only accepts some users, or an address only the browser can reach, passes one check and fails the other.</li>
+</ul>
+
+<h2 id="probe">See what the server answers, from inside the container</h2>
+<p>This sends the same first request Open WebUI sends to a legacy server and prints the status, without following redirects. It uses only Python's standard library, which the Open WebUI image has. Replace the URL and add an <code>Authorization</code> header if your server needs one. <strong>We have not run this snippet.</strong></p>
+<pre>docker exec -i open-webui python3 - &lt;&lt;'EOF'
+import http.client, json, urllib.parse
+url = "http://host.docker.internal:8000/mcp"   # the URL from the connection
+u = urllib.parse.urlsplit(url)
+C = http.client.HTTPSConnection if u.scheme == "https" else http.client.HTTPConnection
+c = C(u.hostname, u.port, timeout=30)
+body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                   "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                              "clientInfo": {"name": "probe", "version": "0"}}})
+c.request("POST", u.path or "/", body, {"Content-Type": "application/json",
+                                        "Accept": "application/json, text/event-stream"})
+r = c.getresponse()
+print(r.status, r.reason, "| Location:", r.getheader("Location"),
+      "| Content-Type:", r.getheader("Content-Type"))
+EOF</pre>
+<p>200 with <code>text/event-stream</code> or <code>application/json</code>: the endpoint is fine and the cause is elsewhere (timeout, size, auth for real users). 301/302/303: change the URL to the <code>Location</code> shown. 307/308 to another host or port: same. 401/403: auth. 404/405: wrong path or not a Streamable HTTP endpoint. An exception instead of a status: network or TLS (the <code>ConnectError</code> and certificate rows of the table).</p>
+
+<p class="warn">A different message: if tools worked at first and then a reply says <code>MCP client is not connected.</code> for every call, the server dropped the connection in the middle of that reply. Open WebUI v0.13.3 does not reconnect until the next message (<a href="https://github.com/open-webui/open-webui/issues/34170">#34170</a>; fix proposed in <a href="https://github.com/open-webui/open-webui/pull/34174">PR #34174</a>, open on 12 November 2026). With vLLM that reply can then end in <a href="vllm-tools-must-not-be-an-empty-array.html">&quot;`tools` must not be an empty array&quot;</a>.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read these files on GitHub on 12 November 2026. Open WebUI v0.13.3: <code>backend/open_webui/utils/middleware.py</code> (the <code>server:mcp:</code> branch), <code>utils/tools.py</code> (<code>build_tool_server_headers</code>, <code>connect_mcp_server</code>), <code>utils/headers.py</code>, <code>utils/mcp/client.py</code> and <code>env.py</code>. MCP Python SDK v2.3.0: <code>src/mcp/client/streamable_http.py</code>, <code>src/mcp/client/_probe.py</code>, <code>src/mcp/shared/_httpx_utils.py</code> and <code>src/mcp/shared/jsonrpc_dispatcher.py</code>, plus the v2.2.0 and v1.30.0 release notes and the SDK's transport docs. httpx2: <code>_redirect_method()</code> in <code>src/httpx2/httpx2/_client.py</code> on its main branch, not at a tag. Nothing was run, including the snippet above. We followed the code paths by reading, not by tracing a real failure, so the exact traceback in your log may wrap these texts in another exception. The <code>ConnectError</code> and certificate texts are the usual Python and httpx wording, not read from httpx2's code. Facts from issues are marked with the issue. Open WebUI versions between 0.12.4 and 0.13.3 were not read one by one; the bundled package versions for 0.12.3, 0.12.4 and 0.13.3 come from their <code>backend/requirements.txt</code>. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 12 November 2026 from <a href="https://github.com/open-webui/open-webui/tree/v0.13.3/backend/open_webui/utils">Open WebUI v0.13.3 backend/open_webui/utils</a>, <a href="https://github.com/modelcontextprotocol/python-sdk/tree/v2.3.0/src/mcp">mcp v2.3.0 src/mcp</a>, <a href="https://py.sdk.modelcontextprotocol.io/client/transports/">the MCP Python SDK transport docs</a>, <a href="https://github.com/pydantic/httpx2">httpx2</a> and the Open WebUI issues linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
