@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama pull &quot;Error: 403:&quot; behind a company proxy, and the four other errors the same block prints</title>
+<meta name="description" content="Tested on Ollama v0.40.16: a proxy or firewall that answers one of ollama pull's requests with HTTP 403 prints a different error depending on which request it blocked: &quot;Error: 403:&quot; with nothing after it, &quot;pull model manifest: 403: &lt;html&gt;&quot;, &quot;context deadline exceeded&quot; after 30 seconds, or &quot;max retries exceeded: EOF&quot; after about a minute. Which is which, what the server log shows, and the fixes. Plus &quot;http: no Location header in response&quot; from self-hosted registries. 12 November 2026, by MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/ollama-pull-error-403.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama</a> · <a href="ollama-redirect-target-not-allowed.html">redirect target not allowed</a> · <strong>pull errors behind a proxy (403)</strong></nav>
+<h1>Ollama pull &quot;Error: 403:&quot; behind a company proxy, and the four other errors the same block prints</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. <strong>Tested</strong> on 12 November 2026: the official Ollama v0.40.16 Linux release binary pulled a tiny model from a local stand-in registry that answered one kind of request with HTTP 403 and a block page, the way a filtering company proxy does. Read the <a href="#limits">limits</a> before relying on it.</p>
+
+<p>A web filter or proxy that refuses one of the requests <code>ollama pull</code> makes doesn't always produce an error with &quot;403&quot; in it. In our test, <strong>the same 403 block page gave five different results</strong>, depending on which request it hit. Two of them never mention 403 at all, and in three the server log (even with <code>OLLAMA_DEBUG=1</code>) has no line with the 403 in it either. Retrying doesn't help: a 403 is a policy decision, and it gives the same answer every time.</p>
+
+<h2 id="table">Which blocked request prints which error</h2>
+<table>
+  <tr><th>The 403 hit…</th><th><code>ollama pull</code> printed</th><th>After</th><th>Server log (<code>OLLAMA_DEBUG=1</code>)</th></tr>
+  <tr><td>the <strong>manifest</strong> (<code>GET /v2/&lt;repo&gt;/manifests/&lt;tag&gt;</code>), block page in the body</td><td><code>Error: pull model manifest: 403: &lt;html&gt;&lt;head&gt;&lt;title&gt;Access Denied&lt;/title&gt;…</code>: the whole block page, HTML and all</td><td>at once</td><td>no 403 line</td></tr>
+  <tr><td>the manifest, empty body</td><td><code>Error: pull model manifest: 403:</code></td><td>at once</td><td>no 403 line</td></tr>
+  <tr><td>the registry's <strong>token</strong> request (the registry answered 401 and Ollama went to fetch a token)</td><td>the same <code>Error: pull model manifest: 403: &lt;html&gt;…</code> as a manifest block</td><td>at once</td><td>no 403 line</td></tr>
+  <tr><td>the <strong>HEAD</strong> of a model file (blob) that Ollama sends to learn its size</td><td><code>Error: 403:</code> with <strong>nothing after the colon</strong>: a HEAD answer has no body, so the block page never reaches you</td><td>at once</td><td><strong>no 403 line</strong>; the pull is logged as <code>POST "/api/pull"</code> with status 200</td></tr>
+  <tr><td>the <strong>GET</strong> of a blob on the registry (the step that should answer with a redirect to the download host)</td><td><code>Error: context deadline exceeded</code></td><td><strong>about 30 s</strong></td><td>repeated <code>level=WARN … msg="failed to get direct URL; backing off and retrying" err="403: &lt;html&gt;…"</code></td></tr>
+  <tr><td>the <strong>download host</strong> the registry redirects to (blob registry GET answered 307, the target answered 403)</td><td><code>Error: max retries exceeded: EOF</code></td><td><strong>about 64 s</strong></td><td><code>&lt;digest&gt; part 0 attempt 0 failed: EOF, retrying in 1s</code> … <code>attempt 5 failed: EOF, retrying in 32s</code>. The only hint is one DEBUG line, <code>skipping requires check: config fetch failed … error="max retries exceeded: status 403"</code> (it appeared in the registry-GET row too)</td></tr>
+</table>
+<p>The HTTP API answered each of these with status 500 and the same text in <code>{"error": "…"}</code>, so Open WebUI and other front ends that call <code>/api/pull</code> should show the same messages. In a control run with nothing blocked and blobs redirected to a second host, the way Ollama's own registry works, the pull succeeded.</p>
+
+<h2 id="why">Why the messages differ (Ollama v0.40.16 source)</h2>
+<ul>
+  <li><strong>Manifest, token and HEAD</strong> go through <code>makeRequestWithRetry</code> in <code>server/images.go</code>. For any status of 400 or more except 401 and 404, it returns <code>"&lt;status&gt;: &lt;response body&gt;"</code>. On a 401 it fetches a token (<code>server/auth.go</code>), which reports a failed token request in the same format. The manifest path adds <code>pull model manifest: </code> in front. A HEAD response has no body, so its error is just <code>403: </code>. The function logs only network failures (<code>request failed: …</code>), not HTTP error statuses, which is why the log stays silent.</li>
+  <li><strong>The registry blob GET</strong> runs in a loop with a <strong>30-second</strong> timeout in <code>server/download.go</code> (<code>blobDownload.run</code>). Each 403 is logged as <code>failed to get direct URL; backing off and retrying</code> and retried. When the 30 seconds are up, you get Go's <code>context deadline exceeded</code>, and the 403 is gone from the message.</li>
+  <li><strong>The download host</strong> is fetched in <code>downloadChunk</code>, which <strong>doesn't check the HTTP status</strong>. It copies the response body as if it were the file's bytes. A block page is far shorter than a download part (at least 100 MB, or the whole blob if that is smaller), so the copy runs out early with <code>EOF</code>. That is retried 6 times (<code>maxRetries = 6</code>), waiting 1, 2, 4, 8, 16 and 32 seconds, which gives the minute before <code>max retries exceeded: EOF</code>.</li>
+</ul>
+<p class="warn"><strong>So &quot;max retries exceeded: EOF&quot; isn't always a flaky connection.</strong> Most advice for it is about dropped connections and says to run the pull again. If it fails the same way every time, and the log shows <code>attempt 0 failed: EOF</code> within a second or so of starting, suspect a proxy refusing the download host. A pull that resumes and makes progress between failures is the flaky-connection kind.</p>
+
+<h2 id="real">What this looks like in a real report</h2>
+<p>Per <a href="https://github.com/ollama/ollama/issues/19604">ollama/ollama#19604</a> (opened 8 November 2026, now closed): behind a corporate proxy, every pull failed with <code>Error: 403:</code>, while <code>curl</code> to the registry worked through the same proxy. The debug log ended with <code>POST "/api/pull"</code> and status 200, with no 403 in it. A <code>curl -sI</code> of the blob URL through the proxy then returned <code>HTTP/2 403</code> with a 17,518-byte HTML page saying <code>Your system policy has denied access to the requested site.</code> That matches our HEAD row exactly: bare <code>403:</code>, silent log. The block page only showed up when the request was made with curl.</p>
+<p>The same thread also shows that <code>ollama pull --insecure</code> doesn't get around a proxy. It switches the registry requests to plain <code>http://</code>, and there it failed with <code>connection reset by peer</code>.</p>
+
+<h2 id="find">Find the blocked request</h2>
+<ol>
+  <li>Match your message to <a href="#table">the table</a>. A bare <code>Error: 403:</code> means a HEAD request. An HTML page after <code>pull model manifest: 403:</code> is the block page itself; read its title and policy text. <code>context deadline exceeded</code> plus <code>failed to get direct URL</code> warnings means the registry's blob URL. <code>max retries exceeded: EOF</code> plus <code>attempt N failed: EOF</code> lines means the download host.</li>
+  <li>For the silent cases, make the same request with curl <em>through the proxy the Ollama server uses</em> and save what comes back, as in #19604. <strong>We have not run these commands against the real registry</strong>:
+<pre>P="$HTTPS_PROXY"   # the value set for the Ollama *server* (e.g. in its systemd unit)
+curl -sS -x "$P" -o /tmp/reg.txt -w '%{http_code} %{content_type}\n' https://registry.ollama.ai/v2/
+curl -sS -x "$P" -o /tmp/manifest.txt -w '%{http_code} %{content_type}\n' \
+  https://registry.ollama.ai/v2/library/llama3.2/manifests/latest
+grep -io '&lt;title&gt;[^&lt;]*' /tmp/reg.txt /tmp/manifest.txt</pre>
+  A <code>403</code> with <code>text/html</code> is the proxy talking. A <code>401</code> with a JSON body means the proxy let you through to the registry, which wants a token (Ollama fetches the token itself). For the download host, ask whoever runs the proxy which host it refused for your machine: Ollama doesn't log that host name, and it changes per file.</li>
+</ol>
+
+<h2 id="fix">Fixes</h2>
+<table>
+  <tr><th>Situation</th><th>What to do</th></tr>
+  <tr><td>The block page names a policy or category</td><td>Ask for the registry and its download host to be allowed. Ollama v0.40.16's redirect check has special handling for <code>cloudflarestorage.com</code>, <code>hf.co</code> and <code>huggingface.co</code> hosts (see <a href="ollama-redirect-target-not-allowed.html">our redirect page</a>), so the refused download host is likely under one of those; the proxy's own log will name it. Allowing only <code>registry.ollama.ai</code> leaves you with the <code>max retries exceeded: EOF</code> row.</td></tr>
+  <tr><td>curl works but Ollama gets 403</td><td>The proxy settings must be in the <strong>server's</strong> environment (<code>systemctl edit ollama.service</code>, or the environment of <code>ollama serve</code>); the <code>ollama pull</code> command only talks to the local server. Also compare user agents and source accounts: a filter can treat Ollama's requests (user agents <code>ollama/&lt;version&gt;</code>, <code>ollama-transfer/1.0</code> and Go's default in our logs) differently from curl's, or treat the service account differently from your own.</td></tr>
+  <tr><td>Hugging Face is allowed but Ollama's registry isn't</td><td>Pull a GGUF from Hugging Face directly (<code>ollama pull hf.co/&lt;user&gt;/&lt;repo&gt;</code>), which was the way out in <a href="https://github.com/ollama/ollama/issues/8533">#8533</a>.</td></tr>
+  <tr><td>Nothing can be unblocked in time</td><td>Pull on another network and copy the models folder (<code>~/.ollama/models</code>, or the folder in <code>OLLAMA_MODELS</code>) across, keeping its <code>manifests/</code> and <code>blobs/</code> layout.</td></tr>
+  <tr><td>Thinking about <code>--insecure</code></td><td>Don't. It switches to plain HTTP and skips address checks, and per #19604 it doesn't get past a proxy anyway.</td></tr>
+</table>
+
+<h2 id="no-location">Self-hosted registry: &quot;Error: http: no Location header in response&quot;</h2>
+<p>Our test caught one more message by accident. Our first stand-in registry served blob bytes straight back with <code>200 OK</code>, the way a plain Docker/OCI registry or a simple mirror does, and Ollama v0.40.16 failed at once with:</p>
+<pre>Error: http: no Location header in response</pre>
+<p>The reason is the blob GET in <code>blobDownload.run</code>. It follows redirects only within the registry's own scheme, host and port, then takes the download address from the last response's <code>Location</code> header, even when that response is a 200. A registry that serves the bytes itself has no <code>Location</code>, so the pull stops there. With the same registry answering <code>307</code> to a second host, the pull succeeded. This matches <a href="https://github.com/ollama/ollama/issues/7244">#7244</a> (pulling from a local Docker registry, open since October 2024) and <a href="https://github.com/afshinghezeli/weightkeep/pull/14">weightkeep PR #14</a> (September 2026), whose author fixed their Ollama-compatible server by answering blob GETs with <code>200</code> plus a <code>Location</code> header. A same-host 307 was not enough, because Ollama follows that and then still needs a <code>Location</code> on the final answer.</p>
+<p>So a registry or mirror for Ollama has to answer blob GETs with a redirect to another host or port, or with a <code>Location</code> header. That target must also pass Ollama's redirect checks (see <a href="ollama-redirect-target-not-allowed.html">&quot;redirect target not allowed&quot;</a>); our local test only passed because it used <code>--insecure</code>.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. built a small Python registry stand-in and ran the official Ollama v0.40.16 Linux amd64 release binary (checksum verified) against it in a sealed container on 12 November 2026, with a fresh models folder and server for each case. Each case was run once through the CLI and once through <code>/api/pull</code>, and every request was logged. All traffic stayed on 127.0.0.1 over plain HTTP with <code>--insecure</code>. The model was a tiny two-file stand-in (blobs of 23 and 278 bytes), not a real model. Limits:</p>
+<ul>
+  <li>A real proxy usually sits in front of HTTPS. It can only send a 403 page if it inspects TLS with a certificate your machine trusts (as in #19604). Otherwise the same block shows up as a TLS or connection error, which this test doesn't cover.</li>
+  <li>Which request a real proxy blocks depends on its rules. We didn't test against <code>registry.ollama.ai</code> or its real download hosts, and we don't know whether the real registry answers HEAD itself or redirects it.</li>
+  <li>We tested one version, v0.40.16. Other versions may print other text.</li>
+  <li>For a file smaller than the block page, the download-host case could end differently (the page's bytes would fill the whole file). We didn't test that.</li>
+  <li>The curl commands above were not run.</li>
+</ul>
+<p>Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="ollama.html">Ollama</a> or <a href="openwebui.html">Open WebUI</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 12 November 2026 from a test of the <a href="https://github.com/ollama/ollama/releases/tag/v0.40.16">Ollama v0.40.16</a> release binary, its source (<code>server/download.go</code>, <code>server/images.go</code>), and the issues linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
