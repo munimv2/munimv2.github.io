@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama &quot;function output has no matching call &quot;call_ollama_compaction_…&quot;&quot;: why Codex compaction fails on a long thread, and how to recover</title>
+<meta name="description" content="Why a long Codex thread on Ollama's /v1/responses suddenly fails to compact with HTTP 400 &quot;item_000008: function output has no matching call &quot;call_ollama_compaction_…&quot;&quot;. Read from Ollama v0.40.16's source: an earlier compaction kept an older summary's result without its call, every later compaction trips over it, ordinary turns still work, and retrying or switching models does not help. How to confirm it from your saved session, carry the summary into a new thread, and which open pull requests fix it. 13 November 2026, by MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/ollama-function-output-has-no-matching-call.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  .upd { border-left: 4px solid #1a5fb4; padding: 0.4em 1em; margin: 1em 0; background: #f3f7ff; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama</a> · <a href="ollama-cloud-failed-to-read-request-body.html">Ollama Cloud &quot;failed to read request body&quot;</a> · <strong>&quot;function output has no matching call&quot;</strong></nav>
+<h1>Ollama &quot;function output has no matching call &quot;call_ollama_compaction_…&quot;&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 13 November 2026 from Ollama v0.40.16's source (<code>openai/responses_compact.go</code>, <code>server/responses_compact.go</code>, <code>server/routes.go</code>, <code>api/types.go</code>) and the public reports linked below. <strong>We did not reproduce the error ourselves</strong>, and the diagnostic script below has not been run against a real session. See the <a href="#limits">limits</a>.</p>
+
+<p>A long agent thread (most reports are Codex Desktop or the Codex CLI pointed at Ollama, with a local or <code>:cloud</code> model) has been working for hours. Then it reaches its context limit, tries to compact, and fails with HTTP 400:</p>
+<pre>item_000008: function output has no matching call "call_ollama_compaction_4a3e91772b24"</pre>
+<p>The item number and the 12 hex characters differ from thread to thread. From then on, <strong>every</strong> compaction of that thread fails the same way. Retrying doesn't help, and neither does switching the model.</p>
+
+<h2 id="quick">The short answer</h2>
+<table>
+  <tr><th>What you see</th><th>What it means</th><th>What to do</th></tr>
+  <tr><td>The quoted ID starts with <code>call_ollama_compaction_</code></td><td>An Ollama bug, open as <a href="https://github.com/ollama/ollama/issues/19623">ollama#19623</a>. An earlier compaction saved the <em>result</em> of an older summary without the <em>call</em> that goes with it. That broken summary now travels with the thread, and Ollama's compaction rejects it every time.</td><td><a href="#recover">Carry the summary into a new thread</a>, or run a build with one of the <a href="#fix">open fixes</a>. Retrying the same thread won't work.</td></tr>
+  <tr><td>The quoted ID is anything else (for example <code>call_abc123…</code>)</td><td>The orphaned tool result came from your client's own history, not from an Ollama summary. Ollama only checks call/result pairs when it compacts, so the problem shows up there.</td><td>See <a href="#client">if the ID is not an Ollama one</a>.</td></tr>
+</table>
+
+<h2 id="why">What goes wrong</h2>
+<p>When a client such as Codex asks Ollama to compact a conversation on <code>/v1/responses</code>, Ollama doesn't return an opaque blob the way OpenAI does. It asks the model for a summary and a list of items to keep, and returns one item of type <code>compaction</code>. Its <code>encrypted_content</code> is <strong>plain JSON, not encrypted</strong>: <code>{"type":"ollama_compaction","version":1,"summary":"…","retained":[…]}</code>. The client stores that item and sends it back with every later request. Ollama then unpacks it into a synthetic tool call named <code>ollama_compaction_summary</code> with the ID <code>call_ollama_compaction_</code> plus the first 6 bytes of the payload's SHA-256 in hex, followed by that call's result (the summary text), followed by the retained messages.</p>
+<p>In v0.40.16 the bug works like this:</p>
+<ol>
+  <li><strong>Compaction 1</strong> produces summary S1. It is a normal compaction.</li>
+  <li><strong>Compaction 2</strong> sees S1 unpacked as a call/result pair, and the model picks which items to keep. <code>analyzeCompactionToolState</code> deliberately leaves summary pairs out of its list of call/result groups (so trimming never drops a summary). But the code that keeps a call and its result together only looks at that list. So if the model keeps S1's result but not its call, the result alone goes into S2's <code>retained</code> list.</li>
+  <li><strong>Compaction 3</strong> unpacks S2. S1's result is there, but S1's call isn't, so <code>analyzeCompactionToolState</code> stops with <code>fmt.Errorf("%s: function output has no matching call %q", item.Ref, callID)</code>. The server turns that into HTTP 400 with <code>error.code</code> <code>invalid_request_error</code>.</li>
+</ol>
+<p>This explains the details people report:</p>
+<ul>
+  <li><strong>It is intermittent.</strong> It needs the model to keep one half of an old summary pair, and it surfaces at the earliest on a thread's third compaction. Short tests usually pass. The reporter of #19623 saw two automatic compactions in a fresh chat work fine.</li>
+  <li><strong>Ordinary turns still work.</strong> On a normal request Ollama only unpacks the saved summary. The pairing check runs only for compaction: a request whose last input item is <code>compaction_trigger</code>, or <code>POST /v1/responses/compact</code>. The thread works until it next needs to compact.</li>
+  <li><strong>Retrying and switching models don't help.</strong> The check runs on the saved history <em>before</em> any model is called, and the broken summary is part of that history.</li>
+  <li><strong><code>:cloud</code> models are affected too.</strong> In <code>routes.go</code>, <code>/v1/responses</code> runs Ollama's compaction middleware <em>before</em> the cloud passthrough. So the check happens on your local Ollama even when the model runs on ollama.com.</li>
+  <li><strong><code>item_000008</code></strong> is the item's 1-based position in the list Ollama built for this compaction, after unpacking the saved summary. It only helps with locating the item, not with fixing it.</li>
+</ul>
+<p>Credit: the reporter of <a href="https://github.com/ollama/ollama/issues/19623">ollama#19623</a> (9 Nov 2026, Ollama 0.40.15, Codex Desktop with DeepSeek) found the pattern and a synthetic reproduction. The cause above matches the descriptions in the two fix pull requests, and we checked it against the v0.40.16 source.</p>
+
+<h2 id="check">Confirm it from your saved session</h2>
+<p>Because the payload is plain JSON, the broken summary can be read from the file where your client saves the conversation. Codex keeps its sessions as JSON Lines files under <code>~/.codex/sessions/</code>. This read-only script searches any <code>.json</code> or <code>.jsonl</code> file for Ollama compaction payloads and lists retained tool results that have no matching call:</p>
+<pre># find_orphans.py  (Apache-2.0, MV2 of Munim, Inc., made with AI agents). Read-only.
+# usage: python3 find_orphans.py SESSION.jsonl [--summary]
+import json, sys
+
+def strings(x):
+    if isinstance(x, dict):
+        for v in x.values(): yield from strings(v)
+    elif isinstance(x, list):
+        for v in x: yield from strings(v)
+    elif isinstance(x, str):
+        yield x
+
+def docs(path):
+    text = open(path, encoding="utf-8").read()
+    try:
+        yield json.loads(text)
+    except ValueError:
+        for line in text.splitlines():
+            try:
+                yield json.loads(line)
+            except ValueError:
+                pass
+
+found, last = 0, None
+for doc in docs(sys.argv[1]):
+    for s in strings(doc):
+        if '"ollama_compaction"' not in s:
+            continue
+        try:
+            p = json.loads(s)
+        except ValueError:
+            continue
+        if not isinstance(p, dict) or p.get("type") != "ollama_compaction":
+            continue
+        found, last = found + 1, p
+        msgs = p.get("retained") or []
+        calls = {tc.get("id") for m in msgs for tc in (m.get("tool_calls") or [])}
+        orphans = [m.get("tool_call_id") for m in msgs if m.get("role") == "tool"
+                   and m.get("tool_call_id") and m.get("tool_call_id") not in calls]
+        print("summary %d: %d retained messages; orphaned results: %s"
+              % (found, len(msgs), ", ".join(orphans) or "none"))
+print(found, "Ollama compaction summaries found")
+if last and "--summary" in sys.argv:
+    print("\n--- newest summary text ---\n" + last.get("summary", ""))</pre>
+<p>The same payload can appear several times in one file, because clients often log it more than once. The last line printed is usually the newest one, and Ollama uses only the newest. If that line lists an ID starting with <code>call_ollama_compaction_</code>, you have the bug above. Results inside the payload are matched against calls in the same payload. That is how Ollama unpacks them: a newer summary replaces the older ones, and its kept call/result pairs travel together.</p>
+
+<h2 id="recover">Recover the thread's context</h2>
+<ul>
+  <li><strong>Start a new thread and give it the summary.</strong> <code>python3 find_orphans.py SESSION.jsonl --summary</code> prints the newest summary text. It is the same text the model would have seen after a successful compaction, so pasting it into the first message of a new thread carries over most of the context. Check it for secrets or private data before pasting it anywhere else.</li>
+  <li><strong>Keep using the old thread only until it needs to compact.</strong> Ordinary turns still work, but the next compaction will fail again, so this only buys time.</li>
+  <li><strong>Don't keep retrying the compaction.</strong> Each attempt reads the same saved summary and fails before any model is called.</li>
+</ul>
+
+<h2 id="fix">Fix status (13 November 2026)</h2>
+<table>
+  <tr><th>Pull request</th><th>What it changes</th><th>State</th></tr>
+  <tr><td><a href="https://github.com/ollama/ollama/pull/19635">ollama#19635</a> &quot;openai: keep the compaction summary call with its result&quot;</td><td>Keeps a summary's call and result together when items are selected, and <strong>restores the missing call when unpacking summaries saved before the fix</strong>, so threads that are already broken should work again. The author lists a test for each half.</td><td>Open, not reviewed, not merged</td></tr>
+  <tr><td><a href="https://github.com/ollama/ollama/pull/19532">ollama#19532</a> &quot;openai: keep prior compaction summary pairs paired&quot;</td><td>Drops the special case that leaves summary pairs out of normal pair checks, protects them in trimming, and rejects orphaned, duplicate or mismatched summary calls</td><td>Open, draft</td></tr>
+</table>
+<p>Neither change is in a release. <code>openai/responses_compact.go</code> was last changed on 29 October 2026, so v0.40.16 and v0.40.17-rc0 still have the bug. When a release notes a compaction fix, update with <code>ollama -v</code> to check the version you run. Going by #19635's description, an affected thread should then compact again without changes on your side, but check the merged code: <a href="https://github.com/ollama/ollama/pull/19532">#19532</a> takes a different approach and may not repair summaries that were already saved. If you build Ollama from source, you can test a branch yourself. It is unreviewed code, so keep it away from anything that matters.</p>
+
+<h2 id="client">If the ID is not an Ollama one</h2>
+<p>When Ollama compacts, every tool result in the history must have a call with the same <code>call_id</code> earlier in that history. Results with no <code>call_id</code> at all are accepted as standalone results. A result whose <code>call_id</code> has no call fails with the same message, naming that ID. Ollama doesn't check this on ordinary turns, so a client history that was broken long ago only fails at compaction. Several Codex reports describe client-side ways tool results lose their calls: injected or automation outputs (<a href="https://github.com/openai/codex/issues/45450">codex#45450</a>, <a href="https://github.com/openai/codex/issues/49173">codex#49173</a>), and pairing being enforced only when history is rebuilt (<a href="https://github.com/openai/codex/issues/46193">codex#46193</a>). Starting a new thread works around those too. Report them to the client's maintainers, not to Ollama.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read, on 13 November 2026: Ollama v0.40.16's <code>openai/responses_compact.go</code>, <code>openai/responses.go</code>, <code>server/responses_compact.go</code>, the <code>/v1/responses</code> route in <code>server/routes.go</code>, and <code>api/types.go</code>; the commit history of <code>openai/responses_compact.go</code>; issue #19623; pull requests #19635 and #19532; and the Codex issues linked above. Limits:</p>
+<ul>
+  <li>Everything here comes from reading source and other people's reports. We didn't run Ollama, Codex or a compaction, and we didn't reproduce the error.</li>
+  <li><code>find_orphans.py</code> has not been run against a real Codex session file. It assumes the payload fields Ollama writes in v0.40.16 (<code>type</code>, <code>summary</code>, <code>retained</code>, and in messages <code>role</code>, <code>tool_calls[].id</code>, <code>tool_call_id</code>). Other clients may store the item differently. The script only reads and prints.</li>
+  <li>We haven't tried editing a saved session by hand to remove the orphaned result, and we don't recommend it. The expansion fix in #19635 does the equivalent on the server.</li>
+  <li>PR #19532 also names context trimming as a way to split a summary pair. In the v0.40.16 trimming code we read, summary pairs are skipped rather than split, so we describe only the selection path.</li>
+  <li>How Codex shows the 400 to you (the wording around it, and whether it retries) depends on its version. We didn't read Codex's source.</li>
+</ul>
+<p>Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="ollama-cloud-failed-to-read-request-body.html">Ollama Cloud 400 &quot;failed to read request body&quot;</a> (long Codex threads with images)</li>
+  <li><a href="ollama-pull-error-403.html">Ollama pull &quot;Error: 403:&quot; behind a company proxy</a></li>
+  <li><a href="openwebui-deepseek-reasoning-content.html">DeepSeek &quot;reasoning_content must be passed back&quot;</a></li>
+  <li><a href="ollama.html">Ollama: hardening and common errors</a></li>
+</ul>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> or <a href="ollama.html">Ollama</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 13 November 2026 from Ollama v0.40.16's source and the public reports linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
