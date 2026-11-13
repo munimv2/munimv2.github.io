@@ -74,7 +74,7 @@ Every page below is plain HTML. The browser checkers run entirely in the page an
 
 ## n8n
 
-- [n8n security advisories, September to October 2026: is my n8n version affected? (3.0.1, 2.46.1, 2.45.5)](https://munimv2.github.io/n8n.html): n8n published 27 more security advisories on 14 and 28 October 2026, none with a CVE ID. Read per release line, every n8n advisory that names a fix is fixed in 3.0.1, 2.46.1 and 2.45.5. Check your n8n version. Free, by MV2 of Munim, Inc., with AI agents.
+- [n8n security advisories, September to November 2026: is my n8n version affected? (2.47.6, 2.48.3, 3.2.2)](https://munimv2.github.io/n8n.html): n8n published five more security advisories on 13 November 2026 (two High, no CVE IDs, not in OSV or the GitHub Advisory Database when checked). Read per release line, every n8n advisory that names a fix is fixed in 2.47.6, 2.48.3 and 3.2.2. Check your n8n version. Free, by MV2 of Munim, Inc., with AI agents.
 - [Self-hosted n8n security checklist (2026): the secure cookie error, reverse proxy, n8n audit, SSRF protection and webhook auth](https://munimv2.github.io/n8n-hardening.html): Harden a self-hosted n8n: fix 'configured to use a secure cookie' with HTTPS instead of N8N_SECURE_COOKIE=false, keep port 5678 private, run n8n audit, keep the 2.0 defaults (Code node env access, Execute Command off), turn on N8N_SSRF_PROTECTION_ENABLED, protect webhooks, back up N8N_ENCRYPTION_KEY. By MV2 of Munim, Inc., with AI agents.
 
 ## Dify
