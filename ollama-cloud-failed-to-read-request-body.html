@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama Cloud 400 &quot;failed to read request body&quot;: the ~32 MiB request limit, images in chat history, and bad tool schemas</title>
+<meta name="description" content="Why Ollama Cloud answers a chat request with HTTP 400 &quot;failed to read request body&quot;. Two independent reports put the cut-off at about 32 MiB of request body (31.14 MiB passed, 32.48 MiB failed), almost always from base64 images piling up in the chat history; a string-valued tool-schema enum can produce the same message. What a local Ollama adds when it proxies a :cloud model (it passes the error through unchanged, and caps zstd-compressed bodies at 20 MiB), how to measure your request, and how to fix it. 13 November 2026, by MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/ollama-cloud-failed-to-read-request-body.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  .upd { border-left: 4px solid #1a5fb4; padding: 0.4em 1em; margin: 1em 0; background: #f3f7ff; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="ollama.html">Ollama</a> · <a href="ollama-pull-error-403.html">Ollama pull 403</a> · <a href="mcp-request-body-too-large-413.html">MCP 413</a> · <strong>Ollama Cloud &quot;failed to read request body&quot;</strong></nav>
+<h1>Ollama Cloud 400 &quot;failed to read request body&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 13 November 2026 from Ollama v0.40.16's source (<code>server/cloud_proxy.go</code>, <code>server/routes.go</code>), Ollama's API docs, and the public reports linked below. <strong>We did not send requests to Ollama Cloud ourselves</strong>: the measurements are other people's, credited where they appear. See the <a href="#limits">limits</a>.</p>
+
+<p>A chat request to an Ollama Cloud model works for a while, then a long conversation (usually one with screenshots or pasted images) starts failing with:</p>
+<pre>400: failed to read request body</pre>
+<p>It often arrives after 10 to 15 seconds, and nothing in it says &quot;too large&quot;. Agent apps then report something vaguer still, for example Codex Desktop's <code>stream disconnected before completion: stream closed before response.completed</code>, or a model that suddenly says it has no tools.</p>
+
+<h2 id="quick">The short answer</h2>
+<table>
+  <tr><th>Your situation</th><th>Most likely cause</th><th>Fix</th></tr>
+  <tr><td>The conversation carries images (screenshots, tool outputs with images, pasted PNGs), and the error started as it grew</td><td>The whole JSON body has crossed about <strong>32 MiB</strong>. Images are sent as base64, which is a third bigger than the files themselves, and most apps re-send every earlier image on every turn.</td><td>Send fewer and smaller images: <a href="#shrink">re-encode and cap them</a>. Splitting images across messages does <em>not</em> help; the limit is on the whole request.</td></tr>
+  <tr><td>The request is small (a few MB or less), and it uses tools</td><td>The JSON doesn't fit Ollama's request types, most often a tool schema with <code>&quot;enum&quot;: &quot;x&quot;</code> (a string) where JSON Schema needs <code>&quot;enum&quot;: [&quot;x&quot;]</code></td><td><a href="#schema">Find and fix the schema</a>. A small replay usually shows the real decode error.</td></tr>
+  <tr><td>You go through a local Ollama (<code>model:cloud</code>) and your client compresses requests with zstd</td><td>The local server caps a zstd body at <strong>20 MiB once decompressed</strong>, before it reaches the cloud. That error reads <code>http: request body too large</code>, not &quot;failed to read&quot;.</td><td>Send the request uncompressed, or keep it under 20 MiB (<a href="#local">details</a>).</td></tr>
+</table>
+
+<h2 id="evidence">Where the 32 MiB comes from</h2>
+<p>Ollama doesn't document a size limit for <code>/api/chat</code>. Its <a href="https://docs.ollama.com/api/errors">error list</a> names only 400, 404, 429, 500 and 502. Two separate reports measured where cloud chat requests start failing:</p>
+<table>
+  <tr><th>Report</th><th>Passed (HTTP 200)</th><th>Failed with <code>failed to read request body</code></th></tr>
+  <tr><td><a href="https://github.com/ollama/ollama/issues/19597">ollama#19597</a> (7 Nov 2026, <code>deepseek-v4.1-flash</code>, 4.8 MB PNGs as base64 in one user message)</td><td>1.77 MB text only (~373k prompt tokens); 25.6 MB (4 images); 31.14 MiB</td><td>32.48 MiB; 38.0 MiB (6 images); 51.0 MiB (8 images)</td></tr>
+  <tr><td><a href="https://github.com/cheaper-inference/OmniRoute/issues/18684">OmniRoute#18684</a> (31 Oct 2026, Codex Desktop through a proxy to Ollama Cloud)</td><td>9 images / 26.8 MB</td><td>11 images / 32.7 MB; 13 images / 38.7 MB; 11 images in <em>separate</em> messages / 34.3 MB; a full 51.2 MB history</td></tr>
+</table>
+<p>Both point at a cut-off just above 31 MiB and below 32.5 MiB, which fits 32 MiB (33,554,432 bytes) if OmniRoute's &quot;MB&quot; are MiB; that report doesn't say which. 32 MiB is also the documented request limit of Ollama's <a href="https://docs.ollama.com/api/systemone">System One endpoint</a>, where the local server enforces it in code (<code>http.MaxBytesReader(..., 32&lt;&lt;20)</code> in <code>routes.go</code>) and answers with a clear 413 <code>request body must not exceed 32 MiB</code>. The same docs give cloud System One requests a lower 13 MiB limit. Whether cloud chat applies 32 MiB, 13 MiB in some cases, or counts bytes before or after decoding, is exactly what #19597 asks; an Ollama collaborator replied there that the Ollama Cloud source isn't public, and there was no answer on the limit itself as of 13 November 2026.</p>
+<p>The arithmetic is unkind to images. Base64 turns every 3 bytes into 4, so a 4.8 MB screenshot costs 6.4 MB of request, and five of them already sit at the edge. In OmniRoute's case the app re-sent every image from earlier tool outputs on every turn: 43 images in a 369-item history. Capping them cut the images from 36.3 MB to 2.4 MB, and the same session returned 200 and used its tools again.</p>
+
+<h2 id="measure">Measure your request</h2>
+<p>If your app can log or save the request body (or you can rebuild it), measure it before guessing:</p>
+<pre># size of a saved request body in MiB
+python3 -c "import sys,os; print(round(os.path.getsize(sys.argv[1])/2**20, 2), 'MiB')" request.json
+
+# how much of it is images (base64 strings longer than 10,000 characters)
+python3 - request.json &lt;&lt;'EOF'
+import json, sys
+body = json.load(open(sys.argv[1]))
+big = []
+def walk(x):
+    if isinstance(x, dict): [walk(v) for v in x.values()]
+    elif isinstance(x, list): [walk(v) for v in x]
+    elif isinstance(x, str) and len(x) &gt; 10000: big.append(len(x))
+walk(body)
+print(len(big), "large strings,", round(sum(big)/2**20, 2), "MiB")
+EOF</pre>
+<p>Over 30 MiB: treat it as the size limit. Well under it: look at the <a href="#schema">schema</a> next.</p>
+
+<h2 id="shrink">Fix: send fewer, smaller images</h2>
+<ul>
+  <li><strong>Re-encode before sending.</strong> Screenshots saved as PNG are often several MB; the same image as JPEG at quality 85 to 90 is usually a tenth of that. Many vision models scale large images down internally anyway, so very large images mostly cost you request size. With Pillow:
+<pre>from PIL import Image
+im = Image.open("shot.png").convert("RGB")
+im.thumbnail((2048, 2048))          # long edge at most 2048 px
+im.save("shot.jpg", quality=88)</pre></li>
+  <li><strong>Don't resend old images.</strong> Keep only the last few images in the history (OmniRoute's fix keeps the newest ones within a count and byte budget and replaces older ones with a short text placeholder; see <a href="https://github.com/cheaper-inference/OmniRoute/pull/18784">OmniRoute#18784</a>). Many agent apps have a setting for this; if yours doesn't, start a new conversation once images pile up.</li>
+  <li><strong>Leave room.</strong> Aim well below 32 MiB in total, not just under it: the limit isn't documented and may change, and the 13 MiB cloud figure in the System One docs shows that cloud limits can be lower than local ones.</li>
+</ul>
+
+<h2 id="schema">Same message, different cause: a tool schema Ollama can't decode</h2>
+<p>Ollama decodes tool definitions into fixed Go types, so JSON that is valid but has the wrong shape is rejected before the model runs. In <a href="https://github.com/cheaper-inference/OmniRoute/issues/18679">OmniRoute#18679</a> a tool parameter had <code>&quot;enum&quot;: &quot;[MaxDepth]&quot;</code> (a string). A 490-byte replay to Ollama Cloud returned the explicit error:</p>
+<pre>json: cannot unmarshal string into Go struct field ToolProperty.enum of type []interface {} (ref: …)</pre>
+<p>The same request with <code>&quot;enum&quot;: [&quot;[MaxDepth]&quot;]</code> returned 200. In the real Codex Desktop session (236 messages, 32 tools) the reporter saw only the generic <code>failed to read request body</code>; fixing the three bad <code>enum</code> values made that session work. The report doesn't explain why the long session got the generic message and the small replay the explicit one. Either way, a tool-schema problem can look like a size problem, and the model then claims it has no tools.</p>
+<p>To check a saved request for the shapes that break decoding:</p>
+<pre># every "enum" should be an array; prints any that are not
+jq -c '[.. | objects | select(has("enum")) | select(.enum|type != "array") | .enum]' request.json
+
+# same idea for "required", which must be an array of strings
+jq -c '[.. | objects | select(has("required")) | select(.required|type != "array") | .required]' request.json</pre>
+<p>Empty arrays (<code>[]</code>) mean nothing was found. A tool parameter that is itself <em>named</em> <code>enum</code> or <code>required</code> shows up as a false alarm; ignore those. The usual source is an MCP server or app whose tool schema writes <code>enum</code> or <code>required</code> as a string; fix it there, or have your proxy drop or wrap such values.</p>
+
+<h2 id="local">If you go through a local Ollama (<code>model:cloud</code>)</h2>
+<p>When you ask a local Ollama for a model whose name ends in <code>:cloud</code> (for example <code>gpt-oss:20b:cloud</code>), the local server forwards the request to <code>https://ollama.com</code>. From <code>cloudPassthroughMiddleware</code> and <code>proxyCloudRequestWithPath</code> in v0.40.16:</p>
+<ul>
+  <li><strong>The cloud's answer comes back unchanged.</strong> The status code and body are copied through as they are, so <code>failed to read request body</code> comes from ollama.com, not from your machine. Raising anything on the local server won't help.</li>
+  <li><strong>No local size limit on a plain body.</strong> The local server reads the whole request into memory (to find the model name), swaps <code>model</code> for the base name, and sends the rest on. We found no cap on uncompressed bodies in this path, and none on local <code>/api/chat</code> in <code>routes.go</code>.</li>
+  <li><strong>A 20 MiB cap on zstd bodies.</strong> If the request has <code>Content-Encoding: zstd</code>, the server decompresses it with a limit of 20 MiB (<code>maxDecompressedBodySize = 20 &lt;&lt; 20</code>), and the zstd decoder itself is limited to 8 MiB of memory. Going over the 20 MiB returns 400 with Go's standard text, <code>http: request body too large</code>; a body it can't decompress gets <code>failed to decompress request body</code>. This happens before the model is looked up, so it applies to every POST request this middleware sees, on whichever routes it is attached to, not only cloud models.</li>
+  <li>If the local server can't reach the cloud at all, you get 502 with the network error instead, and a sign-in problem gives 401 <code>unauthorized</code>; see <a href="https://github.com/ollama/ollama/issues/19489">ollama#19489</a> for a case where a non-JSON 401 loses its sign-in hint.</li>
+</ul>
+
+<h2 id="slow">Slow uploads</h2>
+<p>One more report fits the pattern: the same error after a very large request had been uploading for 108 seconds (<a href="https://github.com/yetone/magpie/issues/3348">magpie#3348</a>, in Chinese). Whether the cloud also gives up on slow uploads, or that request was simply over the size limit, isn't known. If your uplink is slow, a smaller body helps here too.</p>
+
+<h2 id="report">If none of this fits</h2>
+<p>Ollama Cloud prints a <code>ref:</code> ID with some errors. If you report the problem on <a href="https://github.com/ollama/ollama/issues/19597">ollama#19597</a> or to Ollama, include the request size in bytes, the number and format of images, the model, whether you went direct or through a local Ollama, and those ref IDs. Don't post the request itself if it contains private data.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read, on 13 November 2026: Ollama v0.40.16's <code>server/cloud_proxy.go</code>, <code>server/routes.go</code> and <code>server/model_resolver.go</code>; <a href="https://docs.ollama.com/api/errors">docs.ollama.com/api/errors</a> and the System One docs; and the issues linked above. Limits:</p>
+<ul>
+  <li>We sent nothing to Ollama Cloud. Every cloud measurement on this page is someone else's report. The cloud's source isn't public, so the exact limit, whether it counts compressed or decoded bytes, and whether it differs by plan are unknown.</li>
+  <li>OmniRoute's report doesn't say whether its &quot;MB&quot; are 10<sup>6</sup> or 2<sup>20</sup> bytes, so the cut-off is only pinned between 31.14 and 32.48 MiB by #19597.</li>
+  <li>The local-proxy behaviour comes from reading the source, not running it. We didn't read the route table, so we can't list every route the zstd cap covers, and we didn't read how library tags such as <code>…-cloud</code> are routed, only the <code>:cloud</code> suffix.</li>
+  <li>The <code>jq</code> and Python snippets are for a request you have saved yourself; adjust them to your app's format.</li>
+</ul>
+<p>Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="mcp-request-body-too-large-413.html">MCP &quot;Request body too large&quot; / HTTP 413</a></li>
+  <li><a href="ollama-pull-error-403.html">Ollama pull &quot;Error: 403:&quot; behind a company proxy</a></li>
+  <li><a href="ollama-redirect-target-not-allowed.html">Ollama &quot;redirect target not allowed&quot;</a></li>
+  <li><a href="ollama.html">Ollama: hardening and common errors</a></li>
+</ul>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> or <a href="ollama.html">Ollama</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 13 November 2026 from Ollama v0.40.16's source and the public reports linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
