@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP OAuth &quot;Authorization server metadata issuer mismatch: https://x != https://x/&quot;: why it started with mcp 2.x and how to fix it</title>
+<meta name="description" content="Why an MCP client stops with &quot;OAuthFlowError: Authorization server metadata issuer mismatch: https://api.box.com != https://api.box.com/&quot;. Which side of the != is which, why a lone trailing slash passes in Python mcp 1.30.0 but fails in 2.x, why TypeScript SDK 1.32.2 clients never complain, how Python servers end up advertising the slash, and a two-command check. From the SDK source at each release tag, 13 November 2026. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/mcp-oauth-issuer-mismatch.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <a href="mcp-oauth-registration-failed.html">MCP OAuth Registration failed</a> · <a href="mcp-redirect-not-followed.html">MCP redirect not followed</a> · <strong>MCP OAuth issuer mismatch</strong></nav>
+<h1>MCP OAuth &quot;Authorization server metadata issuer mismatch: https://x != https://x/&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 13 November 2026 from the source of the MCP Python SDK (<code>mcp</code> v1.29.1, v1.30.0, v2.0.0, v2.1.1, v2.2.0 and v2.3.0), the SDK's v2 migration guide and release notes, and the public issues linked below. <strong>Read from the source, not run.</strong> See the <a href="#limits">limits</a>.</p>
+
+<p>You connect to a remote MCP server that needs a login. Before any browser window opens, a Python client stops with:</p>
+<pre>OAuthFlowError: Authorization server metadata issuer mismatch: https://api.box.com != https://api.box.com/</pre>
+<p>Often the same server works in other clients, or worked yesterday before an upgrade. That pattern has a specific cause, covered below. Real reports with this exact text: Box (<a href="https://github.com/box/mcp-server-box-remote/issues/4">mcp-server-box-remote#4</a>, opened 2 November 2026, still open) and Otter (<a href="https://github.com/NousResearch/hermes-agent/pull/132253">hermes-agent#132253</a>: <code>https://otter.ai != https://otter.ai/</code>).</p>
+
+<h2 id="read">How to read the message</h2>
+<pre>Authorization server metadata issuer mismatch: &lt;A&gt; != &lt;B&gt;</pre>
+<table>
+  <tr><th></th><th>Where it comes from</th><th>Who controls it</th></tr>
+  <tr><td><code>&lt;A&gt;</code> (left)</td><td>The <code>issuer</code> field inside the authorization server's own metadata document (<code>/.well-known/oauth-authorization-server</code> or <code>/.well-known/openid-configuration</code>).</td><td>Whoever runs the login server (Auth0, Clerk, Keycloak, the provider's own).</td></tr>
+  <tr><td><code>&lt;B&gt;</code> (right)</td><td>What the client expected. If the MCP server publishes protected resource metadata (<code>/.well-known/oauth-protected-resource…</code>), it is the <strong>first</strong> entry of its <code>authorization_servers</code> list, exactly as written. If it doesn't, it is the MCP server's own origin (<code>https://host</code>).</td><td>Whoever runs the MCP server.</td></tr>
+</table>
+<p>The rule comes from RFC 8414 section 3.3 (and the MCP spec's SEP-2468): the issuer a metadata document names must be the very issuer the client used to find it, compared as plain strings. It stops a server from quietly sending your login to someone else's token endpoint.</p>
+
+<h2 id="quick">The short answer</h2>
+<table>
+  <tr><th>The two sides differ by</th><th>Meaning</th><th>Fix</th></tr>
+  <tr><td>Only a trailing <code>/</code> on a bare host (<code>https://x</code> vs <code>https://x/</code>)</td><td>Same server, written two ways. Python <code>mcp</code> 2.x rejects it when protected resource metadata is in use; 1.30.0 accepted it (<a href="#versions">table</a>).</td><td>Server side: write the URL in <code>authorization_servers</code> exactly as the issuer writes it. Python servers often add the slash without meaning to (<a href="#python-servers">why</a>). Client side, while you wait: <a href="#client">options</a>.</td></tr>
+  <tr><td>A path (<code>https://auth.example.com/tenant123</code> vs <code>https://auth.example.com</code>)</td><td>The MCP server names a tenant-specific issuer, but that URL serves the provider's root metadata.</td><td>Server side: advertise the issuer the metadata really names, or serve per-tenant metadata. Atlassian had this in July 2026 (<a href="https://github.com/atlassian/atlassian-mcp-server/issues/205">atlassian-mcp-server#205</a>; their staff reported it fixed in August).</td></tr>
+  <tr><td>A different host (<code>https://clerk.context7.com</code> vs <code>https://context7.com</code>)</td><td>The MCP server points at its own domain, but the login is run by an identity provider on another host.</td><td>Server side: list the identity provider's real issuer in <code>authorization_servers</code> (<a href="https://github.com/upstash/context7/issues/2723">context7#2723</a>, reported with the Go SDK).</td></tr>
+</table>
+<p class="warn">There is no switch in the Python SDK to turn this check off. The SDK's migration guide says so directly: &quot;There is no client-side override.&quot; The proper fix is on the server.</p>
+
+<h2 id="versions">Which Python versions check what</h2>
+<p>This is why the same server &quot;worked before&quot;. Checked in <code>src/mcp/client/auth/oauth2.py</code> and <code>utils.py</code> at each tag:</p>
+<table>
+  <tr><th><code>mcp</code> version</th><th>With protected resource metadata</th><th>Without it (older &quot;legacy&quot; servers)</th></tr>
+  <tr><td>1.29.1 and older</td><td>No issuer check (the word <code>issuer</code> does not appear in <code>utils.py</code>)</td><td>No issuer check</td></tr>
+  <tr><td>1.30.0 (7 Sep 2026)</td><td>Checked; a root issuer with and without its trailing <code>/</code> counts as the same (<code>issuers_match</code>)</td><td>Checked against the MCP server's origin, same tolerance</td></tr>
+  <tr><td>2.0.0 to 2.1.1 (Jul to Aug 2026)</td><td>Checked, <strong>exact string</strong>, no slash tolerance</td><td>Not checked</td></tr>
+  <tr><td>2.2.0 (7 Sep 2026) and 2.3.0 (2 Oct 2026)</td><td>Checked, <strong>exact string</strong>, no slash tolerance</td><td>Checked against the origin; a root issuer with or without the <code>/</code> is accepted</td></tr>
+</table>
+<p>Two more 2.x details make the slash matter. Since 2.0 the SDK's metadata models keep a URL exactly as it arrived (<code>url_preserve_empty_path=True</code>, Pydantic 2.12 or later), so <code>https://x</code> stays <code>https://x</code>. In 1.30.0 the same models add a <code>/</code> to every bare host on parsing, so both sides tended to end up as <code>https://x/</code> anyway. The result: a server that advertises <code>https://x/</code> while its issuer says <code>https://x</code> works with 1.x clients and fails with 2.x ones.</p>
+<p>A note on the migration guide: its section on this change says &quot;v1 accepted the metadata without checking&quot;. That is true up to 1.29.x. Since 1.30.0 the 1.x line checks too (release note: &quot;The OAuth client checks the authorization server's <code>issuer</code>&quot;, #3431), but it forgives the lone trailing slash. So pinning <code>mcp&lt;2</code> only helps with the slash case, not with a different host or path.</p>
+
+<h2 id="other-clients">Why other clients don't complain</h2>
+<table>
+  <tr><th>Client library</th><th>What it does with a mismatched issuer</th></tr>
+  <tr><td>TypeScript SDK 1.32.2 (<code>@modelcontextprotocol/sdk</code>)</td><td>Doesn't check it: the metadata issuer is ignored and the URL it fetched from is used (<a href="https://github.com/modelcontextprotocol/typescript-sdk/issues/3152">typescript-sdk#3152</a>, open). Clients built on it connect to the same server without error.</td></tr>
+  <tr><td>TypeScript v2 client (<code>@modelcontextprotocol/client</code> 2.0.0 betas)</td><td>Checks. Reported as <code>IssuerMismatchError (kind: "metadata")</code> with <code>expected "…"</code> and <code>received "…"</code> (atlassian-mcp-server#205). We did not read its source.</td></tr>
+  <tr><td>Go SDK</td><td>Checks. Reported as <code>failed to get authorization server metadata: metadata issuer "…" does not match issuer URL "…"</code> (context7#2723). We did not read its source.</td></tr>
+  <tr><td>Apps with their own OAuth code</td><td>Vary. Hermes Agent added its own tolerance for the root trailing slash after the Otter and Indeed reports (<a href="https://github.com/NousResearch/hermes-agent/issues/95508">hermes-agent#95508</a>; #132253 was folded into #148635), using the SDK's own <code>issuers_match</code> rule.</td></tr>
+</table>
+
+<h2 id="check">Check it yourself in one minute</h2>
+<pre># 1. What does the MCP server say its authorization server is? (path form first, then root)
+curl -s https://mcp.example.com/.well-known/oauth-protected-resource/mcp
+curl -s https://mcp.example.com/.well-known/oauth-protected-resource
+#    -&gt; note authorization_servers[0] EXACTLY, including any trailing slash
+
+# 2. What does that authorization server call itself?
+curl -s https://auth.example.com/.well-known/oauth-authorization-server | grep -o '"issuer":"[^"]*"'
+curl -s https://auth.example.com/.well-known/openid-configuration      | grep -o '"issuer":"[^"]*"'</pre>
+<p>If <code>authorization_servers[0]</code> and <code>issuer</code> are not byte-for-byte equal, a Python <code>mcp</code> 2.x client will refuse. For an issuer with a path (<code>https://auth.example.com/tenant</code>), the Python SDK looks at <code>/.well-known/oauth-authorization-server/tenant</code>, then <code>/.well-known/openid-configuration/tenant</code>, then <code>/tenant/.well-known/openid-configuration</code>, so try those URLs in step 2.</p>
+
+<h2 id="python-servers">How Python MCP servers end up advertising the slash</h2>
+<p>Pydantic's <code>AnyHttpUrl</code> turns <code>https://auth.example.com</code> into <code>https://auth.example.com/</code> unless the model it lives in sets <code>url_preserve_empty_path=True</code>. So:</p>
+<ul>
+  <li><strong>Python <code>mcp</code> 1.x server:</strong> <code>AuthSettings</code> in 1.30.0 has no such setting, so <code>issuer_url="https://auth.example.com"</code> is published as <code>https://auth.example.com/</code>. If your identity provider's issuer has no slash, 2.x clients fail.</li>
+  <li><strong>Python <code>mcp</code> 2.x server:</strong> <code>AuthSettings</code> keeps the form you give it, but only if you pass a <strong>string</strong>. Passing an already-built <code>AnyHttpUrl("https://auth.example.com")</code> still adds the slash when it is built (the migration guide says the same). Pass the issuer as a plain string, copied from the provider's metadata.</li>
+  <li><strong>Your own metadata code:</strong> the same trap applies to any <code>authorization_servers=[AnyHttpUrl(issuer)]</code> you build yourself (one example: <a href="https://github.com/xianhong1208/MCP_Gate/issues/37">MCP_Gate#37</a>).</li>
+</ul>
+<p>Only bare hosts are affected. An issuer with a path, such as Keycloak's <code>https://kc.example.com/realms/main</code>, is left alone. Some providers' issuers really do end in <code>/</code> (Auth0 tenant issuers, for example, are written <code>https://YOUR_TENANT.auth0.com/</code>); then the protected resource metadata must have the slash too.</p>
+
+<h2 id="client">If you only run the client</h2>
+<ul>
+  <li><strong>Report it to the server's owner</strong> with the two curl outputs above. It is a one-line fix on their side.</li>
+  <li><strong>Slash-only mismatch:</strong> <code>mcp</code> 1.30.0 accepts it. Pinning <code>mcp&gt;=1.30,&lt;2</code> works for now, but you lose the 2.x fixes, so treat it as temporary.</li>
+  <li><strong>Different host or path:</strong> no Python version from 1.30.0 on will connect, and older ones skip a security check. Wait for the server fix.</li>
+  <li>Don't patch the check out. It is the guard against a server naming someone else's token endpoint.</li>
+</ul>
+
+<h2 id="related-strings">Related messages in Python <code>mcp</code> 2.3.0</h2>
+<table>
+  <tr><th>Message</th><th>Meaning</th></tr>
+  <tr><td><code>Protected resource {resource} does not match expected {url}</code></td><td>The <code>resource</code> in the protected resource metadata doesn't match the MCP server URL. A different check, before the issuer one. Clients on the TypeScript SDK show a version ending in <code> (or origin)</code> (quoted in client bug reports; we did not read that source for this page).</td></tr>
+  <tr><td><code>Authorization response iss mismatch: {iss} != {expected}</code></td><td>After you log in: the <code>iss</code> parameter on the callback (RFC 9207) doesn't equal the issuer, again compared exactly.</td></tr>
+  <tr><td><code>Authorization response missing iss parameter advertised by the authorization server</code></td><td>The server said it sends <code>iss</code> (<code>authorization_response_iss_parameter_supported</code>) but the callback had none.</td></tr>
+</table>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read, on 13 November 2026: <code>src/mcp/client/auth/utils.py</code> (v1.29.1, v1.30.0, v2.0.0, v2.3.0), <code>oauth2.py</code> (v1.30.0, v2.2.0, v2.3.0), <code>shared/auth.py</code> (v1.30.0, v2.0.0, v2.1.1, v2.2.0, v2.3.0), <code>server/auth/settings.py</code> (v1.30.0, v2.3.0), <code>pyproject.toml</code> (v2.3.0), <code>docs/migration.md</code> (v2.3.0), the release notes, and the issues linked above. Limits:</p>
+<ul>
+  <li>Nothing here was run. What you finally see depends on how your app wraps the SDK error.</li>
+  <li>We read 2.1.1's models but not its <code>oauth2.py</code>; the &quot;legacy path not checked&quot; row for 2.0.0 to 2.1.1 rests on the 2.2.0 release note (&quot;The protected-resource-metadata path has done this since 2.0&quot;) and on 2.0.0's exact-match <code>validate_metadata_issuer</code>.</li>
+  <li>The TypeScript v2 and Go messages are quoted from the linked issues, not from source. We did not check the Rust, Java, C# or Kotlin SDKs, FastMCP's own OAuth helpers, or desktop apps.</li>
+  <li>Provider setups change. Check the two metadata documents yourself before reporting.</li>
+</ul>
+<p>Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="mcp-oauth-registration-failed.html">MCP OAuth &quot;Registration failed: 404&quot; / &quot;does not support dynamic client registration&quot;</a></li>
+  <li><a href="mcp-redirect-not-followed.html">MCP &quot;Redirect to … not followed&quot;</a></li>
+  <li><a href="mcp-session-terminated-session-not-found.html">MCP &quot;Session terminated&quot; / 404 &quot;Session not found&quot;</a></li>
+  <li><a href="mcp-request-body-too-large-413.html">MCP &quot;Request body too large&quot; / HTTP 413</a></li>
+  <li><a href="openwebui-failed-to-connect-to-mcp-server.html">Open WebUI &quot;Failed to connect to MCP server&quot;: ten causes</a></li>
+</ul>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> or <a href="ollama.html">Ollama</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 13 November 2026 from the source of the <a href="https://github.com/modelcontextprotocol/python-sdk">MCP Python SDK</a> and the issues linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
