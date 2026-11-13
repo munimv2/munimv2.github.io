@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP OAuth &quot;Registration failed: 404&quot; / &quot;Incompatible auth server: does not support dynamic client registration&quot; / &quot;Token exchange failed&quot;: what each one means and how to fix it</title>
+<meta name="description" content="Why an MCP client's OAuth login fails with &quot;OAuthRegistrationError: Registration failed: 404&quot;, &quot;Registration failed: 307 (redirected to ...; not followed)&quot;, &quot;Incompatible auth server: does not support dynamic client registration&quot; or &quot;Token exchange failed (401): invalid_client&quot;. Where the MCP Python and TypeScript SDKs send the registration request, why the 404 URL is often a guess on the MCP server's own host, and how to use a pre-registered client_id and client_secret instead. From the source, 13 November 2026. By MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/mcp-oauth-registration-failed.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  nav, .by { color: #555; }
+  .warn { border-left: 4px solid #b00020; padding: 0.4em 1em; margin: 1em 0; background: #fff5f5; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <a href="mcp-redirect-not-followed.html">MCP redirect not followed</a> · <a href="mcp-request-body-too-large-413.html">MCP 413</a> · <strong>MCP OAuth Registration failed</strong></nav>
+<h1>MCP OAuth &quot;Registration failed: 404&quot;, &quot;does not support dynamic client registration&quot; and &quot;Token exchange failed&quot;</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. Written on 13 November 2026 from the source of the MCP Python SDK (<code>mcp</code> v2.1.1, v2.2.0, v2.3.0 and v1.30.0) and the MCP TypeScript SDK (1.32.2), plus the issues linked below. <strong>Read from the source, not run.</strong> See the <a href="#limits">limits</a>.</p>
+
+<p>You add a remote MCP server that needs a login. Before a browser window ever opens, or right after you approve access, the client stops with one of these:</p>
+<pre>OAuthRegistrationError: Registration failed: 404 {"detail":"Not Found"}
+OAuthRegistrationError: Registration failed: 307 (redirected to https://…/register; not followed) …
+Incompatible auth server: does not support dynamic client registration
+HTTP 404: Invalid OAuth error response: SyntaxError: … Raw body: &lt;!DOCTYPE html&gt;…
+Authorization server registered the client for 'client_secret_basic' but issued no client_secret
+OAuthTokenError: Token exchange failed (401): {"error":"invalid_client", …}</pre>
+<p>The first four happen at <strong>client registration</strong>: before an MCP client can send you to a login page, it needs a <code>client_id</code>. If it has none stored, it tries to get one by Dynamic Client Registration (DCR, RFC 7591): a <code>POST</code> of its own name and callback URL to the authorization server's <code>registration_endpoint</code>. Many big providers don't offer DCR at all and expect you to create an OAuth app in their console and give the client that app's <code>client_id</code> and <code>client_secret</code>. The last one happens after you log in, when the client trades the code for a token.</p>
+
+<h2 id="quick">The short answer</h2>
+<table>
+  <tr><th>You see</th><th>Most likely meaning</th><th>Fix</th></tr>
+  <tr><td><code>Registration failed: 404</code> (Python SDK) or <code>Incompatible auth server: does not support dynamic client registration</code> (TypeScript SDK)</td><td>The authorization server has no DCR, or the client couldn't read its metadata and guessed a <code>/register</code> URL that doesn't exist. See <a href="#where">where the request goes</a>.</td><td>Get a client ID and secret from the provider and give them to the client (<a href="#preregistered">how</a>), or fix the server's metadata if it's yours.</td></tr>
+  <tr><td><code>Registration failed: 307</code> / <code>302</code> / <code>308</code> <code>(redirected to …; not followed)</code></td><td>The registration URL redirects somewhere else. Python <code>mcp</code> 2.2.0 and 1.30.0 (7 September 2026) and later follow redirects only on the same origin, in the login steps too.</td><td>Point the metadata's <code>registration_endpoint</code> straight at the final URL. See <a href="mcp-redirect-not-followed.html">MCP &quot;Redirect to … not followed&quot;</a>.</td></tr>
+  <tr><td><code>Registration failed: 400</code> with <code>invalid_redirect_uri</code> or <code>invalid_client_metadata</code></td><td>The server has DCR but refuses what the client asked for, usually its callback URL (for example only approved redirect URIs are allowed).</td><td>Allow the client's callback URL on the server, or pre-register a client.</td></tr>
+  <tr><td><code>Registration failed: 401</code> / <code>403</code></td><td>Registration needs an initial access token, or a firewall or WAF blocks it.</td><td>Pre-register a client, or allow the request on the server.</td></tr>
+  <tr><td><code>Authorization server registered the client with unsupported token_endpoint_auth_method …</code> or <code>… for 'client_secret_basic' but issued no client_secret</code></td><td>Registration worked, but the server answered with a client the Python 2.x SDK can't use, for example <code>private_key_jwt</code>, or a secret-based method with no secret.</td><td>Fix the server's registration answer, or pre-register a client.</td></tr>
+  <tr><td><code>Token exchange failed (401)</code> / <code>(400)</code> with <code>invalid_client</code>, or <code>(422)</code> asking for <code>client_secret</code></td><td>Login worked, but the client didn't send its secret the way the token endpoint wants it.</td><td>For a pre-registered client in Python, set <code>token_endpoint_auth_method</code> (<a href="#token">why</a>).</td></tr>
+</table>
+
+<h2 id="where">Where the registration request really goes</h2>
+<p>This is the part most reports miss. The URL in a 404 is often <strong>not</strong> where the provider takes registrations; it is a guess the SDK made.</p>
+<table>
+  <tr><th>Situation</th><th>Python SDK, <code>OAuthClientProvider</code> (2.1.1 to 2.3.0 and 1.30.0)</th><th>TypeScript SDK 1.32.2</th></tr>
+  <tr><td>Authorization-server metadata found, has <code>registration_endpoint</code></td><td>POSTs to that URL</td><td>POSTs to that URL</td></tr>
+  <tr><td>Metadata found, <strong>no</strong> <code>registration_endpoint</code> (the provider has no DCR)</td><td>POSTs anyway, to <code>/register</code> on the <strong>MCP server's own origin</strong> (<code>urljoin(fallback_base, "/register")</code>, where <code>fallback_base</code> is built from <code>server_url</code>). Usually a 404, often an HTML page.</td><td>Sends nothing and throws <code>Incompatible auth server: does not support dynamic client registration</code></td></tr>
+  <tr><td>No metadata could be read (every well-known URL failed)</td><td>The same guess: <code>/register</code> on the MCP server's origin</td><td><code>/register</code> on the authorization server URL it has</td></tr>
+</table>
+<p>So with the Python SDK, a provider whose MCP server is <code>mcp.example.com</code> and whose login lives on <code>auth.example.com</code> can produce <code>POST https://mcp.example.com/register</code> → <code>Registration failed: 404</code>, which looks like a broken MCP server but really means &quot;no DCR&quot; or &quot;metadata not readable&quot;. That pattern shows up in real reports: HubSpot (<a href="https://github.com/preset-io/agor/issues/1957">agor#1957</a>: its metadata lists no <code>registration_endpoint</code>, and <code>mcp.hubspot.com/register</code> answers with a 404 HTML page), Google-hosted MCP servers (<a href="https://github.com/unslothai/unsloth/issues/7653">unsloth#7653</a>), and TradingView in Hermes Agent, where the advertised endpoint was on another host (<a href="https://github.com/NousResearch/hermes-agent/issues/113771">hermes-agent#113771</a>, which first worked out the guessed URL; the reporter later found the app's own code path also played a part). The 307 case was <a href="https://github.com/CALLE-AI/call-e-integrations/issues/155">call-e-integrations#155</a>: it worked on <code>mcp</code> 2.1.1, failed on 2.2.0 with <code>Registration failed: 307 (... not followed)</code>, and was fixed by serving the metadata where clients look for it so the client went straight to the real endpoint.</p>
+
+<h2 id="check">Check it yourself in one minute</h2>
+<pre># 1. Which authorization server does the MCP server name? (path form first, then root)
+curl -s https://mcp.example.com/.well-known/oauth-protected-resource/mcp
+curl -s https://mcp.example.com/.well-known/oauth-protected-resource
+
+# 2. Does that authorization server offer DCR?
+curl -s https://auth.example.com/.well-known/oauth-authorization-server | grep -o '"registration_endpoint":"[^"]*"'
+curl -s https://auth.example.com/.well-known/openid-configuration      | grep -o '"registration_endpoint":"[^"]*"'</pre>
+<ul>
+  <li><strong>Step 1 fails</strong> (404, 403, HTML): the client is guessing. If you run the server, serve the protected-resource metadata; otherwise ask the provider which login to use.</li>
+  <li><strong>Step 2 shows no <code>registration_endpoint</code></strong>: the provider has no DCR. Pre-register a client.</li>
+  <li><strong>Step 2 shows one on a different host than the URL in your 404</strong>: the client never read the metadata (a firewall on the metadata URL, a path-based issuer the client tried in the wrong form, or an app that builds its own flow). The Python SDK tries <code>/.well-known/oauth-authorization-server/&lt;path&gt;</code>, <code>/.well-known/openid-configuration/&lt;path&gt;</code> and <code>&lt;path&gt;/.well-known/openid-configuration</code>, in that order, for an issuer with a path.</li>
+</ul>
+
+<h2 id="preregistered">Use a pre-registered client instead</h2>
+<p>Both SDKs skip registration when they already have client information. Create an OAuth app in the provider's console, add your client's callback URL there, and hand the client its ID and secret.</p>
+<p><strong>Python <code>mcp</code> 2.x:</strong> the provider reads it from your <code>TokenStorage</code>. Return it from <code>get_client_info()</code>:</p>
+<pre>from mcp.client.auth import OAuthClientProvider, TokenStorage
+from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
+
+class PreRegisteredStorage(TokenStorage):
+    def __init__(self):
+        self.tokens: OAuthToken | None = None
+
+    async def get_tokens(self):
+        return self.tokens
+
+    async def set_tokens(self, tokens):
+        self.tokens = tokens
+
+    async def get_client_info(self):
+        return OAuthClientInformationFull(
+            client_id="YOUR_CLIENT_ID",
+            client_secret="YOUR_CLIENT_SECRET",          # read it from an env var, not source
+            token_endpoint_auth_method="client_secret_post",  # or "client_secret_basic"; see below
+            redirect_uris=["http://localhost:3030/callback"],
+        )
+
+    async def set_client_info(self, client_info):
+        pass</pre>
+<p>Leave <code>issuer</code> unset. Since the SEP-2352 issuer binding in 2.x, stored credentials with no issuer are treated as having &quot;no binding to enforce&quot; and are reused as they are; credentials bound to a different issuer are thrown away and the client registers again.</p>
+<p><strong>TypeScript SDK:</strong> return the same fields from your <code>OAuthClientProvider</code>'s <code>clientInformation()</code>. If <code>clientInformation()</code> returns nothing and the provider has no <code>saveClientInformation</code>, 1.32.2 throws <code>OAuth client information must be saveable for dynamic registration</code>.</p>
+<p><strong>Apps built on the SDKs</strong> need their own setting for this. Some have added one after exactly these reports (for example <a href="https://github.com/unslothai/unsloth/pull/7665">unsloth#7665</a>, <a href="https://github.com/kyegomez/swarms/pull/3223">swarms#3223</a>); others are still asking (<a href="https://github.com/microsoft/vscode/issues/257415">vscode#257415</a>, <a href="https://github.com/openai/codex/issues/19154">codex#19154</a>, <a href="https://github.com/anthropics/claude-code/issues/3273">claude-code#3273</a>). Check your client's docs for a client ID option before writing code.</p>
+<p><strong>A third way, if the server supports it:</strong> Client ID Metadata Documents. When the authorization server's metadata says <code>client_id_metadata_document_supported: true</code> and you give the client a <code>client_metadata_url</code> (HTTPS, with a path), both SDKs use that URL as the <code>client_id</code> and skip DCR.</p>
+
+<h2 id="token">&quot;Token exchange failed&quot; after you log in</h2>
+<p>The two SDKs differ when a client has a secret but no <code>token_endpoint_auth_method</code>:</p>
+<table>
+  <tr><th>SDK</th><th>Client has a secret, method not set</th></tr>
+  <tr><td>Python <code>mcp</code> (2.3.0, 1.30.0)</td><td>Sends <strong>no</strong> secret. Only <code>client_secret_basic</code> (HTTP Basic header, ID and secret URL-encoded first) and <code>client_secret_post</code> (form fields) add it; anything else, including a missing method, is treated as a public client. A confidential client then gets <code>Token exchange failed (401)</code> with <code>invalid_client</code>, or a provider-specific message such as <code>Required parameter: client_secret</code> (<a href="https://github.com/NousResearch/hermes-agent/issues/29680">hermes-agent#29680</a>).</td></tr>
+  <tr><td>TypeScript 1.32.2</td><td>Picks one from the server's <code>token_endpoint_auth_methods_supported</code>; if the server lists none, it uses <code>client_secret_basic</code> when there is a secret and <code>none</code> when there isn't.</td></tr>
+</table>
+<p>So when you pre-register a confidential client for the Python SDK, set <code>token_endpoint_auth_method</code> to the method the provider expects. If one method gives <code>invalid_client</code>, try the other: some servers only accept form fields, some only the Basic header.</p>
+
+<h2 id="strings">Exact messages by version</h2>
+<table>
+  <tr><th>Package</th><th>Message</th></tr>
+  <tr><td>Python <code>mcp</code> 2.1.1</td><td><code>Registration failed: {status} {body}</code> and <code>Token exchange failed ({status}): {body}</code></td></tr>
+  <tr><td>Python <code>mcp</code> 2.2.0, 2.3.0, 1.30.0</td><td><code>Registration failed: {status}{note} {body}</code> and <code>Token exchange failed ({status}){note}: {body}</code>, where <code>{note}</code> is <code> (redirected to {location}; not followed)</code> for a redirect it refused and empty otherwise. Only 200 and 201 count as a successful registration.</td></tr>
+  <tr><td>Python <code>mcp</code> 2.1.1 to 2.3.0 (not in 1.30.0)</td><td><code>Authorization server registered the client with unsupported token_endpoint_auth_method {method!r}</code>; <code>Authorization server registered the client for {method!r} but issued no client_secret</code> (<code>check_registration_usable</code>, run before the browser opens)</td></tr>
+  <tr><td>TypeScript 1.32.2</td><td><code>Incompatible auth server: does not support dynamic client registration</code>. For a failed registration or token request with a JSON OAuth error, an error class named after the <code>error</code> code (<code>InvalidClientMetadataError</code>, <code>InvalidClientError</code>, …) whose message is only the <code>error_description</code>, which may be empty, and no status. With any other body, <code>HTTP {status}: Invalid OAuth error response: {parse error}. Raw body: {body}</code>, or <code>HTTP {status}: Redirect to {url} not followed</code> for a refused redirect.</td></tr>
+</table>
+<p class="warn"><strong>An empty TypeScript error is not a bug in your code.</strong> When the server returns <code>{"error":"invalid_client_metadata"}</code> with no description, 1.32.2's message is an empty string. Log <code>error.name</code> (the class name, such as <code>InvalidClientMetadataError</code>) or <code>error.errorCode</code> (such as <code>invalid_client_metadata</code>), not only <code>error.message</code>.</p>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. read, on 13 November 2026: the Python SDK's <code>src/mcp/client/auth/oauth2.py</code> and <code>utils.py</code> (v2.1.1, v2.2.0, v2.3.0, v1.30.0), <code>client/auth/__init__.py</code>, <code>shared/auth.py</code> and <code>shared/_httpx_utils.py</code> (v2.3.0), and the release notes for v2.2.0 and v1.30.0; the TypeScript SDK's <code>src/client/auth.ts</code> and <code>src/shared/transport.ts</code> (1.32.2); and the issues linked above. Limits:</p>
+<ul>
+  <li>Nothing here was run against a real authorization server. What you finally see depends on how your app wraps the SDK's error (several apps print their own text, such as <code>Authentication failed: …</code>).</li>
+  <li>We did not check Python releases before 2.1.1 (other than 1.30.0), the TypeScript v2 packages, FastMCP's own OAuth helpers, desktop clients, or the Go, Rust, Java and C# SDKs.</li>
+  <li>The provider examples come from the linked public issues; providers change their login setups, so check the metadata yourself.</li>
+</ul>
+<p>Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="mcp-redirect-not-followed.html">MCP &quot;Redirect to … not followed&quot;</a></li>
+  <li><a href="openwebui-failed-to-connect-to-mcp-server.html">Open WebUI &quot;Failed to connect to MCP server&quot;: ten causes</a></li>
+  <li><a href="mcp-request-initialize-timed-out.html">MCP &quot;Request 'initialize' timed out&quot;</a></li>
+  <li><a href="mcp-session-terminated-session-not-found.html">MCP &quot;Session terminated&quot; / 404 &quot;Session not found&quot;</a></li>
+  <li><a href="mcp-request-body-too-large-413.html">MCP &quot;Request body too large&quot; / HTTP 413</a></li>
+</ul>
+
+<h2>Check the rest of your setup</h2>
+<p>The free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script shows which AI ports on your machine other computers can reach. The <a href="index.html">CVE checker</a> tells you which security advisories affect your <a href="openwebui.html">Open WebUI</a> or <a href="ollama.html">Ollama</a> version. Both are read-only and send nothing off the machine.</p>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, vLLM or Open WebUI server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Written on 13 November 2026 from the source of the <a href="https://github.com/modelcontextprotocol/python-sdk">MCP Python SDK</a> and <a href="https://github.com/modelcontextprotocol/typescript-sdk">MCP TypeScript SDK</a> and the issues linked above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
