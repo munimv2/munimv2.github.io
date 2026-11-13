@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://munimv2.github.io/</loc><lastmod>2026-10-11</lastmod></url>
-  <url><loc>https://munimv2.github.io/ollama.html</loc><lastmod>2026-10-12</lastmod></url>
+  <url><loc>https://munimv2.github.io/ollama.html</loc><lastmod>2026-11-13</lastmod></url>
   <url><loc>https://munimv2.github.io/secure-ollama.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/ollama-remote-access.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/comfyui-listen.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/ollama-api-key.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/ollama-origins-check.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/docker-ollama.html</loc><lastmod>2026-10-12</lastmod></url>
-  <url><loc>https://munimv2.github.io/openwebui.html</loc><lastmod>2026-10-12</lastmod></url>
+  <url><loc>https://munimv2.github.io/openwebui.html</loc><lastmod>2026-11-13</lastmod></url>
   <url><loc>https://munimv2.github.io/openwebui-reverse-proxy.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/openwebui-env-ignored.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/vllm.html</loc><lastmod>2026-10-12</lastmod></url>
@@ -22,7 +22,7 @@
   <url><loc>https://munimv2.github.io/anythingllm.html</loc><lastmod>2026-10-11</lastmod></url>
   <url><loc>https://munimv2.github.io/langflow.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/langflow-hardening.html</loc><lastmod>2026-11-02</lastmod></url>
-<url><loc>https://munimv2.github.io/langflow-superuser-password.html</loc><lastmod>2026-11-02</lastmod></url>
+  <url><loc>https://munimv2.github.io/langflow-superuser-password.html</loc><lastmod>2026-11-02</lastmod></url>
   <url><loc>https://munimv2.github.io/flowise.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/litellm.html</loc><lastmod>2026-10-12</lastmod></url>
   <url><loc>https://munimv2.github.io/fit.html</loc><lastmod>2026-10-10</lastmod></url>
@@ -44,4 +44,17 @@
   <url><loc>https://munimv2.github.io/openwebui-ollama-image-missing-ollama.html</loc><lastmod>2026-11-10</lastmod></url>
   <url><loc>https://munimv2.github.io/ollama-redirect-target-not-allowed.html</loc><lastmod>2026-11-10</lastmod></url>
   <url><loc>https://munimv2.github.io/openwebui-searxng-example-com-404.html</loc><lastmod>2026-11-11</lastmod></url>
+  <url><loc>https://munimv2.github.io/openwebui-terminal-unavailable.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/vllm-tools-must-not-be-an-empty-array.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/mcp-sse-event-exceeded-1048576-byte-limit.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/openwebui-failed-to-connect-to-mcp-server.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/mcp-request-initialize-timed-out.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/mcp-redirect-not-followed.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/mcp-session-terminated-session-not-found.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/ollama-pull-error-403.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/mcp-request-body-too-large-413.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/mcp-oauth-registration-failed.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/mcp-oauth-issuer-mismatch.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/ollama-cloud-failed-to-read-request-body.html</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://munimv2.github.io/ollama-function-output-has-no-matching-call.html</loc><lastmod>2026-11-13</lastmod></url>
 </urlset>
