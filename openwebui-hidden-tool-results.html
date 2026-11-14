@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open WebUI 0.13.1+: chats with memories, skills or knowledge fail on some models (&quot;Conversation roles must alternate&quot;, &quot;Can only get item pairs from a mapping&quot;, &quot;No user message found in messages&quot;)</title>
+<meta name="description" content="Since Open WebUI 0.13.1, memories, the skills list and attached knowledge reach the model as a hidden tool call after your message instead of in the system prompt. We rendered that exact layout with 22 public chat templates: Gemma 3 and 3n, Qwen3.5, GLM-4.5-Air and Mistral 7B v0.3 fail (the 0.13.0 layout renders on all 22), and DeepSeek V3.1 and R1-0528 fail if the arguments arrive as an object. The exact errors, a curl test for your own server, and the fixes. 14 November 2026, by MV2 of Munim, Inc., with AI agents.">
+<link rel="canonical" href="https://munimv2.github.io/openwebui-hidden-tool-results.html">
+<style>
+  body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 56rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
+  h1 { font-size: 1.5rem; line-height: 1.25; word-break: break-word; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  code, pre { font: 0.9rem/1.45 ui-monospace, Consolas, monospace; background: #f3f3f3; }
+  code { padding: 0 0.2rem; word-break: break-word; }
+  pre { padding: 0.7rem; overflow-x: auto; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.93rem; }
+  th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; }
+  td.fail { background: #fff1f1; }
+  nav, .by { color: #555; }
+  footer { margin-top: 2.5rem; color: #555; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">CVE checker</a> · <a href="openwebui.html">Open WebUI</a> · <a href="openwebui-deepseek-reasoning-content.html">DeepSeek &quot;reasoning_content&quot;</a> · <a href="vllm-tools-must-not-be-an-empty-array.html">vLLM empty tools</a> · <strong>Hidden tool results</strong></nav>
+<h1>Open WebUI 0.13.1+: chats with memories, skills or knowledge fail on some models</h1>
+<p class="by">By MV2 of Munim, Inc., with AI agents. 14 November 2026. <strong>Tested:</strong> we rendered the message layout that Open WebUI 0.13.3 sends with 22 public chat templates from Hugging Face, using transformers 5.23.0's own template renderer. <strong>Not tested:</strong> a real Open WebUI install or any model server. See the <a href="#limits">limits</a>.</p>
+
+<p>Chats that worked on Open WebUI 0.13.0 fail after the update to 0.13.1, 0.13.2 or 0.13.3, but only in some chats: the ones where the model has memories, there are skills in the workspace, or knowledge is attached. A chat with none of these still works. Depending on the model and the server, the error is one of these:</p>
+<pre>Conversation roles must alternate user/assistant/user/assistant/...
+Can only get item pairs from a mapping.
+'str object' has no attribute 'items'
+Tool call IDs should be alphanumeric strings with length 9!
+No user message found in messages            (Hermes Agent, HTTP 400)</pre>
+
+<h2 id="quick">The short answer</h2>
+<table>
+  <tr><th>Error</th><th>Where we saw it</th><th>Quickest fix</th></tr>
+  <tr><td><code>Conversation roles must alternate user/assistant/user/assistant/...</code></td><td>Gemma 3 and Gemma 3n templates (no tool role at all)</td><td>For that model, turn off <strong>Builtin Tools</strong> or set <strong>Function Calling</strong> to <strong>Legacy</strong> (<a href="#fix">below</a>)</td></tr>
+  <tr><td><code>Can only get item pairs from a mapping.</code></td><td>Qwen3.5 templates (9B, 35B-A3B), when the call's arguments arrive as a JSON string</td><td>The same, or a server or template that turns the arguments into an object</td></tr>
+  <tr><td><code>'str object' has no attribute 'items'</code></td><td>GLM-4.5-Air's template, string arguments</td><td>The same</td></tr>
+  <tr><td><code>Tool call IDs should be alphanumeric strings with length 9!</code></td><td>Mistral 7B Instruct v0.3's template. Open WebUI's IDs are <code>fc_</code> plus 24 hex characters</td><td>Builtin Tools off, or Legacy</td></tr>
+  <tr><td><code>No user message found in messages</code></td><td>Hermes Agent's API server (<a href="https://github.com/open-webui/open-webui/issues/34047">open-webui#34047</a>)</td><td>Builtin Tools off, or Legacy. A Hermes fix is open as <a href="https://github.com/NousResearch/hermes-agent/pull/151549">hermes-agent#151549</a></td></tr>
+</table>
+
+<h2 id="why">What changed in 0.13.1</h2>
+<p>The <a href="https://github.com/open-webui/open-webui/releases/tag/v0.13.1">0.13.1 release notes</a> list it under Changed, &quot;Context as hidden tool results&quot;: with native function calling (the default), memory recall, the skills list and the attached knowledge list now arrive as hidden tool results <em>after your message</em> instead of in the system prompt. Open WebUI's <a href="https://docs.openwebui.com/features/chat-conversations/prompt-caching/">prompt caching docs</a> name the hidden tools <code>recall_memories</code>, <code>list_available_skills</code> and <code>list_attached_knowledge</code>. They also say when the tools are used: in web UI chats with Native function calling and the model's <strong>Builtin Tools</strong> capability on, once per reply, skipped when there is nothing to list, and saved and replayed unchanged on later turns.</p>
+<p>In 0.13.3's source, <code>hidden_tool_result()</code> in <code>backend/open_webui/utils/middleware.py</code> stores a completed function call with arguments <code>'{}'</code> and an ID from <code>output_id('fc')</code> (<code>fc_</code> plus 24 hex characters), followed by its output. <code>convert_output_to_messages()</code> in <code>utils/misc.py</code> turns that into an ordinary chat-completions tool round. It passes the arguments through as the string <code>"{}"</code>, sets the assistant's <code>content</code> to an empty string, and doesn't drop the call for being hidden. The docstring says automatic recall is kept &quot;in ordinary tool history so later turns replay it unchanged&quot;. So once a chat has the round, every later request in that chat carries it again, and switching the setting off doesn't repair an old chat. Start a new one. What an OpenAI-compatible server receives looks like this:</p>
+<pre>[{"role": "system", "content": "…"},
+ {"role": "user", "content": "your message"},
+ {"role": "assistant", "content": "",
+  "tool_calls": [{"id": "fc_<i>24 hex</i>", "type": "function",
+                  "function": {"name": "recall_memories", "arguments": "{}"}}]},
+ {"role": "tool", "tool_call_id": "fc_<i>24 hex</i>", "content": "<i>the memories / skills / knowledge list</i>"}]</pre>
+<p>Many chat templates only handle a tool round correctly when the model itself made the call, or they expect arguments in one particular form. The request is valid OpenAI format, so what breaks is the template or server on the other end. The Open WebUI maintainers said the same when closing #34047.</p>
+
+<h2 id="results">Results: 22 chat templates, rendered</h2>
+<p>Each template was rendered with transformers' own renderer, with a system message, one user message, the hidden tool round and a one-tool <code>tools</code> list, and <code>add_generation_prompt</code> on. &quot;0.13.0 layout&quot; is the same context inside the system prompt instead. &quot;As sent&quot; uses string arguments, as Open WebUI sends them. &quot;Object arguments&quot; is what you get from a server that parses the string into an object before rendering. Every render that succeeded contained both the user's message and the hidden context.</p>
+<table>
+  <tr><th>Template (Hugging Face repo)</th><th>0.13.0 layout</th><th>0.13.1+ as sent (string arguments)</th><th>0.13.1+ with object arguments</th></tr>
+  <tr><td>google Gemma 3 (<code>unsloth/gemma-3-4b-it</code>)</td><td>ok</td><td class="fail">Conversation roles must alternate user/assistant/user/assistant/...</td><td class="fail">same</td></tr>
+  <tr><td>Gemma 3n (<code>unsloth/gemma-3n-E4B-it</code>)</td><td>ok</td><td class="fail">Conversation roles must alternate user/assistant/user/assistant/...</td><td class="fail">same</td></tr>
+  <tr><td><code>Qwen/Qwen3.5-9B</code></td><td>ok</td><td class="fail">Can only get item pairs from a mapping.</td><td>ok</td></tr>
+  <tr><td><code>Qwen/Qwen3.5-35B-A3B</code></td><td>ok</td><td class="fail">Can only get item pairs from a mapping.</td><td>ok</td></tr>
+  <tr><td><code>zai-org/GLM-4.5-Air</code></td><td>ok</td><td class="fail">'str object' has no attribute 'items'</td><td>ok</td></tr>
+  <tr><td><code>unsloth/mistral-7b-instruct-v0.3</code></td><td>ok</td><td class="fail">Tool call IDs should be alphanumeric strings with length 9!</td><td class="fail">same</td></tr>
+  <tr><td><code>deepseek-ai/DeepSeek-V3.1</code></td><td>ok</td><td>ok</td><td class="fail">can only concatenate str (not "dict") to str</td></tr>
+  <tr><td><code>deepseek-ai/DeepSeek-R1-0528</code></td><td>ok</td><td>ok</td><td class="fail">can only concatenate str (not "dict") to str</td></tr>
+  <tr><td>Qwen3 (<code>Qwen3-8B</code>, <code>Qwen3-30B-A3B</code>, <code>Qwen3-4B-Instruct-2507</code>), <code>Qwen2.5-7B-Instruct</code>, <code>QwQ-32B</code>, <code>DeepSeek-R1-Distill-Qwen-7B</code></td><td>ok</td><td>ok</td><td>ok</td></tr>
+  <tr><td>Llama 3.1 8B and 3.2 3B Instruct (unsloth copies), <code>Mistral-Small-3.2-24B-Instruct-2506</code> (unsloth), <code>Phi-4-mini-instruct</code>, <code>gpt-oss-20b</code>, Hermes 3 8B (both templates), <code>granite-3.3-8b-instruct</code>, <code>Kimi-K2-Instruct</code></td><td>ok</td><td>ok</td><td>ok</td></tr>
+</table>
+<p>So 6 of the 22 templates fail on the layout exactly as Open WebUI sends it, and 6 fail when the arguments are turned into an object. Gemma 3, Gemma 3n and Mistral 7B v0.3 fail either way. All 22 render the 0.13.0 layout. <code>mistralai/Devstral-Small-2507</code> has no Jinja template on Hugging Face and was skipped.</p>
+<p><strong>No one argument form suits every template.</strong> Qwen3.5's template loops over <code>tool_call.arguments|items</code> and GLM-4.5's calls <code>_args.items()</code>, so both need an object. DeepSeek V3.1's and R1-0528's templates join the arguments onto a string, so they need a string. Whether your setup fails therefore depends on what your server does with the arguments before it applies the template, and we did not test that for any server. <a href="#test">Test your own</a>.</p>
+<p><strong>Gemma 3 and Mistral 7B v0.3 would already fail on any real tool call</strong> with native function calling. What is new in 0.13.1 is that the tool round appears even when you never asked for a tool: a memory, a skill in the workspace or an attached knowledge base is enough.</p>
+
+<h2 id="test">Test your own server in one command</h2>
+<p>This sends the same shape of request Open WebUI 0.13.1+ sends, with a short placeholder in place of real memories. Point it at the OpenAI-compatible URL Open WebUI uses for that connection, and set your model name (add <code>-H "Authorization: Bearer …"</code> if the server needs a key):</p>
+<pre>curl -s http://localhost:8000/v1/chat/completions -H 'Content-Type: application/json' -d '{
+ "model": "YOUR-MODEL", "max_tokens": 20,
+ "messages": [
+  {"role": "system", "content": "You are a helpful assistant."},
+  {"role": "user", "content": "Reply only with OK."},
+  {"role": "assistant", "content": "", "tool_calls": [{"id": "fc_0123456789abcdef01234567", "type": "function",
+    "function": {"name": "recall_memories", "arguments": "{}"}}]},
+  {"role": "tool", "tool_call_id": "fc_0123456789abcdef01234567", "content": "Memory: the user likes short answers."}],
+ "tools": [{"type": "function", "function": {"name": "recall_memories", "description": "Recall saved memories.",
+   "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": []}}}]}'</pre>
+<p>An answer means the server and template handle the round. A 400 or 500 with one of the messages above means this is your problem, and the <a href="#fix">fixes</a> below apply. A 400 about something else, for example DeepSeek's <code>reasoning_content</code>, is covered on <a href="openwebui-deepseek-reasoning-content.html">its own page</a>.</p>
+
+<h2 id="fix">Fixes</h2>
+<ol>
+  <li><strong>Per model, in Open WebUI (works today).</strong> Open the model in <em>Settings &gt; Admin &gt; Models</em>, turn off <strong>Builtin Tools</strong> under <em>Capabilities</em>, and save. Or set <strong>Function Calling</strong> to <strong>Legacy</strong> in the model's <em>Advanced Params</em>. An Open WebUI maintainer gave both in <a href="https://github.com/open-webui/open-webui/issues/34047">#34047</a>: the model then gets only your message again. According to the <a href="https://docs.openwebui.com/features/chat-conversations/prompt-caching/">docs</a>, in that mode recalled memories are appended to your message on every turn, and there is no skills or knowledge list (with Legacy, only skills you select go into the system message). Turning off Builtin Tools also turns off Open WebUI's own built-in tools for that model. Use this for Gemma 3/3n and Mistral 7B v0.3, which can't take a tool round anyway, and for Hermes Agent until its fix ships.</li>
+  <li><strong>Memories only:</strong> <code>ENABLE_MEMORY_SYSTEM_CONTEXT=false</code> turns automatic memory injection off for every chat (docs, same page). With Native function calling, the model then reads memories on demand through the memory tools. That is still a tool round, so it doesn't help a template that can't take one.</li>
+  <li><strong>Fix the template, for Qwen3.5 and GLM-4.5.</strong> The usual patch checks the type before looping: loop over the arguments when they are a mapping, and print them as they are when they are a string. A fix like this was proposed for Nemotron's template (<a href="https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/discussions/52">discussion</a>). Some clients work around it themselves instead: <a href="https://github.com/Tencent/WeKnora/pull/4119">WeKnora #4119</a> retries with object arguments. Load a patched template with your server's chat-template option, for example <code>--chat-template-file</code> for llama-server or <code>--chat-template</code> for vLLM. We have not tested a patched template.</li>
+</ol>
+<p>On 14 November 2026, 0.13.3 (8 November) was still Open WebUI's newest release, and the release notes of 0.13.2 and 0.13.3 don't mention a change to this layout. #34047 was closed as not planned, since the request is valid. The Hermes Agent pull request <a href="https://github.com/NousResearch/hermes-agent/pull/151549">#151549</a> (&quot;accept tool-tailed OpenAI chat requests&quot;) was open and not merged.</p>
+
+<h2 id="other">Other layouts we rendered</h2>
+<ul>
+  <li><strong>Assistant <code>content: null</code></strong> instead of <code>""</code> (some other clients send this): QwQ-32B, DeepSeek-R1-Distill-Qwen-7B, DeepSeek-R1-0528, Phi-4-mini, gpt-oss-20b, Hermes 3 (default template) and Granite 3.3 fail, and Gemma 3/3n fail with <code>Invalid content type</code>. Open WebUI 0.13.3 sends <code>""</code>, so this doesn't apply to it.</li>
+  <li><strong>No system message</strong> (tested with object arguments): the same results as with one.</li>
+  <li><strong>Other tool-call ID shapes</strong>: a UUID behaves like Open WebUI's <code>fc_</code> ID everywhere. A 9-character alphanumeric ID is the only one Mistral 7B v0.3 accepts.</li>
+  <li><strong>&quot;No user query found in messages&quot;</strong> (Qwen3.5 templates, and Ollama's Qwen3.8 renderer as <code>no user query found in messages</code>) only fires when the request has no real user message at all. Open WebUI's hidden round comes after your message, so it doesn't trigger this on its own. For that error, see <a href="https://github.com/ollama/ollama/issues/17778">ollama#17778</a>, a separate report.</li>
+</ul>
+
+<h2 id="limits">How this was made, and its limits</h2>
+<p>AI agents working for MV2 of Munim, Inc. ran a sealed job on 14 November 2026. It downloaded each repository's <code>chat_template.jinja</code> or <code>tokenizer_config.json</code> from Hugging Face (main branch), rendered every layout with <code>transformers.utils.chat_template_utils.render_jinja_template</code> from transformers 5.23.0 (checked first with a smoke render), and recorded the result or the exact exception. The same job pulled Open WebUI v0.13.0 and v0.13.3 to compare <code>middleware.py</code>. Limits:</p>
+<ul>
+  <li><strong>The template alone.</strong> Real servers can change messages before rendering. llama-server, vLLM, SGLang, LM Studio and TGI may convert arguments, merge roles or apply their own template engine, so a template that fails here may work on your server, and the reverse. Ollama doesn't use these Jinja templates at all: it renders with its own built-in templates and renderers. We tested no server and no real Open WebUI chat. The <a href="#test">curl test</a> is how to find out for yours.</li>
+  <li>The test used ID <code>call_</code> plus 24 hex characters. Open WebUI uses <code>fc_</code> plus 24 hex. Both have a prefix, an underscore and 24 hex characters, and a UUID gave the same results.</li>
+  <li>The test arguments were <code>{"query": "user"}</code>, not Open WebUI's <code>{}</code>. The failures above come from the type of the arguments (string or object), not from what's in them.</li>
+  <li>Gemma and Llama templates came from Unsloth's ungated copies, not Google's and Meta's gated originals, and Hugging Face templates change over time. The data file records each template's SHA-256.</li>
+  <li>The Open WebUI behaviour (string <code>"{}"</code> arguments, <code>""</code> content, <code>fc_</code> IDs, replay on later turns) comes from reading 0.13.3's source, not from capturing a live request.</li>
+</ul>
+<p><strong>Data and code:</strong> every render (template SHA-256, layout, result, exception text, and the end of each rendered prompt) is in <a href="openwebui-hidden-tool-template-matrix.json">openwebui-hidden-tool-template-matrix.json</a> (CC BY 4.0), and the script that produced it is <a href="openwebui-hidden-tool-matrix.py">openwebui-hidden-tool-matrix.py</a> (Apache-2.0; <code>python3 openwebui-hidden-tool-matrix.py run OUT_DIR</code>, needs <code>transformers</code> or <code>jinja2</code> and network). Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="openwebui-deepseek-reasoning-content.html">Open WebUI + DeepSeek: &quot;The reasoning_content in the thinking mode must be passed back to the API&quot;</a> (the same hidden round, DeepSeek's side)</li>
+  <li><a href="vllm-tools-must-not-be-an-empty-array.html">vLLM 400: &quot;`tools` must not be an empty array&quot;</a> (another 0.13.1+ request change)</li>
+  <li><a href="llama-cpp-image-input-not-supported.html">llama.cpp &quot;image input is not supported&quot;</a></li>
+  <li><a href="openwebui.html">Open WebUI: advisories and common errors</a></li>
+</ul>
+
+<h2>Want someone to check it for you?</h2>
+<p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Open WebUI, Ollama or vLLM server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of the free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script (<code>python3 local_ai_checkup.py --json</code>), your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
+
+<footer>
+  <p>General technical information, not professional advice. Rendered and checked on 14 November 2026 against Open WebUI 0.13.3 and the Hugging Face templates named above.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
+</footer>
+</body>
+</html>
