@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LiteLLM proxy advisories, October 2026: am I affected? (GHSA-w4c7-34wj-hqm8, GHSA-7hp6-4w63-5g45, GHSA-g5ff-637f-6q2m)</title>
-<meta name="description" content="LiteLLM&#x27;s critical advisory of 27 October 2026, GHSA-w4c7-34wj-hqm8 (CVSS 10.0, proxies with an Enterprise licence), is fixed in 1.106.5, 1.105.6, 1.104.8 and 1.103.10. Check your LiteLLM version. Free, by MV2 of Munim, Inc., with AI agents.">
+<title>LiteLLM proxy advisories, October and November 2026: am I affected? (GHSA-2rwg-2wh4-7c4f, GHSA-w4c7-34wj-hqm8, GHSA-7hp6-4w63-5g45, GHSA-g5ff-637f-6q2m)</title>
+<meta name="description" content="LiteLLM&#x27;s High advisory of 12 November 2026, GHSA-2rwg-2wh4-7c4f, is fixed in 1.106.9, 1.108.6 and 1.109.1; 1.106.5 to 1.106.8 are still affected. The critical GHSA-w4c7-34wj-hqm8 of 27 October is fixed in 1.106.5, 1.105.6, 1.104.8 and 1.103.10. Check your LiteLLM version. Free, by MV2 of Munim, Inc., with AI agents.">
 <style>
   body { font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1.2rem; color: #1b1b1b; background: #fff; }
   h1 { font-size: 1.6rem; line-height: 1.25; }
@@ -23,6 +23,21 @@
 <body>
 <nav><a href="index.html">CVE checker</a> · <a href="n8n.html">n8n</a> · <a href="dify.html">Dify</a> · <a href="langflow.html">Langflow</a> · <a href="flowise.html">Flowise</a> · <strong>LiteLLM</strong> · <a href="litellm-hardening.html">LiteLLM hardening</a> · <a href="sample-report.html">Sample health check report</a></nav>
 <h1>LiteLLM proxy: am I affected?</h1>
+<div id="update-2026-11-15" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
+<p><strong>Update, 15 November 2026:</strong> LiteLLM published a High advisory on 12 November 2026, <a href="https://github.com/BerriAI/litellm/security/advisories/GHSA-2rwg-2wh4-7c4f">GHSA-2rwg-2wh4-7c4f</a> (CVSS 7.7, no CVE ID), titled "Authenticated secret exfiltration via Azure Entra credential parameters in the request body". 1.106.5 to 1.106.8, which fix the 27 October advisory below, are still affected by this one. On 15 November 2026 it was in neither OSV.dev nor the GitHub Advisory Database, so pip-audit, Dependabot and OSV-Scanner won't report it yet.</p>
+<p><strong>Who is affected:</strong> by the advisory, a proxy with at least one Azure OpenAI (<code>azure/</code>) or Azure AI (<code>azure_ai/</code>) model, and neither <code>AZURE_API_KEY</code> nor <code>AZURE_OPENAI_API_KEY</code> set in its environment. Any signed-in user who can call one of those models can send Azure Entra parameters (<code>tenant_id</code>, <code>client_id</code>, <code>client_secret</code>, <code>azure_username</code>, <code>azure_password</code>, <code>azure_scope</code>) in an ordinary chat or image request. The proxy uses them in place of its own Azure credential, and the error it passes back can contain the value of a server environment variable such as <code>LITELLM_MASTER_KEY</code>, the database URL or a provider key. The master key gives full admin control of the proxy.</p>
+<table>
+  <thead><tr><th>Your version</th><th>Update to</th></tr></thead>
+  <tbody>
+    <tr><td>before 1.106.9</td><td>1.106.9</td></tr>
+    <tr><td>1.108.0 to 1.108.5</td><td>1.108.6</td></tr>
+    <tr><td>1.109.0</td><td>1.109.1</td></tr>
+    <tr><td>1.110.0 release candidates before rc.2</td><td>1.110.0-rc.2 (pip: 1.110.0rc2)</td></tr>
+  </tbody>
+</table>
+<p><strong>Until you can update:</strong> the advisory's workaround is to strip or block those six parameters in request bodies at a reverse proxy or API gateway in front of LiteLLM. If people you don't fully trust have keys to your proxy, rotate the master key, the database password and your provider keys after updating.</p>
+<p>Source: the advisory, read through GitHub's API on 15 November 2026, with 1.106.9, 1.108.6, 1.109.1 and 1.110.0rc2 each checked on PyPI (all published 12 November 2026; 1.109.1 was the newest stable release). Checked with AI agents working for MV2 of Munim, Inc. The browser checker below does not include this advisory yet; until it does, compare your version with the table above.</p>
+</div>
 <div id="update-2026-11-01" style="border-left:4px solid #b00020;padding:0.4em 1em;margin:1em 0;background:#fff5f5">
 <p><strong>Update, 1 November 2026:</strong> on 27 October 2026 LiteLLM published a critical advisory, <a href="https://github.com/BerriAI/litellm/security/advisories/GHSA-w4c7-34wj-hqm8">GHSA-w4c7-34wj-hqm8</a> (CVSS 10.0, no CVE ID), titled "Unauthenticated file read leaks master key on Enterprise proxy". By the advisory, an unauthenticated request to a LiteLLM proxy running with an Enterprise licence can make it read a local file such as <code>/proc/self/environ</code> and send it out, which gives away <code>LITELLM_MASTER_KEY</code> and provider API keys. The advisory says proxies without an Enterprise licence are not affected.</p>
 <p>It is fixed per release line in <strong>1.106.5</strong>, 1.105.6, 1.104.8 and 1.103.10, all on PyPI. That makes this page's 12 October advice (1.104.0 or newer, with 1.105.0 best) out of date: 1.104.0 to 1.104.7, 1.105.0 to 1.105.5 and every release before 1.103.10 are affected. Read per release line, every LiteLLM advisory published up to 27 October 2026 that names a fixed version is fixed in those four releases. The newest LiteLLM release on PyPI when this was checked, 1.106.6, is clear of them too. If your proxy ran with an Enterprise licence and could be reached, update, then rotate the master key and the provider API keys.</p>
@@ -50,7 +65,7 @@
 
 <h2>What to do</h2>
 <ol>
-  <li><strong>Update to 1.106.5 or newer</strong> (1.106.6 was the newest release on PyPI on 1 November 2026). If you must stay on a release line, use at least 1.105.6 (1.105.x), 1.104.8 (1.104.x) or 1.103.10 (1.103.x): each has every fix named so far, including GHSA-w4c7-34wj-hqm8. Releases before 1.103.10 are affected by GHSA-w4c7-34wj-hqm8 if the proxy runs with an Enterprise licence; see the update above.</li>
+  <li><strong>Update to 1.109.1 or newer</strong> (the newest stable release on PyPI on 15 November 2026). If you stay on an older release line, 1.106.9 (1.106.x) and 1.108.6 (1.108.x) also have every fix named so far; 1.106.5 to 1.106.8 are still affected by GHSA-2rwg-2wh4-7c4f if the proxy has an Azure model and no Azure API key in its environment (see the 15 November update). Releases before 1.103.10 are also affected by GHSA-w4c7-34wj-hqm8 if the proxy runs with an Enterprise licence; see the 1 November update.</li>
   <li><strong>If you can't update today,</strong> set <code>EXPERIMENTAL_UI_LOGIN=false</code>. It closes the privilege escalation path, but it also breaks CLI SSO and Claude Code gateway login. Nothing short of updating closes the viewer-role file read, so remove viewer accounts you don't need.</li>
   <li><strong>If internal or viewer users you don't fully trust could reach an affected version,</strong> rotate the master key and every provider key the proxy holds, and check the admin list and the MCP server settings for entries you didn't make.</li>
   <li><strong>Check your install history for 1.82.7 and 1.82.8.</strong> Look in <code>pip</code> logs, lock files, CI logs and image build logs from March 2026. If either shows up, rotate every provider key, the master key and any cloud credentials on that machine or in that CI job.</li>
@@ -61,6 +76,7 @@
 <table>
   <thead><tr><th>Affected</th><th>Fixed in</th><th>Advisory</th></tr></thead>
   <tbody>
+    <tr><td>before 1.106.9; 1.108.0 to 1.108.5; 1.109.0; 1.110.0 release candidates before rc.2</td><td>1.106.9, 1.108.6, 1.109.1, 1.110.0-rc.2</td><td><a href="https://github.com/BerriAI/litellm/security/advisories/GHSA-2rwg-2wh4-7c4f">GHSA-2rwg-2wh4-7c4f</a>: secret exfiltration through Azure Entra credential parameters in the request body, needs a signed-in user and an Azure model without an Azure API key in the environment (High, 7.7; no CVE ID). Not in the browser checker yet.</td></tr>
     <tr><td>1.91.0 up to 1.100.4; 1.101.0-1.101.2; 1.102.0-1.102.1; 1.103.0</td><td>1.100.4, 1.101.3, 1.102.2, 1.103.1, 1.104.0</td><td><a href="https://github.com/BerriAI/litellm/security/advisories/GHSA-7hp6-4w63-5g45">GHSA-7hp6-4w63-5g45</a>: internal user to proxy admin to host command execution (Critical, 9.9; no CVE ID)</td></tr>
     <tr><td>before 1.95.0</td><td>1.95.0</td><td><a href="https://github.com/BerriAI/litellm/security/advisories/GHSA-g5ff-637f-6q2m">GHSA-g5ff-637f-6q2m</a>: viewer-role arbitrary file read through <code>vertex_ai_credentials</code> (High, 8.1; no CVE ID)</td></tr>
     <tr><td>before 1.88.6; 1.89.0-1.89.6; 1.90.0-1.90.6; 1.91.0-1.91.4; 1.92.0-1.92.1; 1.93.0-1.93.1; 1.94.0-1.94.2; 1.95.0; 1.96.0-1.96.1</td><td>1.88.6, 1.89.7, 1.90.7, 1.91.5, 1.92.2, 1.93.2, 1.94.3, 1.95.1, 1.96.2</td><td><a href="https://github.com/advisories/GHSA-3cv6-jpf6-8222">CVE-2026-84377</a>: provider-key leak and SSRF through request-body routing parameters (Medium, 6.5). The advisory's own range says "&lt;1.94.0", but its patched versions and the <a href="https://osv.dev/vulnerability/GHSA-3cv6-jpf6-8222">OSV record</a> give one range per release line, so 1.94.0-1.94.2, 1.95.0 and 1.96.0-1.96.1 are affected too.</td></tr>
