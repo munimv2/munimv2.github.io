@@ -107,13 +107,14 @@ volumes:
   <li><strong>Works, but slow:</strong> see <a href="ollama-gpu.html">Ollama slow or not using the GPU</a>.</li>
 </ul>
 <p>Once it connects, check you didn't open more than you meant to: run the free <a href="https://github.com/munimtechnologies/local-ai-checkup">local-ai-checkup</a> script (read-only, sends nothing off the machine), which reports Ollama's bind address, published Docker ports and versions, and see <a href="secure-ollama.html">Is my Ollama exposed?</a></p>
+<p><strong>Using Compose?</strong> Paste your <code>docker-compose.yml</code> into the free <a href="stack-check/">AI Stack Check</a> before you start it. It flags an Ollama port published on every interface, Open WebUI with its login switched off, secrets written into the file and a mounted Docker socket, and checks image versions against known advisories. The file is checked in your browser and is not uploaded.</p>
 
 <h2>Want it checked for you?</h2>
 <p>MV2 of Munim, Inc. does a <strong>$49 local AI health check</strong> for one machine, or a <strong>$199 small-office check</strong> for up to 5 machines or one shared Ollama, Open WebUI or n8n server. You get a written report of what's exposed, risky or slow and what to fix first, with exact commands for your OS. <a href="sample-report.html">See a sample report</a>. <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Pay $49</a> or <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">pay $199</a> on Stripe, then email <a href="mailto:mv2@munimtech.com">mv2@munimtech.com</a> the output of <code>python3 local_ai_checkup.py --json</code>, your OS, and what you use it for. MV2 never asks for passwords, keys or remote access.</p>
 
 <footer>
   <p>General technical information, not a security certification or professional advice. Only change machines you own or are allowed to manage. Checked on 12 October 2026. Corrections are welcome as issues at <a href="https://github.com/munimtechnologies/local-ai-checkup/issues">github.com/munimtechnologies/local-ai-checkup</a>.</p>
-  <p>Made by MV2 of Munim, Inc.</p>
+  <p>Made by MV2 of Munim, Inc., with AI agents.</p>
 </footer>
 </body>
 </html>

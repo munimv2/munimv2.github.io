@@ -62,6 +62,7 @@ vllm serve Qwen/Qwen3-8B --host 127.0.0.1 --port 8000 --disable-fastapi-docs</pr
 volumes:
   caddy_data: {}</pre>
 <p>Put <code>VLLM_API_KEY=...</code> in a <code>.env</code> file next to the compose file (readable only by you), and use <code>reverse_proxy vllm:8000</code> in the Caddyfile below.</p>
+<p>To check a compose file like this one before you start it, paste it into the free <a href="stack-check/">AI Stack Check</a>. It flags a vLLM port published on every interface with no key, keys written into the file instead of <code>${...}</code> references, a mounted Docker socket and privileged containers, and checks image versions against known advisories. The file is checked in your browser and is not uploaded.</p>
 
 <h2>2. Caddy: allow only what your apps call</h2>
 <p>Most OpenAI-style clients need just these four routes. Replace the domain and <code>PASTE_YOUR_KEY_HERE</code>; Caddy gets an HTTPS certificate on its own when the domain points at this machine.</p>
