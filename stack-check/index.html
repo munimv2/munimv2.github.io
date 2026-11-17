@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- AI Stack Check. Copyright 2026 Munim, Inc. Apache-2.0. Made by MV2 of Munim, Inc. with AI agents. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Stack Check: is your self-hosted AI stack safe? (runs in your browser)</title>
+<meta name="description" content="Paste a docker-compose file for Ollama, Open WebUI, vLLM, LiteLLM, n8n, Dify and more. Find known vulnerabilities and exposed APIs in your browser; your file is not uploaded.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com https://www.recaptcha.net; connect-src 'self' https://raw.githubusercontent.com https://*.googleapis.com https://*.google.com; frame-src https://www.google.com https://www.recaptcha.net; style-src 'self'; img-src 'self' data:">
+<link rel="stylesheet" href="web/style.css">
+</head>
+<body>
+<header>
+  <h1>AI Stack Check</h1>
+  <p>Paste the compose file (or Dockerfile, requirements.txt, package.json, CycloneDX SBOM) of your self-hosted AI apps: Ollama, Open WebUI, vLLM, LiteLLM, n8n, Dify, Langflow, Flowise, RAGFlow, AnythingLLM, ComfyUI, MCP Inspector. The check runs in this browser. <strong>Your file is not uploaded.</strong></p>
+</header>
+<main>
+  <section>
+    <label for="filename">File name (optional, helps pick the format)</label>
+    <input id="filename" type="text" placeholder="compose.yaml" autocomplete="off">
+    <label for="input">File contents</label>
+    <textarea id="input" rows="16" spellcheck="false" placeholder="services:&#10;  ollama:&#10;    image: ollama/ollama:0.33.1&#10;    ports:&#10;      - &quot;11434:11434&quot;"></textarea>
+    <div class="row">
+      <button id="check" type="button">Check</button>
+      <button id="sample" type="button" class="secondary">Try a sample stack</button>
+      <span id="status" role="status"></span>
+    </div>
+    <p class="small">Advisory list dated <span id="feed-date">…</span>, from <a href="https://github.com/munimtechnologies/ai-stack-advisories" target="_blank" rel="noopener">ai-stack-advisories</a> (curated, includes advisories that have no CVE yet).</p>
+  </section>
+
+  <section id="results" hidden>
+    <h2>What we found</h2>
+    <p id="counts"></p>
+    <div id="findings"></div>
+
+    <div id="ai-panel" hidden>
+      <h2>Explain it in plain words</h2>
+      <p id="device-status" class="small"></p>
+      <fieldset>
+        <legend>Where may the explanation run?</legend>
+        <label><input type="radio" name="privacy" value="device-only" checked> Only on this device (Gemini Nano in Chrome). Nothing leaves your computer.</label>
+        <label><input type="radio" name="privacy" value="hybrid"> On this device first; if it can't, Gemini in the cloud gets the redacted prompt below.</label>
+      </fieldset>
+      <button id="explain" type="button">Explain and suggest fixes</button>
+      <span id="ai-status" role="status"></span>
+      <div id="ai-out"></div>
+      <details>
+        <summary>The exact prompt the model gets</summary>
+        <pre id="prompt-preview"></pre>
+      </details>
+    </div>
+    <p id="ai-off" class="small" hidden>Plain-language explanations are not switched on for this copy of the page. Every finding above still comes from fixed rules and the curated list.</p>
+
+    <details>
+      <summary>Your file with secrets hidden: <span id="redact-summary"></span></summary>
+      <p class="small">This redacted copy is the only version any model ever sees, on-device or in the cloud. API keys, passwords, tokens, credentials in URLs, private keys and public IP addresses are replaced; ${VARIABLE} references are kept.</p>
+      <pre id="redacted"></pre>
+    </details>
+  </section>
+</main>
+<footer>
+  <p>Want every machine checked for you, speed included? <a href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00" target="_blank" rel="noopener">Local AI health check, one machine, $49</a> · <a href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01" target="_blank" rel="noopener">small office, up to 5 machines, $199</a>.</p>
+  <p>Made by MV2 of Munim, Inc. (mv2@munimtech.com) with AI agents. Open source under Apache-2.0: <a href="https://github.com/munimtechnologies/ai-stack-check-web" target="_blank" rel="noopener">source</a>. Findings are information, not a guarantee; check fixes before you apply them.</p>
+</footer>
+<script src="web/cjs-shim.js"></script>
+<script src="src/core.js"></script>
+<script src="web/cjs-capture.js"></script>
+<script src="src/redact.js"></script>
+<script src="src/exposure.js"></script>
+<script src="src/prompt.js"></script>
+<script type="module" src="web/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+/* AI Stack Check. Apache-2.0. Made by MV2 of Munim, Inc. with AI agents. */
+:root { --fg: #1b1f24; --muted: #57606a; --bg: #ffffff; --line: #d0d7de; --accent: #0b57d0; --high: #b42318; --medium: #b54708; --low: #57606a; --ok: #1a7f37; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--fg); background: var(--bg); }
+header, main, footer { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+header { padding-top: 28px; }
+h1 { margin: 0 0 6px; font-size: 28px; }
+h2 { margin-top: 32px; font-size: 21px; }
+h3 { margin: 4px 0; font-size: 17px; }
+label { display: block; margin: 12px 0 4px; font-weight: 600; }
+fieldset label { font-weight: 400; }
+input[type=text], textarea { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; font: 14px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
+button { padding: 9px 16px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; }
+button.secondary { background: #eef2f7; color: var(--fg); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.small { color: var(--muted); font-size: 14px; }
+.card { border: 1px solid var(--line); border-left-width: 5px; border-radius: 6px; padding: 10px 14px; margin: 10px 0; }
+.card .tag { text-transform: uppercase; font-size: 12px; letter-spacing: .04em; color: var(--muted); }
+.card .fix, #ai-out .fix { color: var(--ok); }
+.sev-high { border-left-color: var(--high); }
+.sev-medium, .sev-version { border-left-color: var(--medium); }
+.sev-low { border-left-color: var(--low); }
+.ok { color: var(--ok); font-weight: 600; }
+.warn { color: var(--high); }
+pre { white-space: pre-wrap; word-break: break-word; background: #f6f8fa; border: 1px solid var(--line); border-radius: 6px; padding: 10px; font-size: 13px; }
+details { margin: 16px 0; }
+summary { cursor: pointer; font-weight: 600; }
+fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 10px 0; }
+.badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; margin: 10px 0; }
+.src-device { background: #dafbe1; color: var(--ok); }
+.src-cloud { background: #ddf4ff; color: var(--accent); }
+.src-unknown { background: #eef2f7; color: var(--muted); }
+footer { margin-top: 40px; padding-bottom: 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }

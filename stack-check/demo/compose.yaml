@@ -1,0 +1,42 @@
+# Sample stack for AI Stack Check: deliberately outdated pins and risky settings.
+# Every "secret" below is a made-up demo value.
+services:
+  ollama:
+    image: ollama/ollama:0.33.1
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:v0.11.2
+    ports:
+      - "3000:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_AUTH=False
+      - WEBUI_SECRET_KEY=demo-secret-change-me
+
+  vllm:
+    image: vllm/vllm-openai:v0.30.0
+    command: ["--model", "Qwen/Qwen3-8B"]
+    ports:
+      - "8000:8000"
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-v1.74.0-stable
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      DATABASE_URL: postgres://litellm:demo-password@db:5432/litellm
+
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  ollama: {}
